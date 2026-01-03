@@ -73,7 +73,7 @@ Sistemin kısıtları ve yetkileri bu bölümden yönetilir.
 ## 🖥️ Teknoloji ve Yapı
 - **Dil:** Python 3.13+
 - **GUI Framework:** PyQt6 - Qt Designer  
-- **Veritabanı:** SQLite (`asil_system.db`)
+- **Veritabanı:** SQLite (`xxxxxxxx.db`)
 - **Yapılandırma:** `config.py`
 - **Versiyon Kontrol:** Git & GitHub
 
