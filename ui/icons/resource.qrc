@@ -1,0 +1,16 @@
+<RCC>
+  <qresource prefix="resim">
+    <file>Photo.png</file>
+    <file>istockphoto-671677466-612x612.jpg</file>
+    <file>araclar.png</file>
+    <file>users.png</file>
+    <file>arrow-down.png</file>
+    <file>down-arrow.png</file>
+    <file>../../assets/images/logo-w.png</file>
+    <file>../../assets/images/logo.png</file>
+  </qresource>
+  <qresource prefix="simgeler">
+    <file>ekle.ico</file>
+    <file>remove.ico</file>
+  </qresource>
+</RCC>

@@ -1,0 +1,28 @@
+{
+    "SERVİS ARACI": {
+        "MERCEDES-BENZ": ["SPRINTER", "TRAVEGO", "DİĞER SERİLER"],
+        "TEMSA": ["SAFİR", "PRESTİJ", "DİĞER SERİLER"],
+        "ISUZU": ["NOVO", "DİĞER SERİLER"],
+        "OTOKAR": ["SULTAN", "POYRAZ", "DİĞER SERİLER"],
+        "FORD": ["TRANSIT", "DİĞER SERİLER"],
+        "RENAULT": ["MASTER", "TRAFFIC", "DİĞER SERİLER"],
+        "VOLKSWAGEN": ["CRAFTER", "VOLT", "DİĞER SERİLER"],
+        "FIAT": ["DUCATO", "DİĞER SERİLER"],
+        "CITROEN": ["JUMPER", "DİĞER SERİLER"],
+        "IVECO": ["DAILY", "DİĞER SERİLER"],
+        "PEUGEOT": ["BOXER", "DİĞER SERİLER"]
+    },
+    "HİZMET ARACI": {
+        "RENAULT": ["MEGANE", "FLUENCE", "LATITUDE", "SAFRANE", "TALISMAN", "SYMBOL", "DİĞER SERİLER"],
+        "FIAT": ["ALBEA", "BRAVA", "EGEA", "LINEA", "FULLBACK", "DİĞER SERİLER"],
+        "AUDI": ["A4", "A5", "DİĞER SERİLER"],
+        "DACIA": ["LOGAN", "SANDERO", "DİĞER SERİLER"],
+        "FORD": ["FIESTA", "FOCUS", "DİĞER SERİLER"],
+        "OPEL": ["ASTRA", "INSIGNIA", "CORSA", "DİĞER SERİLER"],
+        "TOYOTA": ["AURIS", "AVENSIS", "COROLLA", "HILUX", "DİĞER SERİLER"],
+        "VOLKSWAGEN": ["GOLF", "JETTA", "PASSAT", "POLO", "DİĞER SERİLER"],
+        "FORD TRUCKS": ["E-TRANSIT", "DİĞER SERİLER"],
+        "RENAULT TRUCKS": ["MASTER", "DİĞER SERİLER"],
+        "ISUZU": ["D-MAX", "DİĞER SERİLER"]
+    }
+}
