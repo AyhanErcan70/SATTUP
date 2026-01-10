@@ -1,0 +1,8 @@
+A Rh(+)
+A Rh(-)
+B Rh(+)
+B Rh(-)
+0 Rh(+)
+0 Rh(-)
+AB Rh(+)
+AB Rh(-)

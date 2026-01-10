@@ -1,0 +1,62 @@
+QDialog{
+background-color: #162D6D;
+}
+QMessageBox{
+background-color: none;
+color: #ffffff;
+}
+
+QPushButton#btn_login{
+background-color: #ff0000;
+border-radius: 8px;
+border: 2px solid #f0ffd3;
+font: 500 15pt "Nesatho";
+color: #ffffff;
+font-weight: bold;
+}
+QPushButton#btn_cancel{
+background-color: #05cb05;
+border-radius: 8px;
+border: 2px solid #f0ffd3;
+font: 500 15pt "Nesatho";
+color: #ffffff;
+font-weight: bold;
+}
+QPushButton#btn_login:hover{
+background-color: #ab0000;
+border-radius: 8px;
+border: 3px solid #ffffff;
+font: 500 13pt "Nesatho";
+color: #ffffff;
+font-weight: bold;
+padding-top: 10px;
+}
+QPushButton#btn_cancel:hover{
+background-color: #037903;
+border-radius: 8px;
+border: 3px solid #ffffff;
+font: 500 13pt "Nesatho";
+color: #ffffff;
+font-weight: bold;
+padding-top: 10px;
+}
+QPushButton#btn_login:pressed{
+QDialog#Dialog, background-color: transparent;
+background-color: #5a0000;
+border-radius: 8px;
+border: 5px solid #ffffff;
+font: 500 15pt "Nesatho";
+color: #ffffff;
+font-weight: bold;
+padding-top: 4px;
+letter-spacing: 5px
+}
+QPushButton#btn_cancel:pressed{
+background-color: #024f02;
+border-radius: 8px;
+border: 5px solid #ffffff;
+font: 500 15pt "Nesatho";
+color: #ffffff;
+font-weight: bold;
+padding-top: 4px;
+letter-spacing: 5px;
