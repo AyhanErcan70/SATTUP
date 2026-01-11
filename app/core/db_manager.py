@@ -174,13 +174,15 @@ class DatabaseManager:
                     route_params_id INTEGER NOT NULL,
                     trip_date TEXT NOT NULL,
                     service_type TEXT NOT NULL,
+                    time_block TEXT NOT NULL,
                     driver_id INTEGER,
                     vehicle_id INTEGER,
                     qty REAL NOT NULL DEFAULT 0,
                     time_text TEXT,
                     note TEXT,
                     created_at TEXT,
-                    updated_at TEXT
+                    updated_at TEXT,
+                    UNIQUE (contract_id, route_params_id, trip_date, service_type, time_block)
                 )
                 """
             )
@@ -192,6 +194,171 @@ class DatabaseManager:
                 "CREATE INDEX IF NOT EXISTS idx_trip_allocations_contract_date ON trip_allocations(contract_id, trip_date)"
             )
             conn.commit()
+        finally:
+            conn.close()
+
+        # trip_allocations eski DB'lerde time_block kolonuna sahip olmayabilir.
+        # Migration'ı index oluşturmadan önce çalıştır.
+        self.migrate_trip_allocations_table()
+
+        conn2 = self.connect()
+        if not conn2:
+            return
+        try:
+            cursor2 = conn2.cursor()
+            cursor2.execute(
+                "CREATE INDEX IF NOT EXISTS idx_trip_allocations_key ON trip_allocations(contract_id, trip_date, service_type, time_block)"
+            )
+            conn2.commit()
+        finally:
+            conn2.close()
+
+    def migrate_trip_allocations_table(self):
+        conn = self.connect()
+        if not conn:
+            return
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='trip_allocations'")
+            if cursor.fetchone() is None:
+                return
+
+            cursor.execute("PRAGMA table_info(trip_allocations)")
+            cols = [row[1] for row in (cursor.fetchall() or [])]
+            if "time_block" in cols:
+                return
+
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS trip_allocations_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    contract_id INTEGER NOT NULL,
+                    route_params_id INTEGER NOT NULL,
+                    trip_date TEXT NOT NULL,
+                    service_type TEXT NOT NULL,
+                    time_block TEXT NOT NULL,
+                    driver_id INTEGER,
+                    vehicle_id INTEGER,
+                    qty REAL NOT NULL DEFAULT 0,
+                    time_text TEXT,
+                    note TEXT,
+                    created_at TEXT,
+                    updated_at TEXT,
+                    UNIQUE (contract_id, route_params_id, trip_date, service_type, time_block)
+                )
+                """
+            )
+
+            cursor.execute(
+                """
+                INSERT INTO trip_allocations_new (
+                    id, contract_id, route_params_id, trip_date, service_type, time_block,
+                    driver_id, vehicle_id, qty, time_text, note, created_at, updated_at
+                )
+                SELECT
+                    id, contract_id, route_params_id, trip_date, service_type, 'GUN',
+                    driver_id, vehicle_id, qty, time_text, note, created_at, updated_at
+                FROM trip_allocations
+                """
+            )
+            cursor.execute("DROP TABLE trip_allocations")
+            cursor.execute("ALTER TABLE trip_allocations_new RENAME TO trip_allocations")
+
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_trip_allocations_contract_date ON trip_allocations(contract_id, trip_date)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_trip_allocations_key ON trip_allocations(contract_id, trip_date, service_type, time_block)"
+            )
+
+            conn.commit()
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            print(f"Trip allocations migration error: {e}")
+        finally:
+            conn.close()
+
+    def upsert_trip_allocation(
+        self,
+        contract_id: int,
+        route_params_id: int,
+        trip_date: str,
+        service_type: str,
+        time_block: str,
+        vehicle_id,
+        driver_id,
+        qty: float,
+        time_text: str = "",
+        note: str = "",
+    ) -> bool:
+        conn = self.connect()
+        if not conn:
+            return False
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO trip_allocations (
+                    contract_id, route_params_id, trip_date, service_type, time_block,
+                    vehicle_id, driver_id, qty, time_text, note, created_at, updated_at
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(contract_id, route_params_id, trip_date, service_type, time_block)
+                DO UPDATE SET
+                    vehicle_id=excluded.vehicle_id,
+                    driver_id=excluded.driver_id,
+                    qty=excluded.qty,
+                    time_text=excluded.time_text,
+                    note=excluded.note,
+                    updated_at=excluded.updated_at
+                """
+            ,
+                (
+                    int(contract_id),
+                    int(route_params_id),
+                    str(trip_date),
+                    str(service_type),
+                    str(time_block),
+                    vehicle_id,
+                    driver_id,
+                    float(qty or 0),
+                    str(time_text or ""),
+                    str(note or ""),
+                    now,
+                    now,
+                ),
+            )
+            conn.commit()
+            return True
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return False
+        finally:
+            conn.close()
+
+    def get_trip_allocations_for_range(self, contract_id: int, service_type: str, start_date: str, end_date: str):
+        conn = self.connect()
+        if not conn:
+            return []
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT route_params_id, trip_date, time_block, vehicle_id, driver_id, qty, COALESCE(time_text,''), COALESCE(note,'')
+                FROM trip_allocations
+                WHERE contract_id = ?
+                  AND service_type = ?
+                  AND trip_date BETWEEN ? AND ?
+                """,
+                (int(contract_id), str(service_type), str(start_date), str(end_date)),
+            )
+            return cursor.fetchall() or []
         finally:
             conn.close()
 

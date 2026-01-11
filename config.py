@@ -14,7 +14,14 @@ DATABASE_DIR = os.path.join(BASE_DIR, "database")
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 
 # 4. Kritik Dosya Yolları
-DB_PATH = os.path.join(DATABASE_DIR, "asil_system.db")
+_ENV_DB_PATH = (os.environ.get("SATTUP_DB_PATH") or "").strip()
+DB_PATH = _ENV_DB_PATH if _ENV_DB_PATH else os.path.join(DATABASE_DIR, "asil_system.db")
+
+if not _ENV_DB_PATH:
+    try:
+        os.makedirs(DATABASE_DIR, exist_ok=True)
+    except Exception:
+        pass
 UI_FILES_PATH = os.path.join(UI_DIR, "ui_files")
 ICONS_PATH = os.path.join(UI_DIR, "icons")
 
