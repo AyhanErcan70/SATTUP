@@ -4,7 +4,7 @@ import json
 from PyQt6 import uic
 from PyQt6.QtCore import Qt, QDate
 from PyQt6.QtGui import QColor, QStandardItem, QStandardItemModel
-from PyQt6.QtWidgets import QHeaderView, QMessageBox, QTableWidgetItem, QWidget
+from PyQt6.QtWidgets import QDialog, QHeaderView, QMessageBox, QTableWidgetItem, QWidget
 
 from app.core.db_manager import DatabaseManager
 from config import get_ui_path
@@ -17,6 +17,13 @@ class RoutesApp(QWidget):
         uic.loadUi(get_ui_path("routes_window.ui"), self)
         clear_all_styles(self)
 
+        # Yeni UI'da tablo ismi table_rotalar. Eski kod table_rota bekliyor olabilir.
+        if hasattr(self, "table_rotalar") and not hasattr(self, "table_rota"):
+            try:
+                self.table_rota = getattr(self, "table_rotalar")
+            except Exception:
+                pass
+
         self.db = DatabaseManager()
         self.user_data = user_data or {}
 
@@ -26,9 +33,15 @@ class RoutesApp(QWidget):
         self._selected_contract_end = ""
         self._selected_contract_type = ""
 
+        self._opening_indibindi_dialog = False
+
         self._contract_model = QStandardItemModel(self)
         if hasattr(self, "list_sozlesme"):
             self.list_sozlesme.setModel(self._contract_model)
+
+        self._kalem_model = QStandardItemModel(self)
+        if hasattr(self, "list_kalemler"):
+            self.list_kalemler.setModel(self._kalem_model)
 
         self._ensure_routes_table()
         self._init_tables()
@@ -76,23 +89,25 @@ class RoutesApp(QWidget):
                 pass
 
     def _init_tables(self):
-        if hasattr(self, "table_rota"):
-            if self.table_rota.columnCount() != 5:
-                self.table_rota.setColumnCount(5)
-            self.table_rota.setHorizontalHeaderLabels(
-                ["Hizmet Türü", "Güzergah", "Başlangıç", "Duraklar", "KM"]
-            )
-            self.table_rota.verticalHeader().setVisible(False)
-            self.table_rota.setAlternatingRowColors(True)
-            self.table_rota.setSelectionBehavior(self.table_rota.SelectionBehavior.SelectRows)
-            self.table_rota.setSelectionMode(self.table_rota.SelectionMode.ExtendedSelection)
-            h = self.table_rota.horizontalHeader()
-            h.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-            h.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-            h.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-            h.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-            h.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
-            h.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        # Yeni UI tek tablo: table_rotalar (veya table_rota alias)
+        if hasattr(self, "table_rotalar") or hasattr(self, "table_rota"):
+            tbl = getattr(self, "table_rotalar", None) or getattr(self, "table_rota", None)
+            if tbl is not None:
+                if tbl.columnCount() != 4:
+                    tbl.setColumnCount(4)
+                tbl.setHorizontalHeaderLabels(
+                    ["Hizmet Türü", "İş Kalemi (Hat)", "Durak Noktaları", "KM"]
+                )
+                tbl.verticalHeader().setVisible(False)
+                tbl.setAlternatingRowColors(True)
+                tbl.setSelectionBehavior(tbl.SelectionBehavior.SelectRows)
+                tbl.setSelectionMode(tbl.SelectionMode.ExtendedSelection)
+                h = tbl.horizontalHeader()
+                h.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+                h.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+                h.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+                h.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+                h.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
 
         if hasattr(self, "table_son"):
             if self.table_son.columnCount() != 7:
@@ -125,10 +140,12 @@ class RoutesApp(QWidget):
             
 
     def _init_buttons(self):
+        # Yeni UI: kullanıcı akışı EKLE/ÇIKAR ile tabloyu doldurur, KAYDET ile DB'ye yazar.
+        # Butonları seçimlere göre dinamik kapatmak yerine handler içinde doğrulayacağız.
         if hasattr(self, "btn_kaydet"):
-            self.btn_kaydet.setEnabled(False)
+            self.btn_kaydet.setEnabled(True)
         if hasattr(self, "btn_sil"):
-            self.btn_sil.setEnabled(False)
+            self.btn_sil.setEnabled(True)
 
     def _setup_connections(self):
         if hasattr(self, "cmb_musteri"):
@@ -146,17 +163,17 @@ class RoutesApp(QWidget):
             except Exception:
                 pass
         if hasattr(self, "btn_ekle"):
-            self.btn_ekle.clicked.connect(self._add_to_son)
+            self.btn_ekle.clicked.connect(self._add_selected_kalem_to_table)
         if hasattr(self, "btn_cikar"):
-            self.btn_cikar.clicked.connect(self._remove_from_son)
+            self.btn_cikar.clicked.connect(self._remove_selected_rows_from_table)
         if hasattr(self, "btn_kaydet"):
-            self.btn_kaydet.clicked.connect(self._save_pending)
+            self.btn_kaydet.clicked.connect(self._save_table_rows)
         if hasattr(self, "btn_sil"):
-            self.btn_sil.clicked.connect(self._delete_pending)
-        if hasattr(self, "table_son"):
-            self.table_son.itemSelectionChanged.connect(self._update_action_buttons)
+            self.btn_sil.clicked.connect(self._delete_selected_rows_from_db)
+
+        if hasattr(self, "list_kalemler") and self.list_kalemler.selectionModel() is not None:
             try:
-                self.table_son.doubleClicked.connect(self._on_son_double_clicked)
+                self.list_kalemler.selectionModel().selectionChanged.connect(self._on_kalem_selected)
             except Exception:
                 pass
 
@@ -176,8 +193,9 @@ class RoutesApp(QWidget):
         self._selected_contract_end = item.data(Qt.ItemDataRole.UserRole + 3) or ""
 
         self._load_contract_details_and_fill_rota()
-        self._load_saved_routes_for_contract()
-        self._update_action_buttons()
+        self._load_saved_routes_into_table()
+        self._load_kalemler_from_contract()
+        # Yeni UI'da butonlar statik açık; tabloları/resetleri yaptık.
 
     def _load_customers(self):
         if not hasattr(self, "cmb_musteri"):
@@ -208,10 +226,12 @@ class RoutesApp(QWidget):
         self._selected_contract_type = ""
 
         self._contract_model.clear()
+        if hasattr(self, "table_rotalar"):
+            self.table_rotalar.setRowCount(0)
         if hasattr(self, "table_rota"):
             self.table_rota.setRowCount(0)
-        if hasattr(self, "table_son"):
-            self.table_son.setRowCount(0)
+
+        self._kalem_model.clear()
 
         if not cust_id:
             self._update_action_buttons()
@@ -280,10 +300,453 @@ class RoutesApp(QWidget):
         self._selected_contract_end = item.data(Qt.ItemDataRole.UserRole + 3) or ""
 
         self._load_contract_details_and_fill_rota()
-        self._load_saved_routes_for_contract()
-        self._update_action_buttons()
+        self._load_saved_routes_into_table()
+        self._load_kalemler_from_contract()
+
+    def _table_rotalar_widget(self):
+        return getattr(self, "table_rotalar", None) or getattr(self, "table_rota", None)
+
+    def _load_kalemler_from_contract(self):
+        """Seçili sözleşmedeki aday güzergahları list_kalemler'e yükler."""
+        self._kalem_model.clear()
+        if not self._selected_contract_id:
+            return
+
+        contract_id = int(self._selected_contract_id)
+        contract_type = (self._selected_contract_type or "").strip()
+
+        guzergah_list = []
+        try:
+            conn = self.db.connect()
+            cursor = conn.cursor()
+            cursor.execute("SELECT price_matrix_json FROM contracts WHERE id = ?", (contract_id,))
+            row = cursor.fetchone()
+            conn.close()
+            price_json = row[0] if row else ""
+            parsed = json.loads(price_json) if price_json else []
+            if isinstance(parsed, list):
+                for e in parsed:
+                    guz = str((e or {}).get("guzergah") or "").strip()
+                    if guz:
+                        guzergah_list.append(guz)
+        except Exception:
+            guzergah_list = []
+
+        if not guzergah_list:
+            try:
+                conn = self.db.connect()
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT DISTINCT COALESCE(route_name,'')
+                    FROM route_params
+                    WHERE contract_id = ?
+                    ORDER BY id ASC
+                    """,
+                    (contract_id,),
+                )
+                rows = cursor.fetchall()
+                conn.close()
+                guzergah_list = [str(r[0] or "").strip() for r in rows if str(r[0] or "").strip()]
+            except Exception:
+                guzergah_list = []
+
+        for guz in guzergah_list:
+            it = QStandardItem(guz)
+            it.setEditable(False)
+            it.setData(guz, Qt.ItemDataRole.UserRole)
+            it.setData(contract_type, Qt.ItemDataRole.UserRole + 1)  # hizmet tipi 1-A
+            self._kalem_model.appendRow(it)
+
+    def _on_kalem_selected(self, *_args):
+        if self._opening_indibindi_dialog:
+            return
+        if not self._selected_contract_id:
+            return
+        if not hasattr(self, "list_kalemler"):
+            return
+        idxs = self.list_kalemler.selectedIndexes()
+        if not idxs:
+            return
+
+        it = self._kalem_model.itemFromIndex(idxs[0])
+        if it is None:
+            return
+
+        kalem = (it.data(Qt.ItemDataRole.UserRole) or "").strip()
+        if not kalem:
+            return
+
+        # Hizmet tipi: sözleşme tipinden (1-A akışı)
+        stype = (self._selected_contract_type or "").strip()
+        self._open_indibindi_dialog(kalem=kalem, service_type=stype)
+
+    def _open_indibindi_dialog(self, kalem: str, service_type: str):
+        dlg = QDialog(self)
+        try:
+            uic.loadUi(get_ui_path("indibindi_dialog.ui"), dlg)
+        except Exception as e:
+            QMessageBox.critical(self, "Hata", f"indibindi_dialog.ui yüklenemedi:\n{str(e)}")
+            return
+
+        # UI bindings
+        lbl = getattr(dlg, "lbl_kalem_adi", None)
+        txt = getattr(dlg, "txt_indi_bindi", None)
+        btn_save = getattr(dlg, "btn_kaydet", None)
+        btn_del = getattr(dlg, "btn_sil", None)
+
+        if lbl is not None:
+            try:
+                lbl.setText(kalem)
+            except Exception:
+                pass
+
+        tbl = self._table_rotalar_widget()
+        if tbl is None:
+            return
+
+        # Eğer tabloda satır varsa mevcut durakları dialoga bas
+        existing_row = None
+        existing_stops = ""
+        for r in range(tbl.rowCount()):
+            rn = (tbl.item(r, 1).text().strip() if tbl.item(r, 1) else "")
+            st = (tbl.item(r, 0).text().strip() if tbl.item(r, 0) else "")
+            if rn == kalem and (not service_type or st == service_type):
+                existing_row = r
+                existing_stops = (tbl.item(r, 2).text() if tbl.item(r, 2) else "")
+                break
+
+        if txt is not None:
+            try:
+                txt.setText(existing_stops or "")
+                txt.setFocus()
+            except Exception:
+                pass
+
+        def ensure_row():
+            nonlocal existing_row
+            if existing_row is not None:
+                return existing_row
+            r = tbl.rowCount()
+            tbl.insertRow(r)
+            it0 = QTableWidgetItem(service_type or "")
+            it0.setFlags(it0.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            it1 = QTableWidgetItem(kalem)
+            it1.setFlags(it1.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            it2 = QTableWidgetItem("")
+            it3 = QTableWidgetItem("")
+            it3.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            tbl.setItem(r, 0, it0)
+            tbl.setItem(r, 1, it1)
+            tbl.setItem(r, 2, it2)
+            tbl.setItem(r, 3, it3)
+            existing_row = r
+            return r
+
+        def do_save():
+            stops = ""
+            if txt is not None:
+                try:
+                    stops = (txt.text() or "").strip()
+                except Exception:
+                    stops = ""
+            r = ensure_row()
+            cell = tbl.item(r, 2)
+            if cell is None:
+                cell = QTableWidgetItem("")
+                tbl.setItem(r, 2, cell)
+            cell.setText(stops)
+            dlg.accept()
+
+        def do_delete():
+            nonlocal existing_row
+            if existing_row is not None:
+                tbl.removeRow(existing_row)
+                existing_row = None
+            dlg.accept()
+
+        if btn_save is not None:
+            try:
+                btn_save.clicked.connect(do_save)
+            except Exception:
+                pass
+        if btn_del is not None:
+            try:
+                btn_del.clicked.connect(do_delete)
+            except Exception:
+                pass
+
+        self._opening_indibindi_dialog = True
+        try:
+            dlg.exec()
+        finally:
+            self._opening_indibindi_dialog = False
+
+    def _load_saved_routes_into_table(self):
+        """Seçili sözleşme için route_params kayıtlarını table_rotalar'a yükler."""
+        tbl = self._table_rotalar_widget()
+        if tbl is None:
+            return
+
+        tbl.blockSignals(True)
+        tbl.setRowCount(0)
+        tbl.blockSignals(False)
+
+        if not self._selected_contract_id:
+            return
+
+        try:
+            conn = self.db.connect()
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, COALESCE(service_type,''), COALESCE(route_name,''), COALESCE(stops,''), distance_km
+                FROM route_params
+                WHERE contract_id = ?
+                ORDER BY id ASC
+                """,
+                (int(self._selected_contract_id),),
+            )
+            rows = cursor.fetchall()
+            conn.close()
+        except Exception:
+            rows = []
+
+        tbl.blockSignals(True)
+        for rid, stype, rname, stops, km in rows:
+            r = tbl.rowCount()
+            tbl.insertRow(r)
+            values = [stype or "", rname or "", stops or "", "" if km is None else str(km)]
+            for c, v in enumerate(values):
+                it = QTableWidgetItem(str(v))
+                if c in (0, 1):
+                    it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                if c == 3:
+                    it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                if c == 0:
+                    it.setData(Qt.ItemDataRole.UserRole + 101, int(rid))
+                tbl.setItem(r, c, it)
+        tbl.blockSignals(False)
+
+    def _selected_kalem_texts(self):
+        if not hasattr(self, "list_kalemler"):
+            return []
+        idxs = self.list_kalemler.selectedIndexes()
+        out = []
+        for idx in idxs:
+            it = self._kalem_model.itemFromIndex(idx)
+            if it is None:
+                continue
+            s = (it.data(Qt.ItemDataRole.UserRole) or "").strip()
+            if s:
+                out.append(s)
+        return list(dict.fromkeys(out))
+
+    def _add_selected_kalem_to_table(self):
+        if not self._selected_contract_id:
+            QMessageBox.warning(self, "Uyarı", "Önce müşteri ve sözleşme seçiniz.")
+            return
+        tbl = self._table_rotalar_widget()
+        if tbl is None:
+            return
+
+        stype = (self._selected_contract_type or "").strip()
+        kalemler = self._selected_kalem_texts()
+        if not kalemler:
+            QMessageBox.information(self, "Bilgi", "EKLE için soldan en az 1 iş kalemi seçiniz.")
+            return
+
+        existing = set()
+        for r in range(tbl.rowCount()):
+            rn = (tbl.item(r, 1).text().strip() if tbl.item(r, 1) else "")
+            if rn:
+                existing.add(rn.lower())
+
+        for kalem in kalemler:
+            if kalem.lower() in existing:
+                continue
+            r = tbl.rowCount()
+            tbl.insertRow(r)
+            it0 = QTableWidgetItem(stype)
+            it0.setFlags(it0.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            it1 = QTableWidgetItem(kalem)
+            it1.setFlags(it1.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            it2 = QTableWidgetItem("")
+            it3 = QTableWidgetItem("")
+            it3.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            tbl.setItem(r, 0, it0)
+            tbl.setItem(r, 1, it1)
+            tbl.setItem(r, 2, it2)
+            tbl.setItem(r, 3, it3)
+
+    def _remove_selected_rows_from_table(self):
+        tbl = self._table_rotalar_widget()
+        if tbl is None:
+            return
+        rows = sorted({it.row() for it in tbl.selectedItems()}, reverse=True)
+        if not rows:
+            return
+        for r in rows:
+            tbl.removeRow(r)
+
+    def _save_table_rows(self):
+        if not self._selected_contract_id:
+            QMessageBox.warning(self, "Uyarı", "Önce müşteri ve sözleşme seçiniz.")
+            return
+        tbl = self._table_rotalar_widget()
+        if tbl is None or tbl.rowCount() == 0:
+            QMessageBox.information(self, "Bilgi", "Kaydedilecek satır yok.")
+            return
+
+        contract_id = int(self._selected_contract_id)
+        now = QDate.currentDate().toString("yyyy-MM-dd")
+
+        conn = None
+        try:
+            conn = self.db.connect()
+            cursor = conn.cursor()
+            for r in range(tbl.rowCount()):
+                rid = None
+                it0 = tbl.item(r, 0)
+                if it0 is not None:
+                    rid = it0.data(Qt.ItemDataRole.UserRole + 101)
+
+                stype = (tbl.item(r, 0).text().strip() if tbl.item(r, 0) else "")
+                rname = (tbl.item(r, 1).text().strip() if tbl.item(r, 1) else "")
+                stops = (tbl.item(r, 2).text().strip() if tbl.item(r, 2) else "")
+                km_txt = (tbl.item(r, 3).text().strip() if tbl.item(r, 3) else "")
+                if not rname:
+                    continue
+
+                km_val = None
+                try:
+                    km_val = float(km_txt.replace(",", ".")) if km_txt else None
+                except Exception:
+                    km_val = None
+
+                if rid:
+                    cursor.execute(
+                        """
+                        UPDATE route_params
+                        SET service_type = ?, route_name = ?, stops = ?, distance_km = ?
+                        WHERE id = ?
+                        """,
+                        (stype, rname, stops, km_val, int(rid)),
+                    )
+                else:
+                    cursor.execute(
+                        "SELECT contract_number, start_date, end_date FROM contracts WHERE id = ? LIMIT 1",
+                        (contract_id,),
+                    )
+                    crow = cursor.fetchone() or ("", "", "")
+                    cno, sdate, edate = crow[0] or "", crow[1] or "", crow[2] or ""
+                    cursor.execute(
+                        """
+                        INSERT INTO route_params (
+                            contract_id, contract_number, start_date, end_date,
+                            service_type, route_name, start_point, stops, distance_km,
+                            created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (contract_id, cno, sdate, edate, stype, rname, "", stops, km_val, now),
+                    )
+                    new_id = cursor.lastrowid
+                    if it0 is not None:
+                        it0.setData(Qt.ItemDataRole.UserRole + 101, int(new_id))
+
+            conn.commit()
+            QMessageBox.information(self, "Başarılı", "Rotalar kaydedildi.")
+        except Exception as e:
+            try:
+                if conn is not None:
+                    conn.rollback()
+            except Exception:
+                pass
+            QMessageBox.critical(self, "Hata", f"Kayıt hatası:\n{str(e)}")
+        finally:
+            try:
+                if conn is not None:
+                    conn.close()
+            except Exception:
+                pass
+
+        self._load_saved_routes_into_table()
+
+    def _delete_selected_rows_from_db(self):
+        tbl = self._table_rotalar_widget()
+        if tbl is None:
+            return
+
+        selected_rows = sorted({it.row() for it in tbl.selectedItems()})
+        if not selected_rows:
+            return
+
+        ids = []
+        for r in selected_rows:
+            it0 = tbl.item(r, 0)
+            rid = it0.data(Qt.ItemDataRole.UserRole + 101) if it0 is not None else None
+            if rid:
+                ids.append(int(rid))
+
+        if not ids:
+            for r in sorted(selected_rows, reverse=True):
+                tbl.removeRow(r)
+            return
+
+        msg = QMessageBox.question(
+            self,
+            "Onay",
+            "Seçili kayıtlar DB'den silinsin mi?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if msg != QMessageBox.StandardButton.Yes:
+            return
+
+        conn = None
+        try:
+            conn = self.db.connect()
+            cursor = conn.cursor()
+            for rid in ids:
+                cursor.execute("DELETE FROM route_params WHERE id = ?", (rid,))
+            conn.commit()
+        except Exception as e:
+            try:
+                if conn is not None:
+                    conn.rollback()
+            except Exception:
+                pass
+            QMessageBox.critical(self, "Hata", f"Silme hatası:\n{str(e)}")
+            return
+        finally:
+            try:
+                if conn is not None:
+                    conn.close()
+            except Exception:
+                pass
+
+        self._load_saved_routes_into_table()
 
     def _load_contract_details_and_fill_rota(self):
+        # Yeni UI (routes_window.ui) tek tablo: table_rotalar (4 kolon).
+        # Eski akışta bu fonksiyon 5 kolonlu (başlangıç + durak + km) tabloyu dolduruyordu.
+        # Yeni ekranda tablo formatı farklı olduğu için burada sadece sözleşme tipini yükleyip çıkıyoruz.
+        if hasattr(self, "table_rotalar") and not hasattr(self, "table_son"):
+            if not self._selected_contract_id:
+                return
+            try:
+                conn = self.db.connect()
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT contract_type FROM contracts WHERE id = ? LIMIT 1",
+                    (int(self._selected_contract_id),),
+                )
+                row = cursor.fetchone()
+                conn.close()
+                self._selected_contract_type = ((row[0] or "").strip() if row else "")
+            except Exception:
+                self._selected_contract_type = ""
+            return
+
         if not self._selected_contract_id or not hasattr(self, "table_rota"):
             return
         if self.table_rota.columnCount() < 5:
@@ -662,6 +1125,15 @@ class RoutesApp(QWidget):
         self._update_action_buttons()
 
     def _update_action_buttons(self):
+        # Yeni UI (routes_window.ui): pending tablosu (table_son) yok.
+        # Bu ekranda KAYDET/SİL butonlarını pasife çekmeyelim; handler içinde doğrulama var.
+        if hasattr(self, "table_rotalar") and not hasattr(self, "table_son"):
+            if hasattr(self, "btn_kaydet"):
+                self.btn_kaydet.setEnabled(True)
+            if hasattr(self, "btn_sil"):
+                self.btn_sil.setEnabled(True)
+            return
+
         pending = self._pending_exists()
         if hasattr(self, "btn_kaydet"):
             self.btn_kaydet.setEnabled(pending)
