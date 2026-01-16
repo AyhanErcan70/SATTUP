@@ -2,8 +2,7 @@ import re
 from datetime import datetime
 
 from PyQt6 import uic
-from PyQt6.QtCore import QDate, QTime, Qt
-
+from PyQt6.QtCore import QDate, Qt
 from PyQt6.QtGui import QColor, QStandardItem, QStandardItemModel
 from PyQt6.QtWidgets import (
     QAbstractItemView,
@@ -272,7 +271,7 @@ class TripsGridApp(QWidget):
             rid_s = str(rid)
             self._selected_route_map[rid_s] = {
                 "route_name": (rname or ""),
-                "stops": (stops or ""),
+                \"stops\": (stops or \"\"),
                 "distance_km": km,
             }
             it = QStandardItem(str(rname or ""))
@@ -327,22 +326,6 @@ class TripsGridApp(QWidget):
             pairs.append((idx, g, c))
         return pairs
 
-    def _apply_default_times_to_widgets(self):
-        fixed = self._fixed_time_blocks()
-        pairs = self._time_pairs()
-        if len(pairs) != 3 or len(fixed) < 6:
-            return
-
-        try:
-            pairs[0][1].setTime(QTime.fromString(str(fixed[0]), "HH:mm"))
-            pairs[0][2].setTime(QTime.fromString(str(fixed[1]), "HH:mm"))
-            pairs[1][1].setTime(QTime.fromString(str(fixed[2]), "HH:mm"))
-            pairs[1][2].setTime(QTime.fromString(str(fixed[3]), "HH:mm"))
-            pairs[2][1].setTime(QTime.fromString(str(fixed[4]), "HH:mm"))
-            pairs[2][2].setTime(QTime.fromString(str(fixed[5]), "HH:mm"))
-        except Exception:
-            return
-
     def _clear_inputs(self):
         if hasattr(self, "txt_kalem_sec"):
             self.txt_kalem_sec.clear()
@@ -385,12 +368,12 @@ class TripsGridApp(QWidget):
             QMessageBox.information(self, "Bilgi", "Önce iş kalemi (hat) seçiniz.")
             return
 
-        # Sefer satırı oluşturken araç/şoför seçimi bu satırlara gömülür.
+        # Sefer satırı oluştururken araç/şoför seçimi bu satırlara gömülür.
         vid = self.cmb_arac_sec.currentData() if hasattr(self, "cmb_arac_sec") else None
         did = self.cmb_surucu_sec.currentData() if hasattr(self, "cmb_surucu_sec") else None
 
         route_name = self._selected_route_map.get(str(route_id), {}).get("route_name", "")
-        stops_txt = self._selected_route_map.get(str(route_id), {}).get("stops", "")
+        stops_txt = self._selected_route_map.get(str(route_id), {}).get(\"stops\", \"\")
         plate = self._vehicle_map.get(str(vid or ""), "")
         dname = self._driver_map.get(str(did or ""), "")
 
@@ -402,7 +385,7 @@ class TripsGridApp(QWidget):
             rr = self.tbl_grid.rowCount()
             self.tbl_grid.insertRow(rr)
             it_route = QTableWidgetItem(route_name)
-            it_tb = QTableWidgetItem(str(stops_txt or ""))
+            it_tb = QTableWidgetItem(str(stops_txt or \"\"))
             it_g = QTableWidgetItem(gtxt)
             it_c = QTableWidgetItem("")
             it_v = QTableWidgetItem(plate)
@@ -413,7 +396,7 @@ class TripsGridApp(QWidget):
             it_tb.setData(Qt.ItemDataRole.UserRole + 2, f"G{idx}")
             it_tb.setData(Qt.ItemDataRole.UserRole + 3, (None if vid is None else str(vid)))
             it_tb.setData(Qt.ItemDataRole.UserRole + 4, (None if did is None else str(did)))
-            it_tb.setToolTip(f"G{idx}")
+            it_tb.setToolTip(f\"G{idx}\")
             self.tbl_grid.setItem(rr, 0, it_route)
             self.tbl_grid.setItem(rr, 1, it_tb)
             self.tbl_grid.setItem(rr, 2, it_g)
@@ -425,7 +408,7 @@ class TripsGridApp(QWidget):
             rr2 = self.tbl_grid.rowCount()
             self.tbl_grid.insertRow(rr2)
             it_route2 = QTableWidgetItem(route_name)
-            it_tb2 = QTableWidgetItem(str(stops_txt or ""))
+            it_tb2 = QTableWidgetItem(str(stops_txt or \"\"))
             it_g2 = QTableWidgetItem("")
             it_c2 = QTableWidgetItem(ctxt)
             it_v2 = QTableWidgetItem(plate)
@@ -436,7 +419,7 @@ class TripsGridApp(QWidget):
             it_tb2.setData(Qt.ItemDataRole.UserRole + 2, f"C{idx}")
             it_tb2.setData(Qt.ItemDataRole.UserRole + 3, (None if vid is None else str(vid)))
             it_tb2.setData(Qt.ItemDataRole.UserRole + 4, (None if did is None else str(did)))
-            it_tb2.setToolTip(f"C{idx}")
+            it_tb2.setToolTip(f\"C{idx}\")
             self.tbl_grid.setItem(rr2, 0, it_route2)
             self.tbl_grid.setItem(rr2, 1, it_tb2)
             self.tbl_grid.setItem(rr2, 2, it_g2)
@@ -815,8 +798,6 @@ class TripsGridApp(QWidget):
         if not contract_id or not service_type:
             return
 
-        self._apply_default_times_to_widgets()
-
         # Kalem listesi
         self._load_kalemler_from_contract(int(contract_id), str(service_type))
 
@@ -825,30 +806,11 @@ class TripsGridApp(QWidget):
         if not plan_map:
             return
 
-        def _tb_sort_key(tb_val: str):
-            tbs = str(tb_val or "").strip().upper()
-            m = re.match(r"^([GC])(\d)$", tbs)
-            if m:
-                gc = 0 if m.group(1) == "G" else 1
-                return (0, int(m.group(2)), gc)
-            parsed = self._parse_time(tbs)
-            if parsed is not None:
-                hh, mm = parsed
-                return (1, hh * 60 + mm, 0)
-            return (2, 9999, 0)
-
-        chosen_vids = set()
-        chosen_dids = set()
-
-        for (rid, tb), rec in sorted(plan_map.items(), key=lambda x: (int(x[0][0]), _tb_sort_key(x[0][1]))):
+        for (rid, tb), rec in plan_map.items():
             route_name = self._selected_route_map.get(str(rid), {}).get("route_name", "")
-            stops_txt = self._selected_route_map.get(str(rid), {}).get("stops", "")
+            stops_txt = self._selected_route_map.get(str(rid), {}).get(\"stops\", \"\")
             vid = rec.get("vehicle_id")
             did = rec.get("driver_id")
-            if vid not in (None, ""):
-                chosen_vids.add(str(vid))
-            if did not in (None, ""):
-                chosen_dids.add(str(did))
             plate = self._vehicle_map.get(str(vid or ""), "")
             dname = self._driver_map.get(str(did or ""), "")
 
@@ -856,29 +818,9 @@ class TripsGridApp(QWidget):
             self.tbl_grid.insertRow(rr)
 
             it_route = QTableWidgetItem(route_name)
-            it_tb = QTableWidgetItem(str(stops_txt or ""))
-
-            tbs = str(tb or "").strip().upper()
-            gtxt = ""
-            ctxt = ""
-            m = re.match(r"^([GC])(\d)$", tbs)
-            if m:
-                idx = int(m.group(2))
-                g = getattr(self, f"time_g{idx}", None)
-                c = getattr(self, f"time_c{idx}", None)
-                if m.group(1) == "G" and g is not None:
-                    gtxt = g.time().toString("HH:mm")
-                elif m.group(1) == "C" and c is not None:
-                    ctxt = c.time().toString("HH:mm")
-            else:
-                parsed = self._parse_time(tbs)
-                if parsed is not None:
-                    hh, mm = parsed
-                    gtxt = f"{hh:02d}:{mm:02d}"
-                    ctxt = self._add_minutes(hh, mm, 15)
-
-            it_g = QTableWidgetItem(gtxt)
-            it_c = QTableWidgetItem(ctxt)
+            it_tb = QTableWidgetItem(str(stops_txt or \"\"))
+            it_g = QTableWidgetItem("")
+            it_c = QTableWidgetItem("")
             it_v = QTableWidgetItem(plate)
             it_d = QTableWidgetItem(dname)
 
@@ -890,7 +832,7 @@ class TripsGridApp(QWidget):
             it_tb.setData(Qt.ItemDataRole.UserRole + 2, str(tb or ""))
             it_tb.setData(Qt.ItemDataRole.UserRole + 3, (None if vid is None else str(vid)))
             it_tb.setData(Qt.ItemDataRole.UserRole + 4, (None if did is None else str(did)))
-            it_tb.setToolTip(str(tb or ""))
+            it_tb.setToolTip(str(tb or \"\"))
 
             self.tbl_grid.setItem(rr, 0, it_route)
             self.tbl_grid.setItem(rr, 1, it_tb)
@@ -898,24 +840,6 @@ class TripsGridApp(QWidget):
             self.tbl_grid.setItem(rr, 3, it_c)
             self.tbl_grid.setItem(rr, 4, it_v)
             self.tbl_grid.setItem(rr, 5, it_d)
-
-        if hasattr(self, "cmb_arac_sec") and len(chosen_vids) == 1:
-            only_vid = next(iter(chosen_vids))
-            try:
-                idx = self.cmb_arac_sec.findData(only_vid)
-                if idx >= 0:
-                    self.cmb_arac_sec.setCurrentIndex(idx)
-            except Exception:
-                pass
-
-        if hasattr(self, "cmb_surucu_sec") and len(chosen_dids) == 1:
-            only_did = next(iter(chosen_dids))
-            try:
-                idx = self.cmb_surucu_sec.findData(only_did)
-                if idx >= 0:
-                    self.cmb_surucu_sec.setCurrentIndex(idx)
-            except Exception:
-                pass
 
     # ------------------------- header menu (custom times) -------------------------
     def _open_grid_header_menu(self, pos):

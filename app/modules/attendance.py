@@ -665,6 +665,36 @@ class BulkAttendanceDialog(QDialog):
             except Exception:
                 return set()
 
+        def _tb_sort_key(tb_val: str):
+            tbs = str(tb_val or "").strip().upper()
+            m = re.match(r"^([GC])(\d)$", tbs)
+            if m:
+                gc = 0 if m.group(1) == "G" else 1
+                return (0, int(m.group(2)), gc)
+            parsed = _parse_time(tbs)
+            if parsed is not None:
+                hh, mm = parsed
+                return (1, hh * 60 + mm, 0)
+            return (2, 9999, 0)
+
+        def _time_text_for_time_block(tb_val: str) -> str:
+            tbs = str(tb_val or "").strip().upper()
+            m = re.match(r"^([GC])(\d)$", tbs)
+            if m:
+                idx = int(m.group(2))
+                fixed = _fixed_time_blocks()
+                if len(fixed) >= 6 and idx in (1, 2, 3):
+                    gi = (idx - 1) * 2
+                    ci = gi + 1
+                    if m.group(1) == "G":
+                        return str(fixed[gi])
+                    return str(fixed[ci])
+            parsed = _parse_time(tbs)
+            if parsed is not None:
+                hh, mm = parsed
+                return f"{hh:02d}:{mm:02d}"
+            return str(tb_val or "")
+
         def add_subrow(route_params_id: int, route_name: str, time_block: str, label: str):
             row = self.table.rowCount()
             self.table.insertRow(row)
@@ -690,7 +720,7 @@ class BulkAttendanceDialog(QDialog):
                 cmb_d.addItem(name, did)
             self.table.setCellWidget(row, self._col_driver, cmb_d)
 
-            t_item = QTableWidgetItem(label)
+            t_item = QTableWidgetItem(_time_text_for_time_block(label))
             self.table.setItem(row, self._col_time_text, t_item)
 
             for d in range(1, self.max_days + 1):
@@ -755,36 +785,18 @@ class BulkAttendanceDialog(QDialog):
         self._planned_keys = _planned_keys_for_context(int(self.contract_id), self.month_key, str(self.service_type))
 
         if self._planned_keys:
-            all_blocks = _time_blocks_for_context(int(self.contract_id), self.month_key, str(self.service_type))
-            planned_blocks = []
-            seen = set()
-            for b in all_blocks:
-                if not b:
-                    continue
-                if b in seen:
-                    continue
-                for _rid, tb in self._planned_keys:
-                    if str(tb) == str(b):
-                        planned_blocks.append(str(b))
-                        seen.add(str(b))
-                        break
-
-            for _rid, tb in self._planned_keys:
-                tbs = str(tb)
-                if tbs and tbs not in seen:
-                    planned_blocks.append(tbs)
-                    seen.add(tbs)
-
+            planned_blocks = sorted({str(tb) for _rid, tb in self._planned_keys if str(tb)}, key=_tb_sort_key)
             for rid, rname, _km in self._route_rows:
                 for tb in planned_blocks:
                     if (int(rid), str(tb)) in self._planned_keys:
                         add_subrow(int(rid), rname or "", str(tb), str(tb))
         else:
-            time_blocks = _time_blocks_for_context(int(self.contract_id), self.month_key, str(self.service_type))
+            time_blocks = ["G1", "C1", "G2", "C2", "G3", "C3"]
             legacy_blocks = _legacy_time_blocks_for_month(start_date, end_date)
             for lb in legacy_blocks:
                 if lb not in time_blocks:
                     time_blocks.append(lb)
+            time_blocks = sorted([str(x) for x in time_blocks if str(x)], key=_tb_sort_key)
 
             for rid, rname, _km in self._route_rows:
                 for tb in time_blocks:
