@@ -35,6 +35,8 @@ class TripsGridApp(QWidget):
         self._vehicle_map = {}
         self._driver_map = {}
 
+        self._assignment_ready = False
+
         self._kalem_model = QStandardItemModel()
         if hasattr(self, "list_kalemler"):
             try:
@@ -168,21 +170,19 @@ class TripsGridApp(QWidget):
 
     # ------------------------- setup -------------------------
     def _setup_tables(self):
-        if hasattr(self, "table_sefer"):
-            self.table_sefer.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-            self.table_sefer.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-            self.table_sefer.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-            self.table_sefer.setAlternatingRowColors(True)
-            self.table_sefer.verticalHeader().setVisible(False)
-            self.table_sefer.verticalHeader().setDefaultSectionSize(20)
-            self.table_sefer.horizontalHeader().setHighlightSections(False)
-            self.table_sefer.horizontalHeader().setStretchLastSection(False)
-            
-            headers = ["GÜZERGAH", "DURAKLAR", "GİRİŞ", "ÇIKIŞ", "ARAÇ PLAKA", "SÜRÜCÜ"]
-            self.table_sefer.setColumnCount(len(headers))
-            self.table_sefer.setHorizontalHeaderLabels(headers)
+        if hasattr(self, "tbl_grid"):
+            self.tbl_grid.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+            self.tbl_grid.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+            self.tbl_grid.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+            self.tbl_grid.setAlternatingRowColors(True)
+            self.tbl_grid.verticalHeader().setVisible(False)
+            self.tbl_grid.horizontalHeader().setHighlightSections(False)
+            self.tbl_grid.horizontalHeader().setStretchLastSection(False)
 
-            h = self.table_sefer.horizontalHeader()
+            headers = ["Güzergah", "Blok", "Giriş", "Çıkış", "Araç", "Şoför"]
+            self.tbl_grid.setColumnCount(len(headers))
+            self.tbl_grid.setHorizontalHeaderLabels(headers)
+            h = self.tbl_grid.horizontalHeader()
             h.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
             h.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
             h.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
@@ -211,6 +211,14 @@ class TripsGridApp(QWidget):
             except Exception:
                 pass
 
+        if hasattr(self, "btn_yenile"):
+            self.btn_yenile.clicked.connect(self._reload_grid)
+        if hasattr(self, "btn_temizle"):
+            self.btn_temizle.clicked.connect(self._clear_inputs)
+        if hasattr(self, "btn_ekle"):
+            self.btn_ekle.clicked.connect(self._add_to_grid)
+        if hasattr(self, "btn_cikar"):
+            self.btn_cikar.clicked.connect(self._remove_selected_grid_rows)
         if hasattr(self, "btn_kaydet"):
             self.btn_kaydet.clicked.connect(self._save_table_to_plan)
         if hasattr(self, "btn_satir_sil"):
@@ -363,24 +371,24 @@ class TripsGridApp(QWidget):
         try:
             conn = self.db.connect()
             cursor = conn.cursor()
-            q = (
-                "SELECT id, COALESCE(route_name,''), COALESCE(movement_type,''), stops, distance_km "
-                "FROM route_params "
-                f"WHERE contract_id = ? AND service_type IN ({placeholders}) AND COALESCE(route_name,'') <> '' "
-                "ORDER BY id ASC"
+            cursor.execute(
+                """
+                SELECT id, COALESCE(route_name,''), distance_km
+                FROM route_params
+                WHERE contract_id = ? AND service_type = ? AND COALESCE(route_name,'') <> ''
+                ORDER BY id ASC
+                """,
+                (int(contract_id), str(service_type)),
             )
-            cursor.execute(q, tuple([int(contract_id)] + [str(x) for x in st_values]))
             rows = cursor.fetchall()
             conn.close()
         except Exception:
             rows = []
 
-        for rid, rname, mtype, stops, km in rows:
+        for rid, rname, km in rows:
             rid_s = str(rid)
             self._selected_route_map[rid_s] = {
                 "route_name": (rname or ""),
-                "movement_type": (mtype or ""),
-                "stops": (stops or ""),
                 "distance_km": km,
             }
             disp = f"{(rname or '').strip()} - {(mtype or '').strip()}" if (mtype or "").strip() else str(rname or "")
@@ -429,22 +437,26 @@ class TripsGridApp(QWidget):
         if not route_id:
             return
 
-        rec = self._selected_route_map.get(str(route_id)) or {}
-        route_name = str(rec.get("route_name") or "").strip()
-        movement_type = str(rec.get("movement_type") or "").strip()
-        stops_txt = str(rec.get("stops") or "")
-        if not route_name:
-            return
+    def _time_pairs(self):
+        pairs = []
+        for idx in (1, 2, 3):
+            g = getattr(self, f"time_g{idx}", None)
+            c = getattr(self, f"time_c{idx}", None)
+            if g is None or c is None:
+                continue
+            pairs.append((idx, g, c))
+        return pairs
 
-        # Not: list_kalemler seçimi korunur. Dialog kapanınca grid yenilenmez; sadece tabloya satır ekler/günceller.
-        self._open_trips_dialog(route_id=str(route_id), route_name=route_name, movement_type=movement_type, stops_txt=stops_txt)
+    def _clear_inputs(self):
+        if hasattr(self, "txt_kalem_sec"):
+            self.txt_kalem_sec.clear()
+        if hasattr(self, "cmb_arac_sec"):
+            self.cmb_arac_sec.setCurrentIndex(0)
+        if hasattr(self, "cmb_surucu_sec"):
+            self.cmb_surucu_sec.setCurrentIndex(0)
 
-    def _open_trips_dialog(self, route_id: str, route_name: str, movement_type: str, stops_txt: str):
-        dlg = QDialog(self)
-        try:
-            uic.loadUi(get_ui_path("trips_dialog.ui"), dlg)
-        except Exception as e:
-            QMessageBox.critical(self, "Hata", f"trips_dialog.ui yüklenemedi:\n{str(e)}")
+    def _add_to_grid(self):
+        if not hasattr(self, "tbl_grid"):
             return
 
         # Araç / sürücü listelerini doldur
@@ -487,86 +499,71 @@ class TripsGridApp(QWidget):
         if btn_kaydet is None:
             return
 
-        def _add_or_update_row(time_in: str, time_out: str, vehicle_id, driver_id):
-            if not hasattr(self, "table_sefer"):
-                return
-            table = self.table_sefer
-
-            # Aynı route_id + time_in satırı varsa güncelle
-            existing_row = None
-            for r in range(table.rowCount()):
-                it_meta = table.item(r, 1)
-                if it_meta is None:
-                    continue
-                rid0 = it_meta.data(Qt.ItemDataRole.UserRole + 1)
-                tb0 = it_meta.data(Qt.ItemDataRole.UserRole + 2)
-                if str(rid0 or "") == str(route_id) and str(tb0 or "") == str(time_in):
-                    existing_row = r
-                    break
-
-            rr = existing_row if existing_row is not None else table.rowCount()
-            if existing_row is None:
-                table.insertRow(rr)
-
-            plate = self._vehicle_map.get(str(vehicle_id or ""), "")
-            dname = self._driver_map.get(str(driver_id or ""), "")
-
-            it_route = QTableWidgetItem(route_name)
-            it_stops = QTableWidgetItem(str(stops_txt or ""))
-            it_in = QTableWidgetItem(str(time_in or ""))
-            it_out = QTableWidgetItem(str(time_out or ""))
-            it_vehicle = QTableWidgetItem(str(plate or ""))
-            it_driver = QTableWidgetItem(str(dname or ""))
-            for it in (it_route, it_stops, it_in, it_out, it_vehicle, it_driver):
-                it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
-
-            # meta: route_params_id / time_block / vehicle_id / driver_id / movement_type
-            it_stops.setData(Qt.ItemDataRole.UserRole + 1, str(route_id))
-            it_stops.setData(Qt.ItemDataRole.UserRole + 2, str(time_in))
-            it_stops.setData(Qt.ItemDataRole.UserRole + 3, (None if vehicle_id in (None, "") else str(vehicle_id)))
-            it_stops.setData(Qt.ItemDataRole.UserRole + 4, (None if driver_id in (None, "") else str(driver_id)))
-            it_stops.setData(Qt.ItemDataRole.UserRole + 5, str(movement_type or ""))
-
-            table.setItem(rr, 0, it_route)
-            table.setItem(rr, 1, it_stops)
-            table.setItem(rr, 2, it_in)
-            table.setItem(rr, 3, it_out)
-            table.setItem(rr, 4, it_vehicle)
-            table.setItem(rr, 5, it_driver)
-
-        def _on_save_clicked():
-            vid = cmb_arac.currentData() if cmb_arac is not None else None
-            did = cmb_sur.currentData() if cmb_sur is not None else None
-
-            any_added = False
-            for chk, cmb_g, cmb_c in pairs:
-                if chk is None or not chk.isChecked():
-                    continue
-                if cmb_g is None or cmb_c is None:
-                    continue
-                tin = str(cmb_g.currentText() or "").strip()
-                tout = str(cmb_c.currentText() or "").strip()
-                if not tin:
-                    continue
-                _add_or_update_row(time_in=tin, time_out=tout, vehicle_id=vid, driver_id=did)
-                any_added = True
-
-            if not any_added:
-                QMessageBox.information(dlg, "Bilgi", "Kaydedilecek sefer tipi seçiniz.")
-                return
-            dlg.accept()
-
-        try:
-            btn_kaydet.clicked.connect(_on_save_clicked)
-        except Exception:
-            pass
-
-        dlg.exec()
-
-    def _delete_selected_table_rows(self):
-        if not hasattr(self, "table_sefer"):
+        route_id = self._selected_route_id()
+        if not route_id:
+            QMessageBox.information(self, "Bilgi", "Önce iş kalemi (hat) seçiniz.")
             return
-        rows = sorted({it.row() for it in self.table_sefer.selectedItems()}, reverse=True)
+
+        # Sefer satırı oluştururken araç/şoför seçimi bu satırlara gömülür.
+        vid = self.cmb_arac_sec.currentData() if hasattr(self, "cmb_arac_sec") else None
+        did = self.cmb_surucu_sec.currentData() if hasattr(self, "cmb_surucu_sec") else None
+
+        route_name = self._selected_route_map.get(str(route_id), {}).get("route_name", "")
+        plate = self._vehicle_map.get(str(vid or ""), "")
+        dname = self._driver_map.get(str(did or ""), "")
+
+        for idx, g, c in self._time_pairs():
+            gtxt = g.time().toString("HH:mm")
+            ctxt = c.time().toString("HH:mm")
+
+            # Gidiş
+            rr = self.tbl_grid.rowCount()
+            self.tbl_grid.insertRow(rr)
+            it_route = QTableWidgetItem(route_name)
+            it_tb = QTableWidgetItem(f"G{idx}")
+            it_g = QTableWidgetItem(gtxt)
+            it_c = QTableWidgetItem("")
+            it_v = QTableWidgetItem(plate)
+            it_d = QTableWidgetItem(dname)
+            for it in (it_route, it_tb, it_g, it_c, it_v, it_d):
+                it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            it_tb.setData(Qt.ItemDataRole.UserRole + 1, str(route_id))
+            it_tb.setData(Qt.ItemDataRole.UserRole + 2, f"G{idx}")
+            it_tb.setData(Qt.ItemDataRole.UserRole + 3, (None if vid is None else str(vid)))
+            it_tb.setData(Qt.ItemDataRole.UserRole + 4, (None if did is None else str(did)))
+            self.tbl_grid.setItem(rr, 0, it_route)
+            self.tbl_grid.setItem(rr, 1, it_tb)
+            self.tbl_grid.setItem(rr, 2, it_g)
+            self.tbl_grid.setItem(rr, 3, it_c)
+            self.tbl_grid.setItem(rr, 4, it_v)
+            self.tbl_grid.setItem(rr, 5, it_d)
+
+            # Geliş
+            rr2 = self.tbl_grid.rowCount()
+            self.tbl_grid.insertRow(rr2)
+            it_route2 = QTableWidgetItem(route_name)
+            it_tb2 = QTableWidgetItem(f"C{idx}")
+            it_g2 = QTableWidgetItem("")
+            it_c2 = QTableWidgetItem(ctxt)
+            it_v2 = QTableWidgetItem(plate)
+            it_d2 = QTableWidgetItem(dname)
+            for it in (it_route2, it_tb2, it_g2, it_c2, it_v2, it_d2):
+                it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            it_tb2.setData(Qt.ItemDataRole.UserRole + 1, str(route_id))
+            it_tb2.setData(Qt.ItemDataRole.UserRole + 2, f"C{idx}")
+            it_tb2.setData(Qt.ItemDataRole.UserRole + 3, (None if vid is None else str(vid)))
+            it_tb2.setData(Qt.ItemDataRole.UserRole + 4, (None if did is None else str(did)))
+            self.tbl_grid.setItem(rr2, 0, it_route2)
+            self.tbl_grid.setItem(rr2, 1, it_tb2)
+            self.tbl_grid.setItem(rr2, 2, it_g2)
+            self.tbl_grid.setItem(rr2, 3, it_c2)
+            self.tbl_grid.setItem(rr2, 4, it_v2)
+            self.tbl_grid.setItem(rr2, 5, it_d2)
+
+    def _remove_selected_grid_rows(self):
+        if not hasattr(self, "tbl_grid"):
+            return
+        rows = sorted({it.row() for it in self.tbl_grid.selectedItems()}, reverse=True)
         if not rows:
             return
         for r in rows:
@@ -688,6 +685,12 @@ class TripsGridApp(QWidget):
         if not hasattr(self, "table_sefer"):
             return
 
+        # Header'ı koru
+        if self.tbl_grid.columnCount() == 0:
+            headers = ["Güzergah", "Blok", "Giriş", "Çıkış", "Araç", "Şoför"]
+            self.tbl_grid.setColumnCount(len(headers))
+            self.tbl_grid.setHorizontalHeaderLabels(headers)
+
         self._load_vehicle_driver_maps()
 
         contract_id = self._selected_contract_id
@@ -710,32 +713,10 @@ class TripsGridApp(QWidget):
         if not plan_map:
             return
 
-        def _tb_sort_key(tb_val: str):
-            parsed = self._parse_time(str(tb_val or "").strip())
-            if parsed is not None:
-                hh, mm = parsed
-                return hh * 60 + mm
-            return 9999
-
-        for (rid, tb), prec in sorted(plan_map.items(), key=lambda x: (int(x[0][0]), _tb_sort_key(x[0][1]))):
-            rrec = self._selected_route_map.get(str(rid)) or {}
-            route_name = str(rrec.get("route_name") or "")
-            movement_type = str(rrec.get("movement_type") or "")
-            stops_txt = str(rrec.get("stops") or "")
-            vid = prec.get("vehicle_id")
-            did = prec.get("driver_id")
-
-            tin = str(tb or "")
-            tout = ""
-            legacy = self._legacy_tb_to_times(tin)
-            if legacy is not None:
-                tin, tout = legacy
-            else:
-                parsed = self._parse_time(tin)
-                if parsed is not None:
-                    hh, mm = parsed
-                    tout = self._add_minutes(hh, mm, 15)
-
+        for (rid, tb), rec in plan_map.items():
+            route_name = self._selected_route_map.get(str(rid), {}).get("route_name", "")
+            vid = rec.get("vehicle_id")
+            did = rec.get("driver_id")
             plate = self._vehicle_map.get(str(vid or ""), "")
             dname = self._driver_map.get(str(did or ""), "")
 
@@ -743,24 +724,411 @@ class TripsGridApp(QWidget):
             self.table_sefer.insertRow(rr)
 
             it_route = QTableWidgetItem(route_name)
-            it_stops = QTableWidgetItem(stops_txt)
-            it_in = QTableWidgetItem(tin)
-            it_out = QTableWidgetItem(tout)
+            it_tb = QTableWidgetItem(str(tb or ""))
+            it_g = QTableWidgetItem("")
+            it_c = QTableWidgetItem("")
             it_v = QTableWidgetItem(plate)
             it_d = QTableWidgetItem(dname)
             for it in (it_route, it_stops, it_in, it_out, it_v, it_d):
                 it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
 
-            it_stops.setData(Qt.ItemDataRole.UserRole + 1, str(rid))
-            it_stops.setData(Qt.ItemDataRole.UserRole + 2, str(tb or ""))
-            it_stops.setData(Qt.ItemDataRole.UserRole + 3, (None if vid is None else str(vid)))
-            it_stops.setData(Qt.ItemDataRole.UserRole + 4, (None if did is None else str(did)))
-            it_stops.setData(Qt.ItemDataRole.UserRole + 5, str(movement_type or ""))
+            # Data-roles: route_id / time_block / vehicle_id / driver_id
+            it_tb.setData(Qt.ItemDataRole.UserRole + 1, str(rid))
+            it_tb.setData(Qt.ItemDataRole.UserRole + 2, str(tb or ""))
+            it_tb.setData(Qt.ItemDataRole.UserRole + 3, (None if vid is None else str(vid)))
+            it_tb.setData(Qt.ItemDataRole.UserRole + 4, (None if did is None else str(did)))
 
-            self.table_sefer.setItem(rr, 0, it_route)
-            self.table_sefer.setItem(rr, 1, it_stops)
-            self.table_sefer.setItem(rr, 2, it_in)
-            self.table_sefer.setItem(rr, 3, it_out)
-            self.table_sefer.setItem(rr, 4, it_v)
-            self.table_sefer.setItem(rr, 5, it_d)
-            it_route.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            self.tbl_grid.setItem(rr, 0, it_route)
+            self.tbl_grid.setItem(rr, 1, it_tb)
+            self.tbl_grid.setItem(rr, 2, it_g)
+            self.tbl_grid.setItem(rr, 3, it_c)
+            self.tbl_grid.setItem(rr, 4, it_v)
+            self.tbl_grid.setItem(rr, 5, it_d)
+
+    # ------------------------- header menu (custom times) -------------------------
+    def _open_grid_header_menu(self, pos):
+        if not self._selected_contract_id:
+            return
+        service_type = self._service_type()
+        if not service_type:
+            return
+        menu = QMenu(self)
+        act = menu.addAction("Özel Saatleri Ayarla")
+        chosen = menu.exec(self.tbl_grid.horizontalHeader().mapToGlobal(pos))
+        if chosen != act:
+            return
+
+        month = self._month_key()
+        c1, c2 = self._get_custom_times(int(self._selected_contract_id), month, str(service_type))
+        v1, ok1 = QInputDialog.getText(self, "Özel Saat 1", "HH:MM", text=(c1 or ""))
+        if not ok1:
+            return
+        v2, ok2 = QInputDialog.getText(self, "Özel Saat 2", "HH:MM", text=(c2 or ""))
+        if not ok2:
+            return
+        v1 = (v1 or "").strip()
+        v2 = (v2 or "").strip()
+        if v1 and self._parse_time(v1) is None:
+            QMessageBox.warning(self, "Uyarı", "Özel Saat 1 formatı geçersiz (HH:MM).")
+            return
+        if v2 and self._parse_time(v2) is None:
+            QMessageBox.warning(self, "Uyarı", "Özel Saat 2 formatı geçersiz (HH:MM).")
+            return
+        self._set_custom_times(int(self._selected_contract_id), month, str(service_type), v1, v2)
+        self._reload_grid()
+
+    # ------------------------- selection -> alloc -------------------------
+    def _selected_grid_cells(self):
+        if not hasattr(self, "tbl_grid"):
+            return []
+        cells = []
+        for it in self.tbl_grid.selectedItems():
+            r, c = it.row(), it.column()
+            if c < 3:
+                continue
+            route_id = it.data(Qt.ItemDataRole.UserRole + 1)
+            time_block = it.data(Qt.ItemDataRole.UserRole + 2)
+            if route_id is None:
+                continue
+            tb = str(time_block or "")
+            if not tb:
+                continue
+            cells.append((r, c, str(route_id), tb))
+
+        uniq = []
+        seen = set()
+        for x in cells:
+            key = (x[2], x[3])
+            if key in seen:
+                continue
+            seen.add(key)
+            uniq.append(x)
+        return uniq
+
+    def _alloc_from_selection(self, append: bool = False):
+        if self._is_current_locked():
+            QMessageBox.information(self, "Bilgi", "Bu dönem kilitli. Değişiklik yapılamaz.")
+            return
+        if not hasattr(self, "tbl_alloc"):
+            return
+
+        cells = self._selected_grid_cells()
+        if not cells:
+            QMessageBox.information(self, "Bilgi", "EKLE için grid'den en az 1 hücre seçiniz.")
+            self._refresh_note_from_selection()
+            return
+
+        if not append:
+            self.tbl_alloc.setRowCount(0)
+        else:
+            existing = set()
+            for r in range(self.tbl_alloc.rowCount()):
+                it = self.tbl_alloc.item(r, 0)
+                rid = it.data(Qt.ItemDataRole.UserRole + 1) if it else None
+                tb = it.data(Qt.ItemDataRole.UserRole + 2) if it else None
+                if rid and tb:
+                    existing.add((str(rid), str(tb)))
+            cells = [c for c in cells if (c[2], c[3]) not in existing]
+            if not cells:
+                QMessageBox.information(self, "Bilgi", "Seçili hücreler zaten atama tablosunda.")
+                self._refresh_note_from_selection()
+                return
+
+        plan_map = None
+        if self._selected_contract_id and self._service_type():
+            plan_map = self._load_plan_map(
+                int(self._selected_contract_id), self._month_key(), str(self._service_type())
+            )
+
+        for _r, _c, route_id, tb in cells:
+            row = self.tbl_alloc.rowCount()
+            self.tbl_alloc.insertRow(row)
+
+            route_name = self._selected_route_map.get(str(route_id), {}).get("route_name", "")
+            it_route = QTableWidgetItem(route_name)
+            it_route.setFlags(it_route.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            it_route.setData(Qt.ItemDataRole.UserRole + 1, str(route_id))
+            it_route.setData(Qt.ItemDataRole.UserRole + 2, tb)
+            self.tbl_alloc.setItem(row, 0, it_route)
+
+            it_tb = QTableWidgetItem(tb)
+            it_tb.setFlags(it_tb.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.tbl_alloc.setItem(row, 1, it_tb)
+
+            cmb_v = QComboBox()
+            cmb_v.addItem("Seçiniz...", None)
+            for vcode, plate in self._vehicle_map.items():
+                cmb_v.addItem(plate, vcode)
+            self.tbl_alloc.setCellWidget(row, 2, cmb_v)
+
+            cmb_d = QComboBox()
+            cmb_d.addItem("Seçiniz...", None)
+            for did, name in self._driver_map.items():
+                cmb_d.addItem(name, did)
+            self.tbl_alloc.setCellWidget(row, 3, cmb_d)
+
+            if plan_map is not None:
+                rec = plan_map.get((str(route_id), tb))
+                if rec is not None:
+                    vid = str(rec.get("vehicle_id") or "")
+                    did = str(rec.get("driver_id") or "")
+                    if vid:
+                        idx = cmb_v.findData(vid)
+                        if idx >= 0:
+                            cmb_v.setCurrentIndex(idx)
+                    if did:
+                        idx = cmb_d.findData(did)
+                        if idx >= 0:
+                            cmb_d.setCurrentIndex(idx)
+
+        self._refresh_note_from_selection()
+
+    def _on_grid_selection_changed(self):
+        self._alloc_from_selection(append=False)
+
+    # ------------------------- save / clear allocation -------------------------
+    def _is_current_locked(self) -> bool:
+        if not self._selected_contract_id or not self._service_type():
+            return False
+        return self._is_locked(int(self._selected_contract_id), self._month_key(), str(self._service_type()))
+
+    def _apply_defaults_to_selection(self):
+        if self._is_current_locked():
+            QMessageBox.information(self, "Bilgi", "Bu dönem kilitli. Değişiklik yapılamaz.")
+            return
+        if not hasattr(self, "cmb_default_vehicle") or not hasattr(self, "cmb_default_driver"):
+            return
+        vid = self.cmb_default_vehicle.currentData()
+        did = self.cmb_default_driver.currentData()
+        if not vid and not did:
+            QMessageBox.information(self, "Bilgi", "Varsayılan araç veya sürücü seçiniz.")
+            return
+        if not hasattr(self, "tbl_alloc"):
+            return
+        if self.tbl_alloc.rowCount() == 0:
+            QMessageBox.information(self, "Bilgi", "Önce grid'den hücre seçip EKLE'ye basınız.")
+            return
+        for r in range(self.tbl_alloc.rowCount()):
+            if vid:
+                cmb_v = self.tbl_alloc.cellWidget(r, 2)
+                if cmb_v is not None:
+                    idx = cmb_v.findData(str(vid))
+                    if idx >= 0:
+                        cmb_v.setCurrentIndex(idx)
+            if did:
+                cmb_d = self.tbl_alloc.cellWidget(r, 3)
+                if cmb_d is not None:
+                    idx = cmb_d.findData(str(did))
+                    if idx >= 0:
+                        cmb_d.setCurrentIndex(idx)
+
+    def _alloc_clear_selected_rows(self):
+        if self._is_current_locked():
+            QMessageBox.information(self, "Bilgi", "Bu dönem kilitli. Değişiklik yapılamaz.")
+            return
+        if not hasattr(self, "tbl_alloc"):
+            return
+        selected_rows = sorted({i.row() for i in self.tbl_alloc.selectedItems()}, reverse=True)
+        if not selected_rows:
+            QMessageBox.information(self, "Bilgi", "Silmek için atama tablosundan satır seçiniz.")
+            return
+        for r in selected_rows:
+            route_item = self.tbl_alloc.item(r, 0)
+            route_id = route_item.data(Qt.ItemDataRole.UserRole + 1) if route_item else None
+            tb = route_item.data(Qt.ItemDataRole.UserRole + 2) if route_item else None
+            if route_id and tb:
+                self._upsert_plan(str(route_id), str(tb), None, None, note=None)
+        self._reload_grid()
+
+    def _save_from_alloc_table(self):
+        if self._is_current_locked():
+            QMessageBox.information(self, "Bilgi", "Bu dönem kilitli. Değişiklik yapılamaz.")
+            return
+        if not hasattr(self, "tbl_alloc") or self.tbl_alloc.rowCount() == 0:
+            QMessageBox.information(self, "Bilgi", "Kaydedilecek satır yok. Grid'den hücre seçip EKLE'ye basınız.")
+            return
+
+        single_route_id = None
+        single_vid = None
+        single_did = None
+        for r in range(self.tbl_alloc.rowCount()):
+            route_item = self.tbl_alloc.item(r, 0)
+            route_id = route_item.data(Qt.ItemDataRole.UserRole + 1) if route_item else None
+            tb = route_item.data(Qt.ItemDataRole.UserRole + 2) if route_item else None
+            if not route_id or not tb:
+                continue
+            cmb_v = self.tbl_alloc.cellWidget(r, 2)
+            cmb_d = self.tbl_alloc.cellWidget(r, 3)
+            vid = cmb_v.currentData() if cmb_v is not None else None
+            did = cmb_d.currentData() if cmb_d is not None else None
+            self._upsert_plan(str(route_id), str(tb), vid, did, note=None)
+
+            if self.tbl_alloc.rowCount() == 1:
+                single_route_id = str(route_id)
+                single_vid = vid
+                single_did = did
+
+        if self.tbl_alloc.rowCount() == 1 and single_route_id and (single_vid or single_did):
+            reply = QMessageBox.question(
+                self,
+                "Onay",
+                "Bu güzergahın tüm saat dilimlerini aynı araç ve sürücü ile doldurmak ister misiniz?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                if self._selected_contract_id and self._service_type():
+                    month = self._month_key()
+                    tbs = self._time_blocks_for_context(int(self._selected_contract_id), month, str(self._service_type()))
+                    for tb in tbs:
+                        if not tb:
+                            continue
+                        self._upsert_plan(single_route_id, str(tb), single_vid, single_did, note=None)
+        self._reload_grid()
+
+    def _apply_lock_ui(self, locked: bool):
+        for name in [
+            "btn_alloc_add",
+            "btn_alloc_del",
+            "btn_alloc_save",
+            "btn_apply_default_to_selection",
+            "btn_note_save",
+            "btn_note_clear",
+            "btn_save",
+        ]:
+            if hasattr(self, name):
+                getattr(self, name).setEnabled(not locked)
+        if hasattr(self, "btn_lock_period"):
+            self.btn_lock_period.setText("KİLİDİ AÇ" if locked else "KİLİTLE")
+
+    def _toggle_lock(self):
+        if not self._selected_contract_id or not self._service_type():
+            return
+        contract_id = int(self._selected_contract_id)
+        month = self._month_key()
+        service_type = str(self._service_type())
+        current = self._is_locked(contract_id, month, service_type)
+        new_val = 0 if current else 1
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            conn = self.db.connect()
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO trip_period_lock (contract_id, month, service_type, locked, locked_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(contract_id, month, service_type)
+                DO UPDATE SET locked=excluded.locked, locked_at=excluded.locked_at
+                """,
+                (contract_id, month, service_type, int(new_val), now if new_val else None),
+            )
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            QMessageBox.critical(self, "Hata", f"Kilit işlemi başarısız:\n{str(e)}")
+            return
+        self._reload_grid()
+
+    def _upsert_plan(self, route_id: str, time_block: str, vehicle_id, driver_id, note):
+        if not self._selected_contract_id or not self._service_type():
+            return
+        if not time_block:
+            return
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        month = self._month_key()
+        service_type = str(self._service_type())
+        contract_id = int(self._selected_contract_id)
+        try:
+            conn = self.db.connect()
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT note
+                FROM trip_plan
+                WHERE contract_id=? AND route_params_id=? AND month=? AND service_type=? AND time_block=?
+                LIMIT 1
+                """,
+                (contract_id, int(route_id), month, service_type, time_block),
+            )
+            existing_note_row = cursor.fetchone()
+            final_note = note
+            if note is None and existing_note_row is not None:
+                final_note = existing_note_row[0]
+            cursor.execute(
+                """
+                INSERT INTO trip_plan (
+                    contract_id, route_params_id, month, service_type, time_block,
+                    vehicle_id, driver_id, note, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(contract_id, route_params_id, month, service_type, time_block)
+                DO UPDATE SET vehicle_id=excluded.vehicle_id, driver_id=excluded.driver_id, note=excluded.note, updated_at=excluded.updated_at
+                """,
+                (
+                    contract_id,
+                    int(route_id),
+                    month,
+                    service_type,
+                    time_block,
+                    vehicle_id,
+                    driver_id,
+                    final_note,
+                    now,
+                    now,
+                ),
+            )
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            QMessageBox.critical(self, "Hata", f"Kayıt hatası:\n{str(e)}")
+
+    # ------------------------- note handling -------------------------
+    def _selection_note_key(self):
+        cells = self._selected_grid_cells()
+        if not cells:
+            return None
+        _r, _c, route_id, tb = cells[0]
+        return route_id, tb
+
+    def _refresh_note_from_selection(self):
+        if not hasattr(self, "txt_note"):
+            return
+        key = self._selection_note_key()
+        if key is None:
+            self.txt_note.setPlainText("")
+            return
+        rec = self._get_plan_record(key[0], key[1])
+        self.txt_note.setPlainText((rec or {}).get("note") or "")
+
+    def _get_plan_record(self, route_id: str, time_block: str):
+        if not self._selected_contract_id or not self._service_type():
+            return None
+        plan_map = self._load_plan_map(int(self._selected_contract_id), self._month_key(), str(self._service_type()))
+        return plan_map.get((str(route_id), str(time_block)))
+
+    def _save_note(self):
+        if self._is_current_locked():
+            QMessageBox.information(self, "Bilgi", "Bu dönem kilitli. Değişiklik yapılamaz.")
+            return
+        if not hasattr(self, "txt_note"):
+            return
+        key = self._selection_note_key()
+        if key is None:
+            QMessageBox.information(self, "Bilgi", "Not kaydetmek için grid'den bir hücre seçiniz.")
+            return
+        note = self.txt_note.toPlainText()
+        self._upsert_plan(key[0], key[1], vehicle_id=None, driver_id=None, note=note)
+        self._reload_grid()
+
+    def _clear_note(self):
+        if self._is_current_locked():
+            QMessageBox.information(self, "Bilgi", "Bu dönem kilitli. Değişiklik yapılamaz.")
+            return
+        if not hasattr(self, "txt_note"):
+            return
+        key = self._selection_note_key()
+        if key is None:
+            QMessageBox.information(self, "Bilgi", "Not temizlemek için grid'den bir hücre seçiniz.")
+            return
+        self.txt_note.setPlainText("")
+        self._upsert_plan(key[0], key[1], vehicle_id=None, driver_id=None, note="")
+        self._reload_grid()

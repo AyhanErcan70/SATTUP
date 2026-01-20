@@ -116,7 +116,11 @@ FORM_STYLE = f"""
         font-size: 12px;
         min-height:15px;
     }}
-    QPushButton:hover {{ background-color: #1A5285; }}
+    QPushButton:hover {{ 
+        background-color: #0D39B2;
+        
+        
+    }}
     QPushButton:pressed {{ background-color: #0E2942; }}
 
     QPushButton#btn_yeni {{ background-color: {COLOR_ACCENT}; }}

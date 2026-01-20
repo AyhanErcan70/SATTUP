@@ -365,9 +365,7 @@ class RoutesApp(QWidget):
         except Exception:
             kalem_list = []
 
-        self._contract_route_km_map = self._get_contract_route_km_map(contract_id)
-
-        if not kalem_list:
+        if not guzergah_list:
             try:
                 conn = self.db.connect()
                 cursor = conn.cursor()
@@ -454,10 +452,6 @@ class RoutesApp(QWidget):
             it.setEditable(False)
             it.setData(json.dumps({"route_name": rn, "movement_type": mt}, ensure_ascii=False), Qt.ItemDataRole.UserRole)
             it.setData(contract_type, Qt.ItemDataRole.UserRole + 1)  # hizmet tipi 1-A
-            km_val = (k or {}).get("km")
-            if km_val is None:
-                km_val = self._contract_route_km_map.get(rn.lower())
-            it.setData(km_val, Qt.ItemDataRole.UserRole + 2)  # km
             self._kalem_model.appendRow(it)
 
     def _on_kalem_selected(self, *_args):
@@ -553,15 +547,12 @@ class RoutesApp(QWidget):
             raw_service_type = (service_type or "").strip()
             it0 = QTableWidgetItem(self._display_service_type(raw_service_type) or "")
             it0.setFlags(it0.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            it0.setData(Qt.ItemDataRole.UserRole + 102, raw_service_type)
-            disp = f"{route_name} - {movement_type}" if (movement_type or "").strip() else route_name
-            it1 = QTableWidgetItem(disp)
+            it1 = QTableWidgetItem(kalem)
             it1.setFlags(it1.flags() & ~Qt.ItemFlag.ItemIsEditable)
             it1.setData(Qt.ItemDataRole.UserRole + 201, (route_name or "").strip())
             it1.setData(Qt.ItemDataRole.UserRole + 202, (movement_type or "").strip())
             it2 = QTableWidgetItem("")
-            km_val = self._contract_route_km_map.get((route_name or "").strip().lower())
-            it3 = QTableWidgetItem("" if km_val is None else str(km_val))
+            it3 = QTableWidgetItem("")
             it3.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             tbl.setItem(r, 0, it0)
             tbl.setItem(r, 1, it1)
@@ -643,13 +634,7 @@ class RoutesApp(QWidget):
         for rid, stype, rname, mtype, stops, km in rows:
             r = tbl.rowCount()
             tbl.insertRow(r)
-            raw_service_type = (stype or "").strip()
-            disp_service_type = self._display_service_type(raw_service_type)
-            km_val = km
-            if km_val is None:
-                km_val = self._contract_route_km_map.get((rname or "").strip().lower())
-            disp_name = f"{(rname or '').strip()} - {(mtype or '').strip()}" if (mtype or "").strip() else (rname or "")
-            values = [disp_service_type or "", disp_name, stops or "", "" if km_val is None else str(km_val)]
+            values = [stype or "", rname or "", stops or "", "" if km is None else str(km)]
             for c, v in enumerate(values):
                 it = QTableWidgetItem(str(v))
                 if c in (0, 1):
@@ -658,10 +643,6 @@ class RoutesApp(QWidget):
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 if c == 0:
                     it.setData(Qt.ItemDataRole.UserRole + 101, int(rid))
-                    it.setData(Qt.ItemDataRole.UserRole + 102, raw_service_type)
-                if c == 1:
-                    it.setData(Qt.ItemDataRole.UserRole + 201, (rname or "").strip())
-                    it.setData(Qt.ItemDataRole.UserRole + 202, (mtype or "").strip())
                 tbl.setItem(r, c, it)
         tbl.blockSignals(False)
 
@@ -717,15 +698,12 @@ class RoutesApp(QWidget):
             tbl.insertRow(r)
             it0 = QTableWidgetItem(disp_stype)
             it0.setFlags(it0.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            it0.setData(Qt.ItemDataRole.UserRole + 102, raw_stype)
-            disp_name = f"{rn} - {mv}" if mv else rn
-            it1 = QTableWidgetItem(disp_name)
+            it1 = QTableWidgetItem(kalem)
             it1.setFlags(it1.flags() & ~Qt.ItemFlag.ItemIsEditable)
             it1.setData(Qt.ItemDataRole.UserRole + 201, rn)
             it1.setData(Qt.ItemDataRole.UserRole + 202, mv)
             it2 = QTableWidgetItem("")
-            km_val = self._contract_route_km_map.get((rn or "").strip().lower())
-            it3 = QTableWidgetItem("" if km_val is None else str(km_val))
+            it3 = QTableWidgetItem("")
             it3.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             tbl.setItem(r, 0, it0)
             tbl.setItem(r, 1, it1)
@@ -764,19 +742,8 @@ class RoutesApp(QWidget):
                 if it0 is not None:
                     rid = it0.data(Qt.ItemDataRole.UserRole + 101)
 
-                stype = ""
-                if it0 is not None:
-                    stype = (it0.data(Qt.ItemDataRole.UserRole + 102) or "").strip()
-                if not stype:
-                    stype = (tbl.item(r, 0).text().strip() if tbl.item(r, 0) else "")
-
-                it1 = tbl.item(r, 1)
-                rname = ""
-                mtype = ""
-                if it1 is not None:
-                    rname = (it1.data(Qt.ItemDataRole.UserRole + 201) or "").strip() or (it1.text().strip())
-                    mtype = (it1.data(Qt.ItemDataRole.UserRole + 202) or "").strip()
-
+                stype = (tbl.item(r, 0).text().strip() if tbl.item(r, 0) else "")
+                rname = (tbl.item(r, 1).text().strip() if tbl.item(r, 1) else "")
                 stops = (tbl.item(r, 2).text().strip() if tbl.item(r, 2) else "")
                 km_txt = (tbl.item(r, 3).text().strip() if tbl.item(r, 3) else "")
                 if not rname:

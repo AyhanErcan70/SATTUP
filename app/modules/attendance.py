@@ -860,13 +860,27 @@ class BulkAttendanceDialog(QDialog):
         self._planned_keys = _planned_keys_for_context(int(self.contract_id), self.month_key, str(self.service_type))
 
         if self._planned_keys:
-            planned_blocks = sorted({str(tb) for _rid, tb in self._planned_keys if str(tb)}, key=_tb_sort_key)
-            for row in self._route_rows:
-                try:
-                    rid = int(row[0] or 0)
-                    rname = row[1] if len(row) > 1 else ""
-                except Exception:
+            all_blocks = _time_blocks_for_context(int(self.contract_id), self.month_key, str(self.service_type))
+            planned_blocks = []
+            seen = set()
+            for b in all_blocks:
+                if not b:
                     continue
+                if b in seen:
+                    continue
+                for _rid, tb in self._planned_keys:
+                    if str(tb) == str(b):
+                        planned_blocks.append(str(b))
+                        seen.add(str(b))
+                        break
+
+            for _rid, tb in self._planned_keys:
+                tbs = str(tb)
+                if tbs and tbs not in seen:
+                    planned_blocks.append(tbs)
+                    seen.add(tbs)
+
+            for rid, rname, _km in self._route_rows:
                 for tb in planned_blocks:
                     if (int(rid), str(tb)) in self._planned_keys:
                         add_subrow(int(rid), rname or "", str(tb), str(tb))
