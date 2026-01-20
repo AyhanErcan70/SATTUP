@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="resim">
+    <file>asiltur.png</file>
     <file>Photo.png</file>
     <file>istockphoto-671677466-612x612.jpg</file>
     <file>araclar.png</file>

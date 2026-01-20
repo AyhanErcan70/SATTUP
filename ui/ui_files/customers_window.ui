@@ -6,89 +6,23 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1300</width>
-    <height>589</height>
+    <width>1230</width>
+    <height>627</height>
    </rect>
-  </property>
-  <property name="sizePolicy">
-   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-    <horstretch>0</horstretch>
-    <verstretch>0</verstretch>
-   </sizepolicy>
-  </property>
-  <property name="minimumSize">
-   <size>
-    <width>1300</width>
-    <height>0</height>
-   </size>
-  </property>
-  <property name="maximumSize">
-   <size>
-    <width>1300</width>
-    <height>16777215</height>
-   </size>
-  </property>
-  <property name="font">
-   <font>
-    <family>Century Gothic</family>
-    <pointsize>11</pointsize>
-   </font>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <property name="styleSheet">
-   <string notr="true">#main_form{
-background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(148, 191, 213, 255));
-}
-QLineEdit, QComboBox, QDateEdit{min-height: 25px; max-height: 25px;}
-#main_form{ font-family: Century Gothic; font-size: 11pt;}</string>
-  </property>
-  <layout class="QGridLayout" name="gridLayout_2">
-   <item row="1" column="0">
-    <widget class="QFrame" name="bottom_frame">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>11</pointsize>
-      </font>
-     </property>
-     <property name="frameShape">
-      <enum>QFrame::Shape::StyledPanel</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Shadow::Raised</enum>
-     </property>
-     <layout class="QGridLayout" name="gridLayout">
-      <item row="0" column="0">
-       <widget class="QTableWidget" name="tableView">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="font">
-         <font>
-          <pointsize>11</pointsize>
-         </font>
-        </property>
-        <property name="sizeAdjustPolicy">
-         <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustIgnored</enum>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
+  <layout class="QGridLayout" name="gridLayout_11">
    <item row="0" column="0">
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <item>
+    <layout class="QGridLayout" name="gridLayout_10">
+     <property name="horizontalSpacing">
+      <number>0</number>
+     </property>
+     <property name="verticalSpacing">
+      <number>2</number>
+     </property>
+     <item row="0" column="0">
       <widget class="QFrame" name="top_frame">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -116,477 +50,64 @@ QLineEdit, QComboBox, QDateEdit{min-height: 25px; max-height: 25px;}
        </property>
        <property name="font">
         <font>
+         <family>Century Gothic</family>
          <pointsize>11</pointsize>
         </font>
        </property>
        <property name="styleSheet">
-        <string notr="true">QFrame#top_frame{
-background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(148, 191, 213, 255));}
-QLabel{
-color: #000000;
-background-color: none;
-}
-QLineEdit, QComboBox, QDateEdit{max-height:25px;}
-/* Modern gradient butonlar */
-QPushButton {
- background-color: qlineargradient(spread:pad, x1:0.903, y1:0.880682, x2:0.203209, y2:0.21, stop:0.465241 rgba(41, 8, 106, 255), stop:0.59893 rgba(15, 42, 117, 255), stop:0.935829 rgba(0, 1, 37, 255));
-    border: 1px solid #ffffff;
-    border-radius: 6px;
-    color: white;
-    font-weight: bold;
-    /*padding: 12px 24px;*/
-    font-size: 12px;
-    margin: 2px;
-}
-
-QPushButton:hover {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 #764ba2, stop:1 #667eea);
-}
-
-QPushButton:pressed {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 #5a67d8, stop:1 #6b46c1);
-	border: 2px solid #ffffff;
-	padding-top: 2px;
-}
-
-QPushButton:disabled {
-    background: #cccccc;
-    color: #666666;
-}</string>
+        <string notr="true"/>
        </property>
        <property name="frameShape">
         <enum>QFrame::Shape::Box</enum>
        </property>
        <property name="frameShadow">
-        <enum>QFrame::Shadow::Sunken</enum>
+        <enum>QFrame::Shadow::Plain</enum>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_3">
-        <item>
-         <layout class="QFormLayout" name="formLayout">
-          <item row="0" column="0">
-           <widget class="QLabel" name="lbl_musteri_kodu">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>110</width>
-              <height>25</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>110</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <family>Calibri</family>
-              <pointsize>11</pointsize>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Müsteri Kodu</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QLineEdit" name="txt_musteri_kodu">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-              <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>29</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>100</width>
-              <height>29</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <family>Tahoma</family>
-              <pointsize>11</pointsize>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="focusPolicy">
-             <enum>Qt::FocusPolicy::NoFocus</enum>
-            </property>
-            <property name="styleSheet">
-             <string notr="true"/>
-            </property>
-            <property name="readOnly">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="lbl_personel_turu">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>110</width>
-              <height>25</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>110</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <family>Calibri</family>
-              <pointsize>11</pointsize>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Müşteri Türü</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QComboBox" name="cmb_musteri_turu">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>140</width>
-              <height>29</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>140</width>
-              <height>29</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <family>Calibri</family>
-              <pointsize>11</pointsize>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="placeholderText">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="lbl_ad_soyad">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>110</width>
-              <height>25</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>110</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <family>Calibri</family>
-              <pointsize>11</pointsize>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Kişilik Türü</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QComboBox" name="cmb_kisilik">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>29</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>100</width>
-              <height>29</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <family>Segoe UI</family>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="placeholderText">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="lbl_tckn">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>110</width>
-              <height>25</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>110</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <family>Calibri</family>
-              <pointsize>11</pointsize>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Firma Adı/Unvanı</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QLineEdit" name="txt_firma">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>230</width>
-              <height>29</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>230</width>
-              <height>29</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <family>Calibri</family>
-              <pointsize>11</pointsize>
-              <bold>false</bold>
-             </font>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0">
-           <widget class="QLabel" name="lbl_anne_adi">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>110</width>
-              <height>25</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>110</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <family>Calibri</family>
-              <pointsize>11</pointsize>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>... devamı</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="1">
-           <widget class="QLineEdit" name="txt_firma_2">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>230</width>
-              <height>29</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>230</width>
-              <height>29</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <family>Calibri</family>
-              <pointsize>11</pointsize>
-              <bold>false</bold>
-             </font>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="0">
-           <widget class="QLabel" name="lbl_baba_adi">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>110</width>
-              <height>25</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>110</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <family>Calibri</family>
-              <pointsize>11</pointsize>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Müşteri Statüsü</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="1">
-           <widget class="QComboBox" name="cmb_sektor">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>29</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>130</width>
-              <height>29</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <family>Segoe UI</family>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="placeholderText">
-             <string/>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QFormLayout" name="formLayout_2">
+       <layout class="QGridLayout" name="gridLayout_4">
+        <property name="leftMargin">
+         <number>50</number>
+        </property>
+        <property name="topMargin">
+         <number>10</number>
+        </property>
+        <property name="rightMargin">
+         <number>2</number>
+        </property>
+        <property name="bottomMargin">
+         <number>10</number>
+        </property>
+        <property name="horizontalSpacing">
+         <number>40</number>
+        </property>
+        <property name="verticalSpacing">
+         <number>0</number>
+        </property>
+        <item row="0" column="1">
+         <layout class="QGridLayout" name="gridLayout_2">
+          <property name="horizontalSpacing">
+           <number>10</number>
+          </property>
+          <property name="verticalSpacing">
+           <number>5</number>
+          </property>
           <item row="0" column="0">
            <widget class="QLabel" name="lbl_vergi_tckn">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>110</width>
-              <height>25</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>110</width>
-              <height>16777215</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -610,19 +131,19 @@ QPushButton:disabled {
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>140</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>140</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -638,21 +159,21 @@ QPushButton:disabled {
           <item row="1" column="0">
            <widget class="QLabel" name="lbl_vergi_dairesi">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>110</width>
-              <height>25</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>110</width>
-              <height>16777215</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -676,19 +197,19 @@ QPushButton:disabled {
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>140</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>140</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -704,21 +225,21 @@ QPushButton:disabled {
           <item row="2" column="0">
            <widget class="QLabel" name="lbl_yetkili">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>110</width>
-              <height>25</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>110</width>
-              <height>16777215</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -742,19 +263,19 @@ QPushButton:disabled {
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>140</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>140</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -770,21 +291,21 @@ QPushButton:disabled {
           <item row="3" column="0">
            <widget class="QLabel" name="lbl_gorevi">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>110</width>
-              <height>25</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>110</width>
-              <height>16777215</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -808,19 +329,19 @@ QPushButton:disabled {
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>140</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>140</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -836,21 +357,21 @@ QPushButton:disabled {
           <item row="4" column="0">
            <widget class="QLabel" name="lbl_telefon">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>110</width>
-              <height>25</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>110</width>
-              <height>16777215</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -874,19 +395,19 @@ QPushButton:disabled {
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>140</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>140</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -908,21 +429,21 @@ QPushButton:disabled {
           <item row="5" column="0">
            <widget class="QLabel" name="lbl_email">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>110</width>
-              <height>25</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>110</width>
-              <height>16777215</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -946,19 +467,19 @@ QPushButton:disabled {
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>140</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>140</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -973,26 +494,444 @@ QPushButton:disabled {
           </item>
          </layout>
         </item>
-        <item>
-         <layout class="QFormLayout" name="formLayout_3">
+        <item row="0" column="0">
+         <layout class="QGridLayout" name="gridLayout">
+          <property name="horizontalSpacing">
+           <number>10</number>
+          </property>
+          <property name="verticalSpacing">
+           <number>5</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="QLabel" name="lbl_musteri_kodu">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>28</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>110</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>110</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Müsteri Kodu</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="txt_musteri_kodu">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>28</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>100</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Tahoma</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="focusPolicy">
+             <enum>Qt::FocusPolicy::NoFocus</enum>
+            </property>
+            <property name="styleSheet">
+             <string notr="true"/>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lbl_personel_turu">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>28</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>110</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>110</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Müşteri Türü</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QComboBox" name="cmb_musteri_turu">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>28</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>140</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>140</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="placeholderText">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="lbl_ad_soyad">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>28</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>110</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>110</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Kişilik Türü</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QComboBox" name="cmb_kisilik">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>28</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>100</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Segoe UI</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="placeholderText">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="lbl_tckn">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>28</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>110</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>110</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Firma Adı/Unvanı</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QLineEdit" name="txt_firma">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>28</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>230</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>230</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="lbl_anne_adi">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>28</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>110</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>110</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>... devamı</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QLineEdit" name="txt_firma_2">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>28</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>230</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>230</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QLabel" name="lbl_baba_adi">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>28</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>110</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>110</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Müşteri Statüsü</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QComboBox" name="cmb_sektor">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>28</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>130</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Segoe UI</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="placeholderText">
+             <string/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="0" column="2">
+         <layout class="QGridLayout" name="gridLayout_3">
+          <property name="horizontalSpacing">
+           <number>10</number>
+          </property>
+          <property name="verticalSpacing">
+           <number>5</number>
+          </property>
           <item row="0" column="0">
            <widget class="QLabel" name="lbl_il">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>80</width>
-              <height>25</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>80</width>
-              <height>16777215</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -1015,19 +954,19 @@ QPushButton:disabled {
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>110</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>140</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -1045,21 +984,21 @@ QPushButton:disabled {
           <item row="1" column="0">
            <widget class="QLabel" name="lbl_ilce">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>80</width>
-              <height>25</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>80</width>
-              <height>16777215</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -1082,19 +1021,19 @@ QPushButton:disabled {
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>140</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>140</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -1112,21 +1051,21 @@ QPushButton:disabled {
           <item row="2" column="0">
            <widget class="QLabel" name="lbl_adres1">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>80</width>
-              <height>25</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>80</width>
-              <height>16777215</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -1149,19 +1088,19 @@ QPushButton:disabled {
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>200</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>200</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -1176,21 +1115,21 @@ QPushButton:disabled {
           <item row="3" column="0">
            <widget class="QLabel" name="lbl_adres2">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>80</width>
-              <height>25</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>80</width>
-              <height>16777215</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -1213,19 +1152,19 @@ QPushButton:disabled {
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>200</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>200</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -1240,21 +1179,21 @@ QPushButton:disabled {
           <item row="4" column="0">
            <widget class="QLabel" name="lbl_bakiye">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>80</width>
-              <height>25</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>80</width>
-              <height>16777215</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -1277,19 +1216,19 @@ QPushButton:disabled {
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>200</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>200</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -1304,21 +1243,21 @@ QPushButton:disabled {
           <item row="5" column="0">
            <widget class="QLabel" name="lbl_iban">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>60</width>
-              <height>25</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>40</width>
-              <height>16777215</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -1341,19 +1280,19 @@ QPushButton:disabled {
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
-              <verstretch>25</verstretch>
+              <verstretch>28</verstretch>
              </sizepolicy>
             </property>
             <property name="minimumSize">
              <size>
               <width>230</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>220</width>
-              <height>29</height>
+              <height>28</height>
              </size>
             </property>
             <property name="font">
@@ -1373,670 +1312,691 @@ QPushButton:disabled {
           </item>
          </layout>
         </item>
+        <item row="0" column="3">
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Orientation::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
        </layout>
       </widget>
      </item>
-     <item>
-      <widget class="QFrame" name="frame_4">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>50</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>16777215</width>
-         <height>50</height>
-        </size>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QFrame{background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(148, 191, 213, 255));}
-QPushButton {
- background-color: #3f6cd6;
-    border: 1px solid #ffffff;
-    border-radius: 8px;
-    color: white;
-    font-weight: bold;
-    /*padding: 12px 24px;*/
-    font-size: 12px;
-    margin: 0px;
-	min-height:35px;
-min-width:140px;
-}
-
-QPushButton:hover {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 #8b8f90, stop:1 #d1d1d3);
-border:2px solid #ffffff;
-
-}
-
-QPushButton:pressed {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 #5a67d8, stop:1 #6b46c1);
-	border: 2px solid #ffffff;
-	padding-top: 5px;
-   margin: 3px;
-}
-
-QPushButton:disabled {
-    background: #cccccc;
-    color: #666666;
-}</string>
-       </property>
+     <item row="1" column="0">
+      <widget class="QFrame" name="button_frame">
        <property name="frameShape">
-        <enum>QFrame::Shape::StyledPanel</enum>
+        <enum>QFrame::Shape::Box</enum>
        </property>
        <property name="frameShadow">
-        <enum>QFrame::Shadow::Raised</enum>
+        <enum>QFrame::Shadow::Plain</enum>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout">
-        <item>
-         <widget class="QPushButton" name="btn_kaydet">
-          <property name="minimumSize">
-           <size>
-            <width>142</width>
-            <height>37</height>
-           </size>
+       <layout class="QGridLayout" name="gridLayout_6">
+        <property name="leftMargin">
+         <number>40</number>
+        </property>
+        <property name="topMargin">
+         <number>10</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>10</number>
+        </property>
+        <property name="spacing">
+         <number>0</number>
+        </property>
+        <item row="0" column="0">
+         <layout class="QGridLayout" name="gridLayout_5">
+          <property name="horizontalSpacing">
+           <number>25</number>
           </property>
-          <property name="maximumSize">
-           <size>
-            <width>120</width>
-            <height>30</height>
-           </size>
+          <property name="verticalSpacing">
+           <number>5</number>
           </property>
-          <property name="font">
-           <font>
-            <family>Calibri</family>
-            <pointsize>11</pointsize>
-            <italic>false</italic>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="styleSheet">
-           <string notr="true"/>
-          </property>
-          <property name="text">
-           <string>KAYDET</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="btn_yeni">
-          <property name="minimumSize">
-           <size>
-            <width>142</width>
-            <height>37</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>120</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <family>Calibri</family>
-            <pointsize>11</pointsize>
-            <italic>false</italic>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>YENİ KAYIT</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="btn_pdfye_aktar">
-          <property name="minimumSize">
-           <size>
-            <width>142</width>
-            <height>37</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>120</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <family>Calibri</family>
-            <pointsize>11</pointsize>
-            <italic>false</italic>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>PDF'YE AKTAR</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="btn_excele_aktar">
-          <property name="minimumSize">
-           <size>
-            <width>142</width>
-            <height>37</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>120</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <family>Calibri</family>
-            <pointsize>11</pointsize>
-            <italic>false</italic>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>EXCEL'E AKTAR</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="btn_excel_yukle">
-          <property name="minimumSize">
-           <size>
-            <width>142</width>
-            <height>37</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>120</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <family>Calibri</family>
-            <pointsize>11</pointsize>
-            <italic>false</italic>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>EXCEL'DEN AL</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="btn_aktifpasif">
-          <property name="minimumSize">
-           <size>
-            <width>142</width>
-            <height>37</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>120</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <family>Calibri</family>
-            <pointsize>11</pointsize>
-            <italic>false</italic>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>AKTİF / PASİF</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="btn_sil">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>142</width>
-            <height>37</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>142</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <family>Calibri</family>
-            <pointsize>11</pointsize>
-            <italic>false</italic>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="focusPolicy">
-           <enum>Qt::FocusPolicy::NoFocus</enum>
-          </property>
-          <property name="text">
-           <string>SİL</string>
-          </property>
-         </widget>
+          <item row="0" column="3">
+           <widget class="QPushButton" name="btn_excele_aktar">
+            <property name="minimumSize">
+             <size>
+              <width>120</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>120</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <italic>false</italic>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>EXCEL'E AKTAR</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="4">
+           <widget class="QPushButton" name="btn_excel_yukle">
+            <property name="minimumSize">
+             <size>
+              <width>120</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>120</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <italic>false</italic>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>EXCEL'DEN AL</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QPushButton" name="btn_kaydet">
+            <property name="minimumSize">
+             <size>
+              <width>120</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>120</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <italic>false</italic>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="styleSheet">
+             <string notr="true"/>
+            </property>
+            <property name="text">
+             <string>KAYDET</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="btn_yeni">
+            <property name="minimumSize">
+             <size>
+              <width>120</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>120</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <italic>false</italic>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>YENİ KAYIT</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QPushButton" name="btn_pdfye_aktar">
+            <property name="minimumSize">
+             <size>
+              <width>120</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>120</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <italic>false</italic>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>PDF'YE AKTAR</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="6">
+           <widget class="QPushButton" name="btn_sil">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>120</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>120</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <italic>false</italic>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="focusPolicy">
+             <enum>Qt::FocusPolicy::NoFocus</enum>
+            </property>
+            <property name="text">
+             <string>SİL</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="5">
+           <widget class="QPushButton" name="btn_aktifpasif">
+            <property name="minimumSize">
+             <size>
+              <width>120</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>120</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <italic>false</italic>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>AKTİF / PASİF</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="7">
+           <spacer name="horizontalSpacer_2">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
         </item>
        </layout>
       </widget>
      </item>
-     <item>
-      <widget class="QFrame" name="frame">
+     <item row="2" column="0">
+      <widget class="QFrame" name="filter_frame">
        <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
          <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>50</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>16777215</width>
-         <height>50</height>
-        </size>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QFrame{background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(148, 191, 213, 255));}
-QLabel{background-color: none;}
-QPushButton {
- background-color: #3f6cd6;
-    border: 1px solid #ffffff;
-    border-radius: 8px;
-    color: white;
-    font-weight: bold;
-    /*padding: 12px 24px;*/
-    font-size: 12px;
-    margin: 0px;
-	min-height:35px;
-min-width:140px;
-}
-
-QPushButton:hover {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 #8b8f90, stop:1 #d1d1d3);
-border:2px solid #ffffff;
-
-}
-
-QPushButton:pressed {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 #5a67d8, stop:1 #6b46c1);
-	border: 2px solid #ffffff;
-	padding-top: 5px;
-   margin: 3px;
-}
-
-QPushButton:disabled {
-    background: #cccccc;
-    color: #666666;
-}</string>
        </property>
        <property name="frameShape">
         <enum>QFrame::Shape::Box</enum>
        </property>
        <property name="frameShadow">
-        <enum>QFrame::Shadow::Sunken</enum>
+        <enum>QFrame::Shadow::Plain</enum>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_2">
-        <item>
-         <widget class="QLabel" name="lbl_musteri_turu_f">
-          <property name="minimumSize">
-           <size>
-            <width>80</width>
-            <height>30</height>
-           </size>
+       <layout class="QGridLayout" name="gridLayout_8">
+        <property name="leftMargin">
+         <number>40</number>
+        </property>
+        <property name="topMargin">
+         <number>10</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>10</number>
+        </property>
+        <property name="spacing">
+         <number>0</number>
+        </property>
+        <item row="0" column="0">
+         <layout class="QGridLayout" name="gridLayout_7">
+          <property name="horizontalSpacing">
+           <number>10</number>
           </property>
-          <property name="maximumSize">
-           <size>
-            <width>80</width>
-            <height>16777215</height>
-           </size>
+          <property name="verticalSpacing">
+           <number>0</number>
           </property>
-          <property name="sizeIncrement">
-           <size>
-            <width>0</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <family>Calibri</family>
-            <pointsize>11</pointsize>
-            <bold>false</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Müşt. Türü</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-          </property>
-         </widget>
+          <item row="0" column="8">
+           <widget class="QLabel" name="lbl_vergi_tckn_f">
+            <property name="minimumSize">
+             <size>
+              <width>70</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>70</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Vergi/TCKN</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="4">
+           <widget class="QLabel" name="lbl_durum_f">
+            <property name="minimumSize">
+             <size>
+              <width>50</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>50</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="sizeIncrement">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Durum</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="lbl_musteri_turu_f">
+            <property name="minimumSize">
+             <size>
+              <width>65</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>65</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="sizeIncrement">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Müşt. Türü</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="7">
+           <widget class="QLineEdit" name="txt_firma_f">
+            <property name="minimumSize">
+             <size>
+              <width>160</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>160</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="6">
+           <widget class="QLabel" name="lbl_firma_f">
+            <property name="minimumSize">
+             <size>
+              <width>100</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>80</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Firma Adı/Unv.</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="lbl_kisilik_f">
+            <property name="minimumSize">
+             <size>
+              <width>60</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>60</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="sizeIncrement">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Kişilik Tür</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="cmb_musteri_turu_f">
+            <property name="minimumSize">
+             <size>
+              <width>150</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>150</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="sizeIncrement">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="placeholderText">
+             <string>Tümü</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QComboBox" name="cmb_kisilik_f">
+            <property name="minimumSize">
+             <size>
+              <width>110</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>110</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="sizeIncrement">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="placeholderText">
+             <string>Tümü</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="5">
+           <widget class="QComboBox" name="cmb_durum_f">
+            <property name="minimumSize">
+             <size>
+              <width>100</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>100</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="sizeIncrement">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="placeholderText">
+             <string>Tümü</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="9">
+           <widget class="QLineEdit" name="txt_vergi_tckn_f">
+            <property name="minimumSize">
+             <size>
+              <width>120</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>120</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Calibri</family>
+              <pointsize>11</pointsize>
+              <bold>false</bold>
+             </font>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="10">
+           <widget class="QPushButton" name="btn_temizle_f">
+            <property name="minimumSize">
+             <size>
+              <width>120</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>120</width>
+              <height>28</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>Century Gothic</family>
+              <pointsize>11</pointsize>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>TEMİZLE</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="11">
+           <spacer name="horizontalSpacer_3">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
         </item>
-        <item>
-         <widget class="QComboBox" name="cmb_musteri_turu_f">
-          <property name="minimumSize">
-           <size>
-            <width>150</width>
-            <height>29</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>150</width>
-            <height>29</height>
-           </size>
-          </property>
-          <property name="sizeIncrement">
-           <size>
-            <width>0</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <family>Calibri</family>
-            <pointsize>11</pointsize>
-            <bold>false</bold>
-           </font>
-          </property>
-          <property name="placeholderText">
-           <string>Tümü</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="lbl_kisilik_f">
-          <property name="minimumSize">
-           <size>
-            <width>60</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>60</width>
-            <height>16777215</height>
-           </size>
-          </property>
-          <property name="sizeIncrement">
-           <size>
-            <width>0</width>
-            <height>0</height>
-           </size>
+       </layout>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QFrame" name="bottom_frame">
+       <property name="frameShape">
+        <enum>QFrame::Shape::Box</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Shadow::Plain</enum>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_9">
+        <item row="0" column="0">
+         <widget class="QTableWidget" name="tableView">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
           <property name="font">
            <font>
-            <family>Calibri</family>
+            <family>Century Gothic</family>
             <pointsize>11</pointsize>
-            <bold>false</bold>
            </font>
           </property>
-          <property name="text">
-           <string>Kişilik Tür</string>
+          <property name="frameShape">
+           <enum>QFrame::Shape::Box</enum>
           </property>
-          <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+          <property name="frameShadow">
+           <enum>QFrame::Shadow::Plain</enum>
           </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QComboBox" name="cmb_kisilik_f">
-          <property name="minimumSize">
-           <size>
-            <width>110</width>
-            <height>29</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>110</width>
-            <height>29</height>
-           </size>
-          </property>
-          <property name="sizeIncrement">
-           <size>
-            <width>0</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <family>Calibri</family>
-            <pointsize>11</pointsize>
-            <bold>false</bold>
-           </font>
-          </property>
-          <property name="placeholderText">
-           <string>Tümü</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="lbl_durum_f">
-          <property name="minimumSize">
-           <size>
-            <width>60</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>60</width>
-            <height>16777215</height>
-           </size>
-          </property>
-          <property name="sizeIncrement">
-           <size>
-            <width>0</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <family>Calibri</family>
-            <pointsize>11</pointsize>
-            <bold>false</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Durum</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QComboBox" name="cmb_durum_f">
-          <property name="minimumSize">
-           <size>
-            <width>110</width>
-            <height>29</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>110</width>
-            <height>29</height>
-           </size>
-          </property>
-          <property name="sizeIncrement">
-           <size>
-            <width>0</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <family>Calibri</family>
-            <pointsize>11</pointsize>
-            <bold>false</bold>
-           </font>
-          </property>
-          <property name="placeholderText">
-           <string>Tümü</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="lbl_firma_f">
-          <property name="minimumSize">
-           <size>
-            <width>100</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>80</width>
-            <height>25</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <family>Calibri</family>
-            <pointsize>11</pointsize>
-            <bold>false</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Firma Adı/Unv.</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="txt_firma_f">
-          <property name="minimumSize">
-           <size>
-            <width>160</width>
-            <height>29</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>160</width>
-            <height>29</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <family>Calibri</family>
-            <pointsize>11</pointsize>
-            <bold>false</bold>
-           </font>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="lbl_vergi_tckn_f">
-          <property name="minimumSize">
-           <size>
-            <width>80</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>60</width>
-            <height>25</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <family>Calibri</family>
-            <pointsize>11</pointsize>
-            <bold>false</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Vergi/TCKN</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="txt_vergi_tckn_f">
-          <property name="minimumSize">
-           <size>
-            <width>160</width>
-            <height>29</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>160</width>
-            <height>29</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <family>Calibri</family>
-            <pointsize>11</pointsize>
-            <bold>false</bold>
-           </font>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="btn_temizle_f">
-          <property name="minimumSize">
-           <size>
-            <width>142</width>
-            <height>37</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>120</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>TEMİZLE</string>
+          <property name="sizeAdjustPolicy">
+           <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustIgnored</enum>
           </property>
          </widget>
         </item>

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>999</width>
-    <height>0</height>
+    <height>535</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -152,7 +152,7 @@
            </size>
           </property>
           <property name="text">
-           <string>İŞ KALEMİ (HAT) SEÇİNİZ..</string>
+           <string>İŞ KALEMİ (HAT) + HAREKET TÜRÜ SEÇİNİZ..</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignmentFlag::AlignCenter</set>

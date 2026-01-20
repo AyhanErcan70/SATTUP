@@ -132,6 +132,38 @@ class AttendanceApp(QMainWindow):
             return self.cmb_hizmet_turu.currentText().strip()
         return ""
 
+    def _service_type_values(self, service_type: str) -> list[str]:
+        st = (service_type or "").strip()
+        if not st:
+            return []
+
+        normalized = re.sub(r"\s+", " ", st.upper()).strip()
+
+        mapping = {
+            "PERSONEL": ["PERSONEL", "PERSONEL TAŞIMA", "PERSONEL TASIMA"],
+            "PERSONEL TAŞIMA": ["PERSONEL TAŞIMA", "PERSONEL", "PERSONEL TASIMA"],
+            "PERSONEL TASIMA": ["PERSONEL TASIMA", "PERSONEL TAŞIMA", "PERSONEL"],
+            "ÖĞRENCİ": ["ÖĞRENCİ", "ÖĞRENCİ TAŞIMA", "OGRENCI TASIMA", "OGRENCI TAŞIMA"],
+            "ÖĞRENCİ TAŞIMA": ["ÖĞRENCİ TAŞIMA", "ÖĞRENCİ", "OGRENCI TASIMA", "OGRENCI TAŞIMA"],
+            "OGRENCI": ["OGRENCI", "OGRENCI TASIMA", "ÖĞRENCİ", "ÖĞRENCİ TAŞIMA"],
+            "OGRENCI TASIMA": ["OGRENCI TASIMA", "OGRENCI TAŞIMA", "ÖĞRENCİ TAŞIMA", "ÖĞRENCİ"],
+            "OGRENCI TAŞIMA": ["OGRENCI TAŞIMA", "OGRENCI TASIMA", "ÖĞRENCİ TAŞIMA", "ÖĞRENCİ"],
+        }
+
+        vals = mapping.get(normalized) or [st]
+        out = []
+        seen = set()
+        for v in vals:
+            v2 = (v or "").strip()
+            if not v2:
+                continue
+            k = v2.upper()
+            if k in seen:
+                continue
+            seen.add(k)
+            out.append(v2)
+        return out
+
     def _current_context(self) -> AttendanceContext | None:
         month = self._selected_month_key()
         contract_id = None
@@ -150,8 +182,11 @@ class AttendanceApp(QMainWindow):
         ctx = self._current_context()
         if ctx is None:
             return False
-        state = self.db.get_trip_period_lock(ctx.contract_id, ctx.month, ctx.service_type)
-        return bool((state or {}).get("locked"))
+        for st in self._service_type_values(ctx.service_type) or [ctx.service_type]:
+            state = self.db.get_trip_period_lock(ctx.contract_id, ctx.month, st)
+            if bool((state or {}).get("locked")):
+                return True
+        return False
 
     # ------------------------- Lock / unlock -------------------------
     def _refresh_lock_ui(self):
@@ -164,8 +199,12 @@ class AttendanceApp(QMainWindow):
                 self.btn_onay_kaldir.setVisible(False)
             return
 
-        state = self.db.get_trip_period_lock(ctx.contract_id, ctx.month, ctx.service_type)
-        locked = bool((state or {}).get("locked"))
+        locked = False
+        for st in self._service_type_values(ctx.service_type) or [ctx.service_type]:
+            state = self.db.get_trip_period_lock(ctx.contract_id, ctx.month, st)
+            if bool((state or {}).get("locked")):
+                locked = True
+                break
 
         if hasattr(self, "btn_onayla_kilitle"):
             self.btn_onayla_kilitle.setVisible(not locked)
@@ -211,13 +250,15 @@ class AttendanceApp(QMainWindow):
         try:
             conn = self.db.connect()
             cursor = conn.cursor()
+            st_values = self._service_type_values(ctx.service_type) or [str(ctx.service_type)]
+            placeholders = ",".join(["?"] * len(st_values))
             cursor.execute(
-                """
+                f"""
                 SELECT route_params_id, time_block
                 FROM trip_plan
-                WHERE contract_id = ? AND month = ? AND service_type = ?
+                WHERE contract_id = ? AND month = ? AND service_type IN ({placeholders})
                 """,
-                (int(ctx.contract_id), str(ctx.month), str(ctx.service_type)),
+                (int(ctx.contract_id), str(ctx.month), *st_values),
             )
             plan_rows = cursor.fetchall() or []
             conn.close()
@@ -231,25 +272,27 @@ class AttendanceApp(QMainWindow):
         try:
             conn2 = self.db.connect()
             cur2 = conn2.cursor()
+            st_values = self._service_type_values(ctx.service_type) or [str(ctx.service_type)]
+            placeholders = ",".join(["?"] * len(st_values))
             for rid, tb in plan_rows:
                 rid_i = int(rid or 0)
                 tb_s = str(tb or "")
                 if rid_i <= 0 or not tb_s:
                     continue
                 cur2.execute(
-                    """
+                    f"""
                     SELECT trip_date
                     FROM trip_entries
                     WHERE contract_id = ?
                       AND route_params_id = ?
-                      AND service_type = ?
+                      AND service_type IN ({placeholders})
                       AND time_block = ?
                       AND trip_date BETWEEN ? AND ?
                     """,
                     (
                         int(ctx.contract_id),
                         int(rid_i),
-                        str(ctx.service_type),
+                        *st_values,
                         str(tb_s),
                         start_date,
                         end_date,
@@ -281,13 +324,15 @@ class AttendanceApp(QMainWindow):
         try:
             conn3 = self.db.connect()
             cur3 = conn3.cursor()
+            st_values = self._service_type_values(ctx.service_type) or [str(ctx.service_type)]
+            placeholders = ",".join(["?"] * len(st_values))
             cur3.execute(
-                """
+                f"""
                 SELECT id, COALESCE(route_name,'')
                 FROM route_params
-                WHERE contract_id = ? AND LOWER(service_type) = LOWER(?)
+                WHERE contract_id = ? AND service_type IN ({placeholders})
                 """,
-                (int(ctx.contract_id), str(ctx.service_type)),
+                (int(ctx.contract_id), *st_values),
             )
             for rid, rn in cur3.fetchall() or []:
                 try:
@@ -368,19 +413,21 @@ class AttendanceApp(QMainWindow):
         try:
             conn = self.db.connect()
             cursor = conn.cursor()
+            st_values = self._service_type_values(ctx.service_type) or [str(ctx.service_type)]
+            placeholders = ",".join(["?"] * len(st_values))
             cursor.execute(
-                """
+                f"""
                 SELECT COALESCE(SUM(qty),0)
                 FROM trip_entries
                 WHERE contract_id = ?
-                  AND service_type = ?
+                  AND service_type IN ({placeholders})
                   AND trip_date BETWEEN ? AND ?
                 """,
-                (int(ctx.contract_id), ctx.service_type, start_date, end_date),
+                (int(ctx.contract_id), *st_values, start_date, end_date),
             )
             row = cursor.fetchone()
             conn.close()
-            total = int((row[0] or 0) if row else 0)
+            total = float((row or [0])[0] or 0)
         except Exception:
             total = 0
 
@@ -428,10 +475,11 @@ class AttendanceApp(QMainWindow):
             self.cmb_hizmet_turu.blockSignals(True)
             self.cmb_hizmet_turu.clear()
             self.cmb_hizmet_turu.addItem("Seçiniz...", None)
-            self.cmb_hizmet_turu.addItem("PERSONEL", "PERSONEL")
-            self.cmb_hizmet_turu.addItem("ÖĞRENCİ", "ÖĞRENCİ")
-            if self.cmb_hizmet_turu.count() > 1:
-                self.cmb_hizmet_turu.setCurrentIndex(1)
+            self.cmb_hizmet_turu.addItem("ÖĞRENCİ TAŞIMA", "ÖĞRENCİ TAŞIMA")
+            self.cmb_hizmet_turu.addItem("PERSONEL TAŞIMA", "PERSONEL TAŞIMA")
+            self.cmb_hizmet_turu.addItem("ARAÇ KİRALAMA", "ARAÇ KİRALAMA")
+            self.cmb_hizmet_turu.addItem("DİĞER", "DİĞER")
+            self.cmb_hizmet_turu.setCurrentIndex(0)
             self.cmb_hizmet_turu.blockSignals(False)
 
         if hasattr(self, "cmb_musteri"):
@@ -474,6 +522,21 @@ class AttendanceApp(QMainWindow):
 
 
 class BulkAttendanceDialog(QDialog):
+    def _extract_movement_type(self, rec: dict) -> str:
+        if not isinstance(rec, dict):
+            return ""
+        raw = (
+            rec.get("gidis_gelis")
+            or rec.get("movement_type")
+            or rec.get("hareket_turu")
+            or rec.get("hareket")
+            or rec.get("hareketTuru")
+            or rec.get("hareket_tipi")
+            or rec.get("tip")
+            or ""
+        )
+        return str(raw or "").strip().lower()
+
     def __init__(
         self,
         parent: QMainWindow,
@@ -550,7 +613,19 @@ class BulkAttendanceDialog(QDialog):
         except Exception:
             self._driver_map = {}
 
-        self._route_rows = self.db.get_route_params_for_contract(self.contract_id, self.service_type)
+        self._route_rows = []
+        try:
+            st_values = AttendanceApp._service_type_values(self, self.service_type) or [self.service_type]
+        except Exception:
+            st_values = [self.service_type]
+        for st in st_values:
+            try:
+                rows = self.db.get_route_params_for_contract(self.contract_id, str(st))
+                if rows:
+                    self._route_rows = rows
+                    break
+            except Exception:
+                continue
         self._row_meta = []
         self._planned_keys = set()
         self._alloc_override_map = {}
@@ -665,6 +740,36 @@ class BulkAttendanceDialog(QDialog):
             except Exception:
                 return set()
 
+        def _tb_sort_key(tb_val: str):
+            tbs = str(tb_val or "").strip().upper()
+            m = re.match(r"^([GC])(\d)$", tbs)
+            if m:
+                gc = 0 if m.group(1) == "G" else 1
+                return (0, int(m.group(2)), gc)
+            parsed = _parse_time(tbs)
+            if parsed is not None:
+                hh, mm = parsed
+                return (1, hh * 60 + mm, 0)
+            return (2, 9999, 0)
+
+        def _time_text_for_time_block(tb_val: str) -> str:
+            tbs = str(tb_val or "").strip().upper()
+            m = re.match(r"^([GC])(\d)$", tbs)
+            if m:
+                idx = int(m.group(2))
+                fixed = _fixed_time_blocks()
+                if len(fixed) >= 6 and idx in (1, 2, 3):
+                    gi = (idx - 1) * 2
+                    ci = gi + 1
+                    if m.group(1) == "G":
+                        return str(fixed[gi])
+                    return str(fixed[ci])
+            parsed = _parse_time(tbs)
+            if parsed is not None:
+                hh, mm = parsed
+                return f"{hh:02d}:{mm:02d}"
+            return str(tb_val or "")
+
         def add_subrow(route_params_id: int, route_name: str, time_block: str, label: str):
             row = self.table.rowCount()
             self.table.insertRow(row)
@@ -690,7 +795,7 @@ class BulkAttendanceDialog(QDialog):
                 cmb_d.addItem(name, did)
             self.table.setCellWidget(row, self._col_driver, cmb_d)
 
-            t_item = QTableWidgetItem(label)
+            t_item = QTableWidgetItem(_time_text_for_time_block(label))
             self.table.setItem(row, self._col_time_text, t_item)
 
             for d in range(1, self.max_days + 1):
@@ -755,38 +860,30 @@ class BulkAttendanceDialog(QDialog):
         self._planned_keys = _planned_keys_for_context(int(self.contract_id), self.month_key, str(self.service_type))
 
         if self._planned_keys:
-            all_blocks = _time_blocks_for_context(int(self.contract_id), self.month_key, str(self.service_type))
-            planned_blocks = []
-            seen = set()
-            for b in all_blocks:
-                if not b:
+            planned_blocks = sorted({str(tb) for _rid, tb in self._planned_keys if str(tb)}, key=_tb_sort_key)
+            for row in self._route_rows:
+                try:
+                    rid = int(row[0] or 0)
+                    rname = row[1] if len(row) > 1 else ""
+                except Exception:
                     continue
-                if b in seen:
-                    continue
-                for _rid, tb in self._planned_keys:
-                    if str(tb) == str(b):
-                        planned_blocks.append(str(b))
-                        seen.add(str(b))
-                        break
-
-            for _rid, tb in self._planned_keys:
-                tbs = str(tb)
-                if tbs and tbs not in seen:
-                    planned_blocks.append(tbs)
-                    seen.add(tbs)
-
-            for rid, rname, _km in self._route_rows:
                 for tb in planned_blocks:
                     if (int(rid), str(tb)) in self._planned_keys:
                         add_subrow(int(rid), rname or "", str(tb), str(tb))
         else:
-            time_blocks = _time_blocks_for_context(int(self.contract_id), self.month_key, str(self.service_type))
+            time_blocks = ["G1", "C1", "G2", "C2", "G3", "C3"]
             legacy_blocks = _legacy_time_blocks_for_month(start_date, end_date)
             for lb in legacy_blocks:
                 if lb not in time_blocks:
                     time_blocks.append(lb)
+            time_blocks = sorted([str(x) for x in time_blocks if str(x)], key=_tb_sort_key)
 
-            for rid, rname, _km in self._route_rows:
+            for row in self._route_rows:
+                try:
+                    rid = int(row[0] or 0)
+                    rname = row[1] if len(row) > 1 else ""
+                except Exception:
+                    continue
                 for tb in time_blocks:
                     add_subrow(int(rid), rname or "", str(tb), str(tb))
 
@@ -1226,6 +1323,9 @@ class BulkAttendanceDialog(QDialog):
 
         contract_price_by_name = {}
         contract_price_by_norm = {}
+        contract_price_by_name_mt = {}
+        contract_price_by_norm_mt = {}
+        ambiguous_names = set()
         try:
             conn = self.db.connect()
             cursor = conn.cursor()
@@ -1256,18 +1356,43 @@ class BulkAttendanceDialog(QDialog):
                     ).strip()
                     if st and st.lower() != str(self.service_type).strip().lower():
                         continue
+                    mt = self._extract_movement_type(rec or {})
                     try:
                         pr = float((rec or {}).get("fiyat") or 0.0)
                     except Exception:
                         pr = 0.0
-                    contract_price_by_name[guz] = pr
+
+                    # route_name-only price is only safe when guzergah is unique.
+                    # If the same guzergah appears multiple times (typically different movement types),
+                    # we mark it ambiguous and disable route_name-only fallback for it.
+                    if guz in contract_price_by_name:
+                        ambiguous_names.add(guz)
+                    else:
+                        contract_price_by_name[guz] = pr
+
                     for ng in _norm_route_variants(guz):
-                        if ng and ng not in contract_price_by_norm:
+                        if not ng:
+                            continue
+                        if ng in contract_price_by_norm:
+                            ambiguous_names.add(guz)
+                        else:
                             contract_price_by_norm[ng] = pr
 
+                    contract_price_by_name_mt[(guz, mt)] = pr
+                    for ng in _norm_route_variants(guz):
+                        nk = (ng, mt)
+                        if ng and nk not in contract_price_by_norm_mt:
+                            contract_price_by_norm_mt[nk] = pr
+
         route_price_by_id = {}
-        if contract_price_by_name or contract_price_by_norm:
-            for rid, rname, _km in self._route_rows:
+        if contract_price_by_name or contract_price_by_norm or contract_price_by_name_mt or contract_price_by_norm_mt:
+            for row in self._route_rows:
+                try:
+                    rid = row[0]
+                    rname = row[1] if len(row) > 1 else ""
+                    mt_r = row[3] if len(row) > 3 else ""
+                except Exception:
+                    continue
                 try:
                     rpid = int(rid)
                 except Exception:
@@ -1275,21 +1400,37 @@ class BulkAttendanceDialog(QDialog):
                 rn = (rname or "").strip().lower()
                 if not rn:
                     continue
+                mt_rn = (mt_r or "").strip().lower()
                 pr = None
-                if rn in contract_price_by_name:
+                if mt_rn and (rn, mt_rn) in contract_price_by_name_mt:
+                    pr = float(contract_price_by_name_mt.get((rn, mt_rn)) or 0.0)
+                elif rn in contract_price_by_name and rn not in ambiguous_names:
                     pr = float(contract_price_by_name.get(rn) or 0.0)
                 else:
                     for nrn in _norm_route_variants(rn):
-                        if nrn and nrn in contract_price_by_norm:
+                        if mt_rn:
+                            nk = (nrn, mt_rn)
+                            if nrn and nk in contract_price_by_norm_mt:
+                                pr = float(contract_price_by_norm_mt.get(nk) or 0.0)
+                                break
+                        if nrn and nrn in contract_price_by_norm and rn not in ambiguous_names:
                             pr = float(contract_price_by_norm.get(nrn) or 0.0)
                             break
                     if pr is None:
                         nrn0 = _norm_route_name(rn)
                         if nrn0:
-                            for k_norm, v_pr in contract_price_by_norm.items():
-                                if nrn0 in k_norm or k_norm in nrn0:
-                                    pr = float(v_pr or 0.0)
-                                    break
+                            if mt_rn:
+                                for (k_norm, k_mt), v_pr in contract_price_by_norm_mt.items():
+                                    if k_mt != mt_rn:
+                                        continue
+                                    if nrn0 in k_norm or k_norm in nrn0:
+                                        pr = float(v_pr or 0.0)
+                                        break
+                            if pr is None and rn not in ambiguous_names:
+                                for k_norm, v_pr in contract_price_by_norm.items():
+                                    if nrn0 in k_norm or k_norm in nrn0:
+                                        pr = float(v_pr or 0.0)
+                                        break
                 if pr is not None:
                     route_price_by_id[rpid] = pr
 

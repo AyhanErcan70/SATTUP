@@ -1,7 +1,8 @@
 from PyQt6 import uic
 from PyQt6.QtCore import QDate, Qt, QRegularExpression
 from PyQt6.QtGui import QIntValidator, QRegularExpressionValidator
-from PyQt6.QtWidgets import QWidget, QMessageBox, QTableWidgetItem, QHeaderView
+from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import QDialog, QWidget, QMessageBox, QTableWidgetItem, QHeaderView
 from app.core.db_manager import DatabaseManager
 from config import get_ui_path
 from app.utils.style_utils import clear_all_styles
@@ -15,6 +16,7 @@ class ContractsApp(QWidget):
         self.db = DatabaseManager()
         self.user_data = user_data or {}
         self.current_number = None
+        self._price_matrix_cache = []
         if hasattr(self, "txt_sozlesme_kodu"):
             self.txt_sozlesme_kodu.setReadOnly(True)
             self.txt_sozlesme_kodu.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -104,14 +106,15 @@ class ContractsApp(QWidget):
             w.setDate(QDate.currentDate())
 
     def _init_combos(self):
+        # Yeni UI'da combo item'ları .ui içinde tanımlı olabilir; boş değilse ezmeyelim.
         if hasattr(self, "cmb_hizmet_tipi"):
-            self.cmb_hizmet_tipi.clear()
-            self.cmb_hizmet_tipi.addItem("Seçiniz...")
-            self.cmb_hizmet_tipi.addItems(["OKUL", "PERSONEL", "DİĞER"])
+            if self.cmb_hizmet_tipi.count() == 0:
+                self.cmb_hizmet_tipi.addItem("Seçiniz...")
+                self.cmb_hizmet_tipi.addItems(["ÖĞRENCİ TAŞIMA", "PERSONEL TAŞIMA", "ARAÇ KİRALAMA", "DİĞER"])
         if hasattr(self, "cmb_ucret_tipi"):
-            self.cmb_ucret_tipi.clear()
-            self.cmb_ucret_tipi.addItem("Seçiniz...")
-            self.cmb_ucret_tipi.addItems(["AYLIK", "GÜNLÜK", "SEFER BAŞI"])
+            if self.cmb_ucret_tipi.count() == 0:
+                self.cmb_ucret_tipi.addItem("Seçiniz...")
+                self.cmb_ucret_tipi.addItems(["AYLIK", "GÜNLÜK", "SEFER BAŞI"])
         if hasattr(self, "cmb_musteri"):
             self.cmb_musteri.clear()
             self._load_customers()
@@ -134,6 +137,10 @@ class ContractsApp(QWidget):
             self.btn_kaydet.clicked.connect(self.save)
         if hasattr(self, "btn_temizle"):
             self.btn_temizle.clicked.connect(self.clear_form)
+        if hasattr(self, "btn_sil"):
+            self.btn_sil.clicked.connect(self._delete_selected)
+        if hasattr(self, "btn_kalem_ekle"):
+            self.btn_kalem_ekle.clicked.connect(self._open_hat_dialog)
         if hasattr(self, "txt_toplam_tutar"):
             self.txt_toplam_tutar.textChanged.connect(self._update_kdv_total)
         if hasattr(self, "txt_kdv_orani"):
@@ -153,6 +160,185 @@ class ContractsApp(QWidget):
         list_tbl = self._get_contracts_table()
         if list_tbl is not None:
             list_tbl.doubleClicked.connect(self.select_contract)
+
+    def _open_hat_dialog(self):
+        # Sözleşme kodu olmadan kalem girişi yapmayalım
+        contract_no = (self.txt_sozlesme_kodu.text() or "").strip() if hasattr(self, "txt_sozlesme_kodu") else ""
+        if not contract_no:
+            QMessageBox.warning(self, "Uyarı", "Önce sözleşme kaydını oluşturunuz.")
+            return
+
+        dlg = QDialog(self)
+        try:
+            uic.loadUi(get_ui_path("hat_dialog.ui"), dlg)
+        except Exception as e:
+            QMessageBox.critical(self, "Hata", f"hat_dialog.ui yüklenemedi:\n{str(e)}")
+            return
+
+        tbl = getattr(dlg, "table_kalemler", None)
+        btn_add = getattr(dlg, "btn_satir_ekle", None)
+        btn_del = getattr(dlg, "btn_satir_sil", None)
+        btn_save = getattr(dlg, "btn_kaydet", None) or getattr(dlg, "pushButton", None)
+        btn_close = getattr(dlg, "btn_kapat", None)
+
+        if tbl is None:
+            QMessageBox.critical(self, "Hata", "hat_dialog: table_kalemler bulunamadı")
+            return
+
+        headers = ["İŞ KALEMİ (HAT)", "HAREKET TÜRÜ", "MESAFE (KM)", "ARAÇ KPST.", "FİYAT"]
+        tbl.setColumnCount(len(headers))
+        tbl.setHorizontalHeaderLabels(headers)
+        tbl.verticalHeader().setVisible(False)
+        tbl.setAlternatingRowColors(True)
+        tbl.setSelectionBehavior(tbl.SelectionBehavior.SelectRows)
+        tbl.setSelectionMode(tbl.SelectionMode.ExtendedSelection)
+        h = tbl.horizontalHeader()
+        h.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        h.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        h.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        h.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        h.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        h.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+
+        # mevcut cache veya DB'deki json'u yükle
+        pm = self._price_matrix_cache
+        if not pm and self.current_number:
+            details = self.db.get_contract_details_by_number(self.current_number)
+            try:
+                raw = (details or {}).get("price_matrix_json")
+                parsed = json.loads(raw) if raw else []
+                if isinstance(parsed, list):
+                    pm = parsed
+            except Exception:
+                pm = []
+
+        tbl.setRowCount(0)
+        for row in pm or []:
+            r = tbl.rowCount()
+            tbl.insertRow(r)
+            vals = [
+                str((row or {}).get("guzergah") or ""),
+                str((row or {}).get("gidis_gelis") or ""),
+                ("" if (row or {}).get("km") is None else str((row or {}).get("km"))),
+                ("" if (row or {}).get("arac_kpst") is None else str((row or {}).get("arac_kpst"))),
+                ("" if (row or {}).get("fiyat") is None else str((row or {}).get("fiyat"))),
+            ]
+            for c, v in enumerate(vals):
+                it = QTableWidgetItem(v)
+                if c in (2, 3, 4):
+                    it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                tbl.setItem(r, c, it)
+
+        def add_row():
+            r = tbl.rowCount()
+            tbl.insertRow(r)
+            for c in range(tbl.columnCount()):
+                it = QTableWidgetItem("")
+                if c in (2, 3, 4):
+                    it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                tbl.setItem(r, c, it)
+
+        def del_row():
+            selected = sorted({it.row() for it in tbl.selectedItems()}, reverse=True)
+            if not selected and tbl.rowCount() > 0:
+                selected = [tbl.rowCount() - 1]
+            for r in selected:
+                if 0 <= r < tbl.rowCount():
+                    tbl.removeRow(r)
+
+        def save_rows():
+            out = []
+            for r in range(tbl.rowCount()):
+                hat = (tbl.item(r, 0).text().strip() if tbl.item(r, 0) else "")
+                hareket = (tbl.item(r, 1).text().strip() if tbl.item(r, 1) else "")
+                km_txt = (tbl.item(r, 2).text().strip() if tbl.item(r, 2) else "")
+                kps_txt = (tbl.item(r, 3).text().strip() if tbl.item(r, 3) else "")
+                fiyat_txt = (tbl.item(r, 4).text().strip() if tbl.item(r, 4) else "")
+                if not any([hat, hareket, km_txt, kps_txt, fiyat_txt]):
+                    continue
+
+                row = {
+                    "guzergah": hat,
+                    "gidis_gelis": hareket,
+                    "km": self._parse_money(km_txt),
+                    "arac_kpst": self._parse_money(kps_txt),
+                    "fiyat": self._parse_money(fiyat_txt),
+                }
+                out.append(row)
+
+            self._price_matrix_cache = out
+            # Sözleşme DB'de mevcutsa (update modu) iş kalemlerini anında DB'ye yaz.
+            # Yeni sözleşmede ise ana formdaki KAYDET ile yazılacak.
+            contract_number = (self.current_number or "").strip()
+            if contract_number:
+                try:
+                    payload = {
+                        "contract_number": contract_number,
+                        "price_matrix_json": json.dumps(out, ensure_ascii=False),
+                    }
+                    ok = self.db.save_contract(payload, is_update=True)
+                    if ok:
+                        QMessageBox.information(self, "Başarılı", "İş kalemleri kaydedildi.")
+                    else:
+                        QMessageBox.warning(self, "Uyarı", "İş kalemleri kaydedildi ancak DB güncellemesi yapılamadı. Lütfen sözleşmeyi tekrar KAYDET ediniz.")
+                except Exception:
+                    QMessageBox.warning(self, "Uyarı", "İş kalemleri kaydedildi ancak DB güncellemesi sırasında hata oluştu. Lütfen sözleşmeyi tekrar KAYDET ediniz.")
+            else:
+                QMessageBox.information(self, "Başarılı", "İş kalemleri kaydedildi. Sözleşmeyi KAYDET ile tamamlayınız.")
+            dlg.accept()
+
+        if btn_add is not None:
+            try:
+                btn_add.clicked.connect(add_row)
+            except Exception:
+                pass
+        if btn_del is not None:
+            try:
+                btn_del.clicked.connect(del_row)
+            except Exception:
+                pass
+        if btn_save is not None:
+            try:
+                btn_save.clicked.connect(save_rows)
+            except Exception:
+                pass
+        if btn_close is not None:
+            try:
+                btn_close.clicked.connect(dlg.reject)
+            except Exception:
+                pass
+
+        dlg.exec()
+
+    def _delete_selected(self):
+        tbl = self._get_contracts_table()
+        if tbl is None:
+            return
+        selected_rows = sorted({it.row() for it in tbl.selectedItems()})
+        if not selected_rows:
+            QMessageBox.information(self, "Bilgi", "Silmek için listeden sözleşme seçiniz.")
+            return
+        row = selected_rows[0]
+        code_item = tbl.item(row, 0)
+        contract_number = (code_item.text().strip() if code_item else "")
+        if not contract_number:
+            return
+
+        msg = QMessageBox.question(
+            self,
+            "Onay",
+            f"{contract_number} sözleşmesi silinsin mi?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if msg != QMessageBox.StandardButton.Yes:
+            return
+
+        ok = self.db.delete_contract_by_number(contract_number)
+        if not ok:
+            QMessageBox.critical(self, "Hata", "Sözleşme silinemedi.")
+            return
+        self.load_table()
+        self.clear_form()
 
     def _format_date_tr(self, iso_date: str) -> str:
         s = (iso_date or "").strip()
@@ -246,8 +432,28 @@ class ContractsApp(QWidget):
         # Hizmet tipi / ücret tipi
         if hasattr(self, "cmb_hizmet_tipi") and details.get("contract_type") is not None:
             self.cmb_hizmet_tipi.setCurrentText(str(details.get("contract_type") or ""))
+        if hasattr(self, "cmb_odeme_usulu") and details.get("odeme_usulu") is not None:
+            self.cmb_odeme_usulu.setCurrentText(str(details.get("odeme_usulu") or ""))
         if hasattr(self, "cmb_ucret_tipi") and details.get("ucret_tipi") is not None:
             self.cmb_ucret_tipi.setCurrentText(str(details.get("ucret_tipi") or ""))
+
+        if hasattr(self, "txt_isin_tanimi") and details.get("isin_tanimi") is not None:
+            self.txt_isin_tanimi.setText(str(details.get("isin_tanimi") or ""))
+
+        for name, key in [
+            ("cmb_vardiya", "vardiya"),
+            ("cmb_mesai", "mesai"),
+            ("cmb_ek_ozel", "ek_ozel"),
+        ]:
+            w = getattr(self, name, None)
+            if w is None:
+                continue
+            val = details.get(key)
+            if val is None:
+                continue
+            idx = w.findText(str(val))
+            if idx >= 0:
+                w.setCurrentIndex(idx)
 
         # Tarihler
         self._set_date_from_iso("date_baslangic", str(details.get("start_date") or ""))
@@ -266,14 +472,16 @@ class ContractsApp(QWidget):
             k = details.get("kdv_orani")
             self.txt_kdv_orani.setText("" if k is None else str(int(float(k) or 0)))
 
-        # Fiyat matrisi varsa yükle, yoksa toplam tutarı göster
+        # İş kalemleri (fiyat matrisi json) cache'e alınır
         pm = details.get("price_matrix_json")
         if pm:
-            self._load_price_table_from_json(pm)
+            try:
+                parsed = json.loads(pm)
+                self._price_matrix_cache = parsed if isinstance(parsed, list) else []
+            except Exception:
+                self._price_matrix_cache = []
         else:
-            if hasattr(self, "txt_toplam_tutar"):
-                self.txt_toplam_tutar.setText(self._format_money_tr(float(details.get("toplam_tutar") or 0.0)))
-            self._recalc_price_total()
+            self._price_matrix_cache = []
 
         if hasattr(self, "btn_kaydet"):
             self.btn_kaydet.setText("GÜNCELLE")
@@ -416,12 +624,27 @@ class ContractsApp(QWidget):
             "kdv_orani": float(self.txt_kdv_orani.text()) if hasattr(self, "txt_kdv_orani") and (self.txt_kdv_orani.text() or "").isdigit() else 0.0,
         }
 
-        # Fiyat matrisi: contracts tablosundaki price_matrix_json alanına yazılır
-        matrix = self._collect_price_matrix()
-        if matrix:
-            data["price_matrix_json"] = json.dumps(matrix, ensure_ascii=False)
-            # Toplam tutarı tabloda hesaplananla senkron tut
-            data["toplam_tutar"] = sum(float(x.get("fiyat") or 0.0) for x in matrix)
+        if hasattr(self, "txt_isin_tanimi"):
+            data["isin_tanimi"] = (self.txt_isin_tanimi.text() or "").strip()
+        if hasattr(self, "cmb_odeme_usulu"):
+            data["odeme_usulu"] = (self.cmb_odeme_usulu.currentText() or "").strip()
+
+        for name, key in [
+            ("cmb_vardiya", "vardiya"),
+            ("cmb_mesai", "mesai"),
+            ("cmb_ek_ozel", "ek_ozel"),
+        ]:
+            w = getattr(self, name, None)
+            if w is None:
+                continue
+            txt = (w.currentText() or "").strip()
+            try:
+                data[key] = (None if txt in ("", "-") else int(txt))
+            except Exception:
+                data[key] = None
+
+        if self._price_matrix_cache:
+            data["price_matrix_json"] = json.dumps(self._price_matrix_cache, ensure_ascii=False)
         return data
 
     def save(self):
@@ -443,18 +666,27 @@ class ContractsApp(QWidget):
 
     def clear_form(self):
         self.current_number = None
+        self._price_matrix_cache = []
         if hasattr(self, "txt_sozlesme_kodu"):
             self._assign_next_number()
         if hasattr(self, "cmb_musteri"):
             self.cmb_musteri.setCurrentIndex(0)
         if hasattr(self, "cmb_hizmet_tipi"):
             self.cmb_hizmet_tipi.setCurrentIndex(0)
+        if hasattr(self, "cmb_odeme_usulu"):
+            self.cmb_odeme_usulu.setCurrentIndex(0)
         if hasattr(self, "txt_arac_adedi"):
             self.txt_arac_adedi.clear()
         if hasattr(self, "chk_esnek_sefer"):
             self.chk_esnek_sefer.setChecked(False)
         if hasattr(self, "cmb_ucret_tipi"):
             self.cmb_ucret_tipi.setCurrentIndex(0)
+        if hasattr(self, "txt_isin_tanimi"):
+            self.txt_isin_tanimi.clear()
+        for name in ["cmb_vardiya", "cmb_mesai", "cmb_ek_ozel"]:
+            w = getattr(self, name, None)
+            if w is not None:
+                w.setCurrentIndex(0)
         if hasattr(self, "txt_toplam_tutar"):
             self.txt_toplam_tutar.clear()
         if hasattr(self, "txt_kdv_orani"):
@@ -477,9 +709,9 @@ class ContractsApp(QWidget):
         headers = [
             "SÖZLEŞME KODU",
             "MÜŞTERİ (CARİ)",
-            "SÖZLEŞME BAŞLANGIÇ TARİHİ",
-            "BİTİŞ TARİHİ",
-            "TOPLAM TUTAR",
+            "HİZMET TİPİ",
+            "İŞE BAŞLAMA TARİHİ",
+            "İŞ BİTİŞ TARİHİ",
             "DURUM",
         ]
         tbl.setColumnCount(len(headers))
@@ -488,19 +720,15 @@ class ContractsApp(QWidget):
         header = tbl.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
 
-        # Kolon genişlikleri (yaklaşık karakter genişliği -> px)
-        # 1. sütun (kod) ~7 hane
-        header.resizeSection(0, 90)
-        # 3-4. sütunlar (tarih) ~10 hane
-        header.resizeSection(2, 110)
-        header.resizeSection(3, 110)
-        # 5. sütun (toplam) ~12 hane
-        header.resizeSection(4, 120)
-        # 6. sütun (durum) ~5 hane
-        header.resizeSection(5, 80)
+        # Kolon genişlikleri
+        header.resizeSection(0, 90)   # kod
+        header.resizeSection(3, 110)  # başlangıç
+        header.resizeSection(4, 110)  # bitiş
+        header.resizeSection(5, 80)   # durum
 
-        # 2. sütun (müşteri) kalan alanı kaplasın
+        # Müşteri ve hizmet tipi alanı genişleyebilir
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
 
         tbl.setAlternatingRowColors(True)
         try:
@@ -511,9 +739,9 @@ class ContractsApp(QWidget):
                 SELECT
                     c.contract_number,
                     COALESCE(cu.title, ''),
+                    COALESCE(c.contract_type, ''),
                     COALESCE(c.start_date, ''),
                     COALESCE(c.end_date, ''),
-                    COALESCE(c.toplam_tutar, 0),
                     COALESCE(c.is_active, 1)
                 FROM contracts c
                 LEFT JOIN customers cu ON cu.id = c.customer_id
@@ -525,21 +753,45 @@ class ContractsApp(QWidget):
 
             tbl.setRowCount(len(rows))
             for r, row in enumerate(rows):
-                contract_no, customer_title, start_date, end_date, toplam_tutar, is_active = row
+                contract_no, customer_title, contract_type, start_date, end_date, is_active = row
+
+                # DURUM rengi tarih bazlı
+                status_txt = "AKTİF" if int(is_active or 0) == 1 else "PASİF"
+                status_color = None
+                try:
+                    sd = QDate.fromString(str(start_date or ""), "yyyy-MM-dd")
+                    ed = QDate.fromString(str(end_date or ""), "yyyy-MM-dd")
+                    today = QDate.currentDate()
+                    if ed.isValid() and today > ed:
+                        status_txt = "PASİF"
+                        status_color = QColor("red")
+                    elif int(is_active or 0) != 1:
+                        status_txt = "PASİF"
+                        status_color = QColor("red")
+                    elif sd.isValid() and ed.isValid() and today >= sd and today <= ed:
+                        status_txt = "AKTİF"
+                        days_left = today.daysTo(ed)
+                        if days_left <= 10:
+                            status_color = QColor("orange")
+                        else:
+                            status_color = QColor("green")
+                except Exception:
+                    status_color = None
+
                 values = [
                     contract_no,
                     customer_title,
+                    str(contract_type or ""),
                     self._format_date_tr(str(start_date or "")),
                     self._format_date_tr(str(end_date or "")),
-                    self._format_money_tr(float(toplam_tutar or 0.0)),
-                    "AKTİF" if int(is_active or 0) == 1 else "PASİF",
+                    status_txt,
                 ]
                 for c, value in enumerate(values):
                     item = QTableWidgetItem(str(value) if value is not None else "")
                     if c in [0, 5]:
                         item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                    if c == 4:
-                        item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                    if c == 5 and status_color is not None:
+                        item.setForeground(status_color)
                     tbl.setItem(r, c, item)
         except Exception:
             tbl.setRowCount(0)

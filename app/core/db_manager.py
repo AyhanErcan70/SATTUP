@@ -581,6 +581,11 @@ class DatabaseManager:
                 ("toplam_tutar", "REAL"),
                 ("kdv_orani", "REAL"),
                 ("price_matrix_json", "TEXT"),
+                ("isin_tanimi", "TEXT"),
+                ("odeme_usulu", "TEXT"),
+                ("vardiya", "INTEGER"),
+                ("mesai", "INTEGER"),
+                ("ek_ozel", "INTEGER"),
             ]
             for col, col_type in migrations:
                 if col not in cols:
@@ -827,16 +832,28 @@ class DatabaseManager:
             return []
         try:
             cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT id, COALESCE(route_name,''), COALESCE(distance_km,0)
-                FROM route_params
-                WHERE contract_id = ? AND service_type = ?
-                ORDER BY id ASC
-                """,
-                (int(contract_id), (service_type or "").strip()),
-            )
-            return cursor.fetchall()
+            try:
+                cursor.execute(
+                    """
+                    SELECT id, COALESCE(route_name,''), COALESCE(distance_km,0), COALESCE(movement_type,'')
+                    FROM route_params
+                    WHERE contract_id = ? AND service_type = ?
+                    ORDER BY id ASC
+                    """,
+                    (int(contract_id), (service_type or "").strip()),
+                )
+                return cursor.fetchall()
+            except Exception:
+                cursor.execute(
+                    """
+                    SELECT id, COALESCE(route_name,''), COALESCE(distance_km,0)
+                    FROM route_params
+                    WHERE contract_id = ? AND service_type = ?
+                    ORDER BY id ASC
+                    """,
+                    (int(contract_id), (service_type or "").strip()),
+                )
+                return cursor.fetchall()
         finally:
             conn.close()
 

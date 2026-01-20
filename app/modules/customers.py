@@ -83,7 +83,7 @@ class CustomersApp(QWidget):
         self.load_data()
         self._setup_filters()
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-
+        self.table_size_changed()
         self._assign_next_code()
 
         self._update_kisilik_ui()
@@ -108,20 +108,20 @@ class CustomersApp(QWidget):
         if hasattr(self, "cmb_musteri_turu"):
             self.cmb_musteri_turu.clear()
             self.cmb_musteri_turu.addItem("Seçiniz...", None)
-            self.cmb_musteri_turu.addItem("Müşteri", "Müşteri")
-            self.cmb_musteri_turu.addItem("Alt Yüklenici", "Alt Yüklenici")
+            self.cmb_musteri_turu.addItem("MÜŞTERİ", "MÜŞTERİ")
+            self.cmb_musteri_turu.addItem("ALT YÜKLENICI", "ALT YÜKLENICI")
 
         if hasattr(self, "cmb_kisilik"):
             self.cmb_kisilik.clear()
             self.cmb_kisilik.addItem("Seçiniz...", None)
-            self.cmb_kisilik.addItem("Gerçek Kişi", "Gerçek Kişi")
-            self.cmb_kisilik.addItem("Tüzel Kişi", "Tüzel Kişi")
+            self.cmb_kisilik.addItem("GERÇEK KİŞİ", "GERÇEK KİŞİ")
+            self.cmb_kisilik.addItem("TÜZEL KİŞİ", "TÜZEL KİŞİ")
 
         if hasattr(self, "cmb_sektor"):
             self.cmb_sektor.clear()
             self.cmb_sektor.addItem("Seçiniz...", None)
-            self.cmb_sektor.addItem("Özel Sektör", "Özel Sektör")
-            self.cmb_sektor.addItem("Kamu", "Kamu")
+            self.cmb_sektor.addItem("ÖZEL SEKTÖR", "ÖZEL SEKTÖR")
+            self.cmb_sektor.addItem("KAMU", "KAMU")
 
         # İl/İlçe sabit tablosundan
         if hasattr(self, "cmb_il"):
@@ -160,12 +160,13 @@ class CustomersApp(QWidget):
 
         self.tableView.setColumnCount(len(headers))
         self.tableView.setHorizontalHeaderLabels(headers)
+        self.tableView.verticalHeader().setDefaultSectionSize(20)
         self.tableView.verticalHeader().setVisible(False)
 
         header = self.tableView.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(8, QHeaderView.ResizeMode.Stretch)
+        # header.setSectionResizeMode(8, QHeaderView.ResizeMode.Stretch)
 
         query = """
             SELECT customer_code, musteri_turu, kisilik, title, tax_number, il, ilce, phone, email, is_active
@@ -189,7 +190,7 @@ class CustomersApp(QWidget):
                         display_text = str(value) if value is not None else ""
 
                     item = QTableWidgetItem(display_text)
-                    if col_idx in [0, 1, 2, 9]:
+                    if col_idx in [0, 1, 2, 4, 5, 6, 7, 9]:
                         item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                     if col_idx == 9 and value == 0:
                         item.setForeground(Qt.GlobalColor.red)
@@ -223,21 +224,21 @@ class CustomersApp(QWidget):
         # Combo içerikleri
         self.cmb_musteri_turu_f.blockSignals(True)
         self.cmb_musteri_turu_f.clear()
-        self.cmb_musteri_turu_f.addItem("Tümü")
-        self.cmb_musteri_turu_f.addItem("Müşteri")
-        self.cmb_musteri_turu_f.addItem("Alt Yüklenici")
+        self.cmb_musteri_turu_f.addItem("TÜMÜ")
+        self.cmb_musteri_turu_f.addItem("MÜŞTERİ")
+        self.cmb_musteri_turu_f.addItem("ALT YÜKLENICI")
         self.cmb_musteri_turu_f.blockSignals(False)
 
         self.cmb_kisilik_f.blockSignals(True)
         self.cmb_kisilik_f.clear()
-        self.cmb_kisilik_f.addItem("Tümü")
-        self.cmb_kisilik_f.addItem("Gerçek Kişi")
-        self.cmb_kisilik_f.addItem("Tüzel Kişi")
+        self.cmb_kisilik_f.addItem("TÜMÜ")
+        self.cmb_kisilik_f.addItem("GERÇEK KİŞİ")
+        self.cmb_kisilik_f.addItem("TÜZEL KİŞİ")
         self.cmb_kisilik_f.blockSignals(False)
 
         self.cmb_durum_f.blockSignals(True)
         self.cmb_durum_f.clear()
-        self.cmb_durum_f.addItem("Tümü")
+        self.cmb_durum_f.addItem("TÜMÜ")
         self.cmb_durum_f.addItem("AKTİF")
         self.cmb_durum_f.addItem("PASİF")
         self.cmb_durum_f.blockSignals(False)
@@ -571,3 +572,15 @@ class CustomersApp(QWidget):
 
         if hasattr(self, "btn_kaydet"):
             self.btn_kaydet.setText("GÜNCELLE")
+    def table_size_changed(self):
+        self.tableView.setColumnWidth(0, 70)
+        self.tableView.setColumnWidth(1, 80)
+        self.tableView.setColumnWidth(2, 70)
+        self.tableView.setColumnWidth(3, 650)
+        self.tableView.setColumnWidth(4, 90)
+        self.tableView.setColumnWidth(5, 80)
+        self.tableView.setColumnWidth(6, 90)
+        self.tableView.setColumnWidth(7, 100)
+        self.tableView.setColumnWidth(8, 180)
+        self.tableView.setColumnWidth(9, 55)
+        
