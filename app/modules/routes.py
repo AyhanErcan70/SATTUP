@@ -1,5 +1,6 @@
 
 import json
+import re
 
 from PyQt6 import uic
 from PyQt6.QtCore import Qt, QDate
@@ -365,7 +366,7 @@ class RoutesApp(QWidget):
         except Exception:
             kalem_list = []
 
-        if not guzergah_list:
+        if not kalem_list:
             try:
                 conn = self.db.connect()
                 cursor = conn.cursor()
@@ -444,12 +445,49 @@ class RoutesApp(QWidget):
             uniq.append({"route_name": rn, "movement_type": mt, "km": (k or {}).get("km")})
         kalem_list = uniq
 
+        def _norm_name(s: str) -> str:
+            s2 = str(s or "").strip().casefold()
+            s2 = re.sub(r"\s+", " ", s2)
+            s2 = re.sub(r"[^0-9a-zA-ZğüşöçıİĞÜŞÖÇ]", "", s2)
+            return s2
+
+        existing_names = set()
+        try:
+            conn = self.db.connect()
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT COALESCE(route_name,'')
+                FROM route_params
+                WHERE contract_id = ?
+                """,
+                (contract_id,),
+            )
+            for (rname,) in cursor.fetchall() or []:
+                rn = _norm_name(str(rname or ""))
+                if rn:
+                    existing_names.add(rn)
+            conn.close()
+        except Exception:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            existing_names = set()
         for k in kalem_list:
             rn = str((k or {}).get("route_name") or "").strip()
             mt = str((k or {}).get("movement_type") or "").strip()
             disp = f"{rn} - {mt}" if mt else rn
             it = QStandardItem(disp)
             it.setEditable(False)
+
+            try:
+                if _norm_name(rn) in existing_names:
+                    it.setForeground(QColor(0, 128, 0))
+                else:
+                    it.setForeground(QColor(200, 0, 0))
+            except Exception:
+                pass
             it.setData(json.dumps({"route_name": rn, "movement_type": mt}, ensure_ascii=False), Qt.ItemDataRole.UserRole)
             it.setData(contract_type, Qt.ItemDataRole.UserRole + 1)  # hizmet tipi 1-A
             self._kalem_model.appendRow(it)
@@ -741,6 +779,14 @@ class RoutesApp(QWidget):
                 it0 = tbl.item(r, 0)
                 if it0 is not None:
                     rid = it0.data(Qt.ItemDataRole.UserRole + 101)
+
+                it1 = tbl.item(r, 1)
+                mtype = ""
+                if it1 is not None:
+                    try:
+                        mtype = str(it1.data(Qt.ItemDataRole.UserRole + 202) or "").strip()
+                    except Exception:
+                        mtype = ""
 
                 stype = (tbl.item(r, 0).text().strip() if tbl.item(r, 0) else "")
                 rname = (tbl.item(r, 1).text().strip() if tbl.item(r, 1) else "")

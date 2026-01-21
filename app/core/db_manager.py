@@ -11,6 +11,7 @@ class DatabaseManager:
         self.migrate_trip_plan_table()
         self.migrate_trip_period_lock_table()
         self.create_trip_entries_tables()
+        self._ensure_trip_prices_table()
         self.create_customers_table()
         self.create_vehicles_table()
         self.create_repairs_table()
@@ -212,6 +213,144 @@ class DatabaseManager:
             conn2.commit()
         finally:
             conn2.close()
+
+    def month_has_operational_template(self, month: str) -> bool:
+        """Seçilen ay için şablon veri var mı? (trip_plan / trip_prices / trip_time_blocks)"""
+        self._ensure_trip_prices_table()
+        conn = self.connect()
+        if not conn:
+            return False
+        try:
+            cur = conn.cursor()
+            m = str(month)
+            cur.execute("SELECT COUNT(*) FROM trip_plan WHERE month=?", (m,))
+            c1 = int((cur.fetchone() or [0])[0] or 0)
+            cur.execute("SELECT COUNT(*) FROM trip_prices WHERE month=?", (m,))
+            c2 = int((cur.fetchone() or [0])[0] or 0)
+            cur.execute("SELECT COUNT(*) FROM trip_time_blocks WHERE month=?", (m,))
+            c3 = int((cur.fetchone() or [0])[0] or 0)
+            return (c1 + c2 + c3) > 0
+        except Exception:
+            return False
+        finally:
+            conn.close()
+
+    def has_trip_plan_for_context(self, contract_id: int, month: str, service_types: list[str]) -> bool:
+        """Belirli sözleşme + ay + hizmet tipleri için trip_plan var mı?"""
+        conn = self.connect()
+        if not conn:
+            return False
+        try:
+            st = [str(x) for x in (service_types or []) if str(x).strip()]
+            if not st:
+                return False
+            placeholders = ",".join(["?"] * len(st))
+            cur = conn.cursor()
+            cur.execute(
+                f"""
+                SELECT 1
+                FROM trip_plan
+                WHERE contract_id=? AND month=? AND service_type IN ({placeholders})
+                LIMIT 1
+                """,
+                (int(contract_id), str(month), *st),
+            )
+            return cur.fetchone() is not None
+        except Exception:
+            return False
+        finally:
+            conn.close()
+
+    def copy_month_operational_template(self, from_month: str, to_month: str) -> bool:
+        """Önceki aydan operasyonel şablon verilerini yeni aya kopyalar.
+
+        Kopyalananlar:
+        - trip_plan
+        - trip_prices
+        - trip_time_blocks
+        Kopyalanmayanlar:
+        - trip_entries / trip_allocations (fiili gerçekleşen veriler)
+        """
+        self._ensure_trip_prices_table()
+        conn = self.connect()
+        if not conn:
+            return False
+        try:
+            cur = conn.cursor()
+            fm = str(from_month)
+            tm = str(to_month)
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            # trip_plan
+            cur.execute(
+                """
+                INSERT INTO trip_plan (
+                    contract_id, route_params_id, month, service_type, time_block,
+                    vehicle_id, driver_id, note, created_at, updated_at
+                )
+                SELECT
+                    contract_id, route_params_id, ?, service_type, time_block,
+                    vehicle_id, driver_id, note, ?, ?
+                FROM trip_plan
+                WHERE month = ?
+                ON CONFLICT(contract_id, route_params_id, month, service_type, time_block)
+                DO UPDATE SET
+                    vehicle_id=excluded.vehicle_id,
+                    driver_id=excluded.driver_id,
+                    note=excluded.note,
+                    updated_at=excluded.updated_at
+                """,
+                (tm, now, now, fm),
+            )
+
+            # trip_prices
+            cur.execute(
+                """
+                INSERT INTO trip_prices (
+                    contract_id, route_params_id, month, service_type, time_block, price, updated_at
+                )
+                SELECT
+                    contract_id, route_params_id, ?, service_type, time_block, price, ?
+                FROM trip_prices
+                WHERE month = ?
+                ON CONFLICT(contract_id, route_params_id, month, service_type, time_block)
+                DO UPDATE SET
+                    price=excluded.price,
+                    updated_at=excluded.updated_at
+                """,
+                (tm, now, fm),
+            )
+
+            # trip_time_blocks
+            cur.execute(
+                """
+                INSERT INTO trip_time_blocks (
+                    contract_id, month, service_type, custom1, custom2, created_at, updated_at
+                )
+                SELECT
+                    contract_id, ?, service_type, custom1, custom2, ?, ?
+                FROM trip_time_blocks
+                WHERE month = ?
+                ON CONFLICT(contract_id, month, service_type)
+                DO UPDATE SET
+                    custom1=excluded.custom1,
+                    custom2=excluded.custom2,
+                    updated_at=excluded.updated_at
+                """,
+                (tm, now, now, fm),
+            )
+
+            conn.commit()
+            return True
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            print(f"copy_month_operational_template error: {e}")
+            return False
+        finally:
+            conn.close()
 
     def migrate_trip_allocations_table(self):
         conn = self.connect()

@@ -2,7 +2,7 @@ import re
 from datetime import datetime
 
 from PyQt6 import uic
-from PyQt6.QtCore import QDate, QTime, Qt
+from PyQt6.QtCore import QDate, QTime, Qt, QTimer
 
 from PyQt6.QtGui import QColor, QStandardItem, QStandardItemModel
 from PyQt6.QtWidgets import (
@@ -27,6 +27,11 @@ class TripsGridApp(QWidget):
         uic.loadUi(get_ui_path("trips_grid_window.ui"), self)
         clear_all_styles(self)
 
+        if hasattr(self, "table_sefer") and not hasattr(self, "tbl_grid"):
+            self.tbl_grid = self.table_sefer
+        if hasattr(self, "tbl_grid") and not hasattr(self, "table_sefer"):
+            self.table_sefer = self.tbl_grid
+
         self.user_data = user_data or {}
         self.db = db_manager if db_manager else DatabaseManager()
 
@@ -36,6 +41,9 @@ class TripsGridApp(QWidget):
         self._driver_map = {}
 
         self._assignment_ready = False
+        self._last_kalem_warn_key = None
+        self._reload_debug_printed = False
+        self._opening_trips_dialog = False
 
         self._kalem_model = QStandardItemModel()
         if hasattr(self, "list_kalemler"):
@@ -49,13 +57,55 @@ class TripsGridApp(QWidget):
         self._load_static_filters()
         self._load_customers()
 
+        try:
+            QTimer.singleShot(0, self._reload_grid)
+        except Exception:
+            pass
+
+        if hasattr(self, "cmb_service_type"):
+            try:
+                self.cmb_service_type.setEnabled(True)
+            except Exception:
+                pass
+
     def _service_type_values(self, service_type: str):
-        s = (service_type or "").strip().upper()
-        if s in ("PERSONEL", "PERSONEL TAŞIMA"):
-            return ["PERSONEL TAŞIMA", "PERSONEL"]
-        if s in ("ÖĞRENCİ", "OGRENCI", "ÖĞRENCİ TAŞIMA", "OGRENCI TASIMA"):
-            return ["ÖĞRENCİ TAŞIMA", "ÖĞRENCİ", "OGRENCI", "OGRENCI TASIMA"]
-        return [service_type]
+        raw = (service_type or "").strip()
+        s = raw.upper().replace("_", " ")
+        s2 = s.replace("TAŞIMA", "TASIMA")
+
+        if s in ("PERSONEL", "PERSONEL TAŞIMA", "PERSONEL TASIMA") or s2 in (
+            "PERSONEL",
+            "PERSONEL TASIMA",
+        ):
+            return [
+                "PERSONEL TAŞIMA",
+                "PERSONEL TASIMA",
+                "PERSONEL_TAŞIMA",
+                "PERSONEL_TASIMA",
+                "PERSONEL",
+            ]
+
+        if s in ("ÖĞRENCİ", "OGRENCI", "ÖĞRENCİ TAŞIMA", "ÖĞRENCİ TASIMA", "OGRENCI TASIMA") or s2 in (
+            "OGRENCI",
+            "OGRENCI TASIMA",
+        ):
+            return [
+                "ÖĞRENCİ TAŞIMA",
+                "ÖĞRENCİ TASIMA",
+                "OGRENCI TASIMA",
+                "ÖĞRENCİ_TAŞIMA",
+                "ÖĞRENCİ_TASIMA",
+                "OGRENCI_TASIMA",
+                "ÖĞRENCİ",
+                "OGRENCI",
+            ]
+
+        vals = []
+        for v in (raw, s, s2):
+            vv = (v or "").strip()
+            if vv and vv not in vals:
+                vals.append(vv)
+        return vals
 
     def _load_vehicle_driver_maps(self):
         self._vehicle_map = {}
@@ -70,6 +120,47 @@ class TripsGridApp(QWidget):
                 self._driver_map[str(kod)] = str(ad)
         except Exception:
             self._driver_map = {}
+
+    def _resolve_contract_id(self):
+        if self._selected_contract_id not in (None, ""):
+            return self._selected_contract_id
+
+        if not hasattr(self, "cmb_sozlesme"):
+            return None
+
+        try:
+            v = self.cmb_sozlesme.currentData()
+        except Exception:
+            v = None
+        if v not in (None, ""):
+            return v
+
+        try:
+            txt = (self.cmb_sozlesme.currentText() or "").strip()
+        except Exception:
+            txt = ""
+        if not txt:
+            return None
+
+        contract_no = txt.split("(")[0].strip().split()[0].strip()
+        if not contract_no:
+            return None
+
+        try:
+            conn = self.db.connect()
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id FROM contracts WHERE contract_number = ? LIMIT 1",
+                (str(contract_no),),
+            )
+            row = cursor.fetchone()
+            conn.close()
+            if row:
+                return row[0]
+        except Exception:
+            return None
+
+        return None
 
     def _load_plan_map(self, contract_id: int, month: str, service_type: str):
         plan = {}
@@ -109,37 +200,18 @@ class TripsGridApp(QWidget):
         return f"{nh:02d}:{nm:02d}"
 
     def _apply_default_times_to_widgets(self):
-        defaults = [
-            ("time_g1", "08:00"),
-            ("time_c1", "16:00"),
-            ("time_g2", "08:15"),
-            ("time_c2", "16:15"),
-            ("time_g3", "00:00"),
-            ("time_c3", "00:15"),
-        ]
-        for wname, tstr in defaults:
-            w = getattr(self, wname, None)
-            if w is None:
-                continue
-            try:
-                if hasattr(w, "setTime"):
-                    qt = QTime.fromString(tstr, "HH:mm")
-                    if qt.isValid():
-                        w.setTime(qt)
-            except Exception:
-                pass
+        pass
 
-    def _legacy_tb_to_times(self, tb: str):
-        tbs = str(tb or "").strip().upper()
-        m = re.match(r"^([GC])(\d)$", tbs)
-        if not m:
-            return None
-        idx = int(m.group(2))
-        gmap = {1: "08:00", 2: "08:15", 3: "00:00"}
-        cmap = {1: "16:00", 2: "16:15", 3: "00:15"}
-        if m.group(1) == "G":
-            return gmap.get(idx, ""), ""
-        return "", cmap.get(idx, "")
+    def _split_time_block(self, tb: str):
+        tbs = (tb or "").strip()
+        if not tbs:
+            return "", ""
+        if "-" in tbs:
+            a, b = (tbs.split("-", 1) + [""])[:2]
+            return (a or "").strip(), (b or "").strip()
+        if ":" in tbs:
+            return tbs, ""
+        return tbs, ""
 
     def _delete_plan_for_context(self, contract_id: int, month: str, service_type: str):
         conn = None
@@ -168,7 +240,6 @@ class TripsGridApp(QWidget):
             except Exception:
                 pass
 
-    # ------------------------- setup -------------------------
     def _setup_tables(self):
         if hasattr(self, "tbl_grid"):
             self.tbl_grid.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -177,9 +248,7 @@ class TripsGridApp(QWidget):
             self.tbl_grid.setAlternatingRowColors(True)
             self.tbl_grid.verticalHeader().setVisible(False)
             self.tbl_grid.horizontalHeader().setHighlightSections(False)
-            self.tbl_grid.horizontalHeader().setStretchLastSection(False)
-
-            headers = ["Güzergah", "Blok", "Giriş", "Çıkış", "Araç", "Şoför"]
+            headers = ["Güzergah", "Duraklar", "Giriş", "Çıkış", "Araç", "Şoför"]
             self.tbl_grid.setColumnCount(len(headers))
             self.tbl_grid.setHorizontalHeaderLabels(headers)
             h = self.tbl_grid.horizontalHeader()
@@ -196,8 +265,20 @@ class TripsGridApp(QWidget):
             self.cmb_musteri.currentIndexChanged.connect(self._on_customer_changed)
         if hasattr(self, "cmb_sozlesme"):
             self.cmb_sozlesme.currentIndexChanged.connect(self._on_contract_changed)
+            try:
+                self.cmb_sozlesme.activated.connect(self._on_contract_changed)
+            except Exception:
+                pass
         if hasattr(self, "cmb_service_type"):
             self.cmb_service_type.currentIndexChanged.connect(self._reload_grid)
+            try:
+                self.cmb_service_type.activated.connect(self._reload_grid)
+            except Exception:
+                pass
+            try:
+                self.cmb_service_type.currentTextChanged.connect(self._reload_grid)
+            except Exception:
+                pass
 
         if hasattr(self, "txt_kalem_sec"):
             try:
@@ -237,7 +318,6 @@ class TripsGridApp(QWidget):
             self.cmb_service_type.addItem("DİĞER", "DİĞER")
             self.cmb_service_type.blockSignals(False)
 
-    # ------------------------- data loading -------------------------
     def _ensure_route_params_table(self):
         conn = None
         try:
@@ -264,8 +344,6 @@ class TripsGridApp(QWidget):
                 )
                 """
             )
-
-            # migration: movement_type kolonu yoksa ekle
             try:
                 cursor.execute("PRAGMA table_info(route_params)")
                 cols = {row[1] for row in cursor.fetchall()}
@@ -339,7 +417,7 @@ class TripsGridApp(QWidget):
         self._reload_grid()
 
     def _on_contract_changed(self):
-        self._selected_contract_id = self.cmb_sozlesme.currentData() if hasattr(self, "cmb_sozlesme") else None
+        self._selected_contract_id = self._resolve_contract_id()
         self._reload_grid()
 
     def _fmt_date_tr(self, iso_date: str) -> str:
@@ -358,40 +436,61 @@ class TripsGridApp(QWidget):
     def _service_type(self):
         if not hasattr(self, "cmb_service_type"):
             return None
-        return self.cmb_service_type.currentData()
+        v = self.cmb_service_type.currentData()
+        if v is None:
+            try:
+                v = (self.cmb_service_type.currentText() or "").strip()
+            except Exception:
+                v = None
+        if isinstance(v, str) and v.strip().lower().startswith("seç"):
+            return None
+        return v
 
     def _load_kalemler_from_contract(self, contract_id: int, service_type: str):
-        """Yeni UI: list_kalemler içerisine route_params kayıtlarını yükler."""
+        self._ensure_route_params_table()
         self._selected_route_map = {}
         self._kalem_model.clear()
 
         rows = []
-        st_values = self._service_type_values(str(service_type))
+        st_values = [str(x) for x in self._service_type_values(str(service_type)) if str(x or "").strip()]
+        if not st_values:
+            self._apply_kalem_filter()
+            return
         placeholders = ",".join(["?" for _ in st_values])
         try:
             conn = self.db.connect()
             cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT id, COALESCE(route_name,''), distance_km
-                FROM route_params
-                WHERE contract_id = ? AND service_type = ? AND COALESCE(route_name,'') <> ''
-                ORDER BY id ASC
-                """,
-                (int(contract_id), str(service_type)),
+            q = (
+                "SELECT id, COALESCE(route_name,''), COALESCE(stops,''), distance_km "
+                "FROM route_params "
+                f"WHERE contract_id = ? AND service_type IN ({placeholders}) AND COALESCE(route_name,'') <> '' "
+                "ORDER BY id ASC"
             )
+            cursor.execute(q, tuple([int(contract_id)] + st_values))
             rows = cursor.fetchall()
             conn.close()
-        except Exception:
+        except Exception as e:
             rows = []
+            key = ("kalem_sql", int(contract_id), str(service_type))
+            if getattr(self, "_last_kalem_warn_key", None) != key:
+                self._last_kalem_warn_key = key
+                QMessageBox.critical(
+                    self,
+                    "Hata",
+                    "Kalem (rota) sorgusu çalıştırılamadı.\n"
+                    f"Sözleşme ID: {contract_id}\n"
+                    f"Hizmet Tipi: {service_type}\n\n"
+                    f"Hata: {str(e)}",
+                )
 
-        for rid, rname, km in rows:
+        for rid, rname, stops_txt, km in rows:
             rid_s = str(rid)
             self._selected_route_map[rid_s] = {
                 "route_name": (rname or ""),
+                "stops": (stops_txt or ""),
                 "distance_km": km,
             }
-            disp = f"{(rname or '').strip()} - {(mtype or '').strip()}" if (mtype or "").strip() else str(rname or "")
+            disp = str(rname or "")
             it = QStandardItem(disp)
             it.setEditable(False)
             it.setData(rid_s, Qt.ItemDataRole.UserRole)
@@ -406,8 +505,6 @@ class TripsGridApp(QWidget):
         if not hasattr(self, "list_kalemler"):
             return
 
-        # Not: QStandardItem.setEnabled(False) item'ı seçilemez yapar ve seçim "tutmuyor" gibi görünür.
-        # Bu yüzden filtreleme için satır gizleme kullanıyoruz.
         for r in range(self._kalem_model.rowCount()):
             it = self._kalem_model.item(r)
             txt = (it.text() or "") if it is not None else ""
@@ -415,7 +512,6 @@ class TripsGridApp(QWidget):
             try:
                 self.list_kalemler.setRowHidden(r, hide)
             except Exception:
-                # Bazı widget tiplerinde setRowHidden olmayabilir; bu durumda filtre uygulamayalım.
                 return
 
     def _selected_route_id(self):
@@ -431,54 +527,63 @@ class TripsGridApp(QWidget):
         return (str(rid) if rid is not None else None)
 
     def _on_kalem_selected(self, *_args):
+        if self._opening_trips_dialog:
+            return
         if not self._selected_contract_id or not self._service_type():
             return
         route_id = self._selected_route_id()
         if not route_id:
             return
+        self._open_trips_dialog(str(route_id))
 
-    def _time_pairs(self):
-        pairs = []
-        for idx in (1, 2, 3):
-            g = getattr(self, f"time_g{idx}", None)
-            c = getattr(self, f"time_c{idx}", None)
-            if g is None or c is None:
-                continue
-            pairs.append((idx, g, c))
-        return pairs
+    def _open_trips_dialog(self, route_id: str):
+        if not self._selected_contract_id or not self._service_type():
+            return
+        contract_id = int(self._selected_contract_id)
+        service_type = str(self._service_type())
+        month = self._month_key()
 
-    def _clear_inputs(self):
-        if hasattr(self, "txt_kalem_sec"):
-            self.txt_kalem_sec.clear()
-        if hasattr(self, "cmb_arac_sec"):
-            self.cmb_arac_sec.setCurrentIndex(0)
-        if hasattr(self, "cmb_surucu_sec"):
-            self.cmb_surucu_sec.setCurrentIndex(0)
+        route_name_txt = self._selected_route_map.get(str(route_id), {}).get("route_name", "")
 
-    def _add_to_grid(self):
-        if not hasattr(self, "tbl_grid"):
+        self._load_vehicle_driver_maps()
+
+        dlg = QDialog(self)
+        try:
+            uic.loadUi(get_ui_path("trips_dialog.ui"), dlg)
+        except Exception as e:
+            QMessageBox.critical(self, "Hata", f"trips_dialog.ui yüklenemedi:\n{str(e)}")
             return
 
-        # Araç / sürücü listelerini doldur
-        self._load_vehicle_driver_maps()
-        cmb_arac = getattr(dlg, "cmb_arac_sec", None)
-        cmb_sur = getattr(dlg, "cmb_surucu_sec", None)
-        if cmb_arac is not None:
-            cmb_arac.blockSignals(True)
-            cmb_arac.clear()
-            cmb_arac.addItem("Seçiniz...", None)
-            for vcode, plate in self._vehicle_map.items():
-                cmb_arac.addItem(plate, vcode)
-            cmb_arac.blockSignals(False)
-        if cmb_sur is not None:
-            cmb_sur.blockSignals(True)
-            cmb_sur.clear()
-            cmb_sur.addItem("Seçiniz...", None)
-            for did, name in self._driver_map.items():
-                cmb_sur.addItem(name, did)
-            cmb_sur.blockSignals(False)
+        try:
+            if route_name_txt:
+                dlg.setWindowTitle(route_name_txt)
+        except Exception:
+            pass
 
-        # Sefer tipleri (checkbox -> (giriş combo, çıkış combo))
+        try:
+            lbl2 = getattr(dlg, "lbl_atama_text", None)
+            if lbl2 is not None and route_name_txt:
+                lbl2.setText(
+                    "<html><head/><body><p>İŞ KALEMİ: <b>"
+                    + str(route_name_txt)
+                    + "</b></p><p>İŞ KALEMİ İÇİN ARAÇ VE SÜRÜCÜ ATAMASI YAPIN</p></body></html>"
+                )
+        except Exception:
+            pass
+
+        cmb_v = getattr(dlg, "cmb_arac_sec", None)
+        cmb_d = getattr(dlg, "cmb_surucu_sec", None)
+        if cmb_v is not None:
+            cmb_v.clear()
+            cmb_v.addItem("Seçiniz...", None)
+            for vid, plate in self._vehicle_map.items():
+                cmb_v.addItem(str(plate), str(vid))
+        if cmb_d is not None:
+            cmb_d.clear()
+            cmb_d.addItem("Seçiniz...", None)
+            for did, name in self._driver_map.items():
+                cmb_d.addItem(str(name), str(did))
+
         def _pair(chk: str, g: str, c: str):
             return (
                 getattr(dlg, chk, None),
@@ -495,70 +600,267 @@ class TripsGridApp(QWidget):
             _pair("chk_ek_sefer", "cmb_ek_sefer_g", "cmb_ek_sefer_c"),
         ]
 
-        btn_kaydet = getattr(dlg, "btn_kaydet", None)
-        if btn_kaydet is None:
+        for chk, cg, cc in pairs:
+            if chk is None:
+                continue
+            if cg is not None:
+                cg.setEnabled(bool(chk.isChecked()))
+            if cc is not None:
+                cc.setEnabled(bool(chk.isChecked()))
+
+            def _mk_toggle(_cg, _cc):
+                def _toggle(state):
+                    en = bool(state)
+                    if _cg is not None:
+                        _cg.setEnabled(en)
+                    if _cc is not None:
+                        _cc.setEnabled(en)
+
+                return _toggle
+
+            try:
+                chk.stateChanged.connect(_mk_toggle(cg, cc))
+            except Exception:
+                pass
+
+        existing_pairs = []
+        existing_vid = None
+        existing_did = None
+
+        try:
+            if hasattr(self, "tbl_grid"):
+                for r in range(self.tbl_grid.rowCount()):
+                    it_tb = self.tbl_grid.item(r, 1)
+                    if it_tb is None:
+                        continue
+                    rid2 = it_tb.data(Qt.ItemDataRole.UserRole + 1)
+                    if str(rid2 or "") != str(route_id):
+                        continue
+                    tb2 = it_tb.data(Qt.ItemDataRole.UserRole + 2)
+                    g2 = (self.tbl_grid.item(r, 2).text().strip() if self.tbl_grid.item(r, 2) else "")
+                    c2 = (self.tbl_grid.item(r, 3).text().strip() if self.tbl_grid.item(r, 3) else "")
+                    if not tb2 and (g2 or c2):
+                        tb2 = f"{g2}-{c2}" if (g2 or c2) else ""
+                    g_s, c_s = self._split_time_block(str(tb2 or ""))
+                    if g_s or c_s:
+                        existing_pairs.append((g_s, c_s))
+                    if existing_vid is None:
+                        vv = it_tb.data(Qt.ItemDataRole.UserRole + 3)
+                        if vv not in (None, ""):
+                            existing_vid = str(vv)
+                    if existing_did is None:
+                        dd = it_tb.data(Qt.ItemDataRole.UserRole + 4)
+                        if dd not in (None, ""):
+                            existing_did = str(dd)
+        except Exception:
+            existing_pairs = []
+
+        if not existing_pairs:
+            try:
+                conn = self.db.connect()
+                cur = conn.cursor()
+                cur.execute(
+                    """
+                    SELECT time_block, vehicle_id, driver_id
+                    FROM trip_plan
+                    WHERE contract_id=? AND route_params_id=? AND month=? AND service_type=?
+                    """,
+                    (contract_id, int(route_id), month, service_type),
+                )
+                for tb, vid, did in cur.fetchall() or []:
+                    g_s, c_s = self._split_time_block(str(tb or ""))
+                    if g_s or c_s:
+                        existing_pairs.append((g_s, c_s))
+                    if existing_vid is None and vid not in (None, ""):
+                        existing_vid = str(vid)
+                    if existing_did is None and did not in (None, ""):
+                        existing_did = str(did)
+                conn.close()
+            except Exception:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
+        if cmb_v is not None and existing_vid:
+            idx = cmb_v.findData(existing_vid)
+            if idx >= 0:
+                cmb_v.setCurrentIndex(idx)
+        if cmb_d is not None and existing_did:
+            idx = cmb_d.findData(existing_did)
+            if idx >= 0:
+                cmb_d.setCurrentIndex(idx)
+
+        def _combo_set_text(cmb, txt: str):
+            if cmb is None:
+                return
+            v = (txt or "").strip()
+            if not v:
+                return
+            try:
+                idx = cmb.findText(v)
+                if idx >= 0:
+                    cmb.setCurrentIndex(idx)
+                else:
+                    cmb.setEditText(v)
+            except Exception:
+                pass
+
+        for i, (chk, cg, cc) in enumerate(pairs):
+            if chk is None:
+                continue
+            g_s = ""
+            c_s = ""
+            if i < len(existing_pairs):
+                g_s, c_s = existing_pairs[i]
+            _combo_set_text(cg, g_s)
+            _combo_set_text(cc, c_s)
+            try:
+                chk.setChecked(bool(g_s or c_s))
+            except Exception:
+                pass
+
+        btn_atama = getattr(dlg, "btn_atama", None)
+        if btn_atama is not None:
+            try:
+                btn_atama.clicked.connect(
+                    lambda: QMessageBox.information(
+                        self,
+                        "Bilgi",
+                        "Bu atamalar ekran üzerinde görünür. Kalıcı olması için Seferler ekranında KAYDET'e basınız.",
+                    )
+                )
+            except Exception:
+                pass
+
+        btn_save = getattr(dlg, "btn_kaydet", None)
+        if btn_save is None:
             return
 
+        def _save():
+            vid = None
+            did = None
+            if cmb_v is not None:
+                vid = cmb_v.currentData()
+            if cmb_d is not None:
+                did = cmb_d.currentData()
+
+            def _cmb_text_or_selected(cmb):
+                if cmb is None:
+                    return ""
+                try:
+                    v = (cmb.currentText() or "").strip()
+                except Exception:
+                    v = ""
+                if v:
+                    return v
+                try:
+                    idx = cmb.currentIndex()
+                    if idx is None:
+                        idx = -1
+                    if 0 <= idx < cmb.count():
+                        return (cmb.itemText(idx) or "").strip()
+                except Exception:
+                    return ""
+                return ""
+
+            chosen_pairs = []
+            for chk, cg, cc in pairs:
+                if chk is None or not chk.isChecked():
+                    continue
+                gt = _cmb_text_or_selected(cg)
+                ct = _cmb_text_or_selected(cc)
+                if gt and self._parse_time(gt) is None:
+                    QMessageBox.warning(self, "Uyarı", f"Saat formatı geçersiz: {gt} (HH:MM)")
+                    return
+                if ct and self._parse_time(ct) is None:
+                    QMessageBox.warning(self, "Uyarı", f"Saat formatı geçersiz: {ct} (HH:MM)")
+                    return
+                if gt or ct:
+                    chosen_pairs.append((gt, ct))
+
+            try:
+                if hasattr(self, "tbl_grid"):
+                    del_rows = []
+                    for r in range(self.tbl_grid.rowCount()):
+                        it_tb = self.tbl_grid.item(r, 1)
+                        rid2 = it_tb.data(Qt.ItemDataRole.UserRole + 1) if it_tb else None
+                        if str(rid2 or "") == str(route_id):
+                            del_rows.append(r)
+                    for r in sorted(del_rows, reverse=True):
+                        self.tbl_grid.removeRow(r)
+            except Exception:
+                pass
+
+            plate = self._vehicle_map.get(str(vid or ""), "")
+            dname = self._driver_map.get(str(did or ""), "")
+            stops_txt = self._selected_route_map.get(str(route_id), {}).get("stops", "")
+            for gt, ct in chosen_pairs:
+                rr = self.tbl_grid.rowCount()
+                self.tbl_grid.insertRow(rr)
+                it_route = QTableWidgetItem(route_name_txt)
+                it_tb = QTableWidgetItem(str(stops_txt or ""))
+                it_g = QTableWidgetItem(str(gt or ""))
+                it_c = QTableWidgetItem(str(ct or ""))
+                it_v = QTableWidgetItem(str(plate or ""))
+                it_d = QTableWidgetItem(str(dname or ""))
+                for it in (it_route, it_tb, it_g, it_c, it_v, it_d):
+                    it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
+
+                it_tb.setData(Qt.ItemDataRole.UserRole + 1, str(route_id))
+                it_tb.setData(Qt.ItemDataRole.UserRole + 2, f"{gt}-{ct}")
+                it_tb.setData(Qt.ItemDataRole.UserRole + 3, (None if vid in (None, "") else str(vid)))
+                it_tb.setData(Qt.ItemDataRole.UserRole + 4, (None if did in (None, "") else str(did)))
+
+                self.tbl_grid.setItem(rr, 0, it_route)
+                self.tbl_grid.setItem(rr, 1, it_tb)
+                self.tbl_grid.setItem(rr, 2, it_g)
+                self.tbl_grid.setItem(rr, 3, it_c)
+                self.tbl_grid.setItem(rr, 4, it_v)
+                self.tbl_grid.setItem(rr, 5, it_d)
+
+            QMessageBox.information(
+                self,
+                "Bilgi",
+                "Değişiklikler tabloya aktarıldı. Kalıcı olması için Seferler ekranında KAYDET'e basınız.",
+            )
+
+            try:
+                dlg.accept()
+            except Exception:
+                pass
+
+        try:
+            btn_save.clicked.connect(_save)
+        except Exception:
+            pass
+
+        self._opening_trips_dialog = True
+        try:
+            dlg.exec()
+        finally:
+            self._opening_trips_dialog = False
+
+    def _time_pairs(self):
+        # Removed legacy time_g1/time_c1 default-widget logic usage
+        return []
+
+    def _clear_inputs(self):
+        if hasattr(self, "txt_kalem_sec"):
+            self.txt_kalem_sec.clear()
+        if hasattr(self, "cmb_arac_sec"):
+            self.cmb_arac_sec.setCurrentIndex(0)
+        if hasattr(self, "cmb_surucu_sec"):
+            self.cmb_surucu_sec.setCurrentIndex(0)
+
+    def _add_to_grid(self):
+        # Excel akışı: sefer tipleri ve saatler ana ekranda değil, trips_dialog.ui üzerinden girilir.
+        # Bu buton varsa, seçili iş kalemi için dialog'u açarak planlama yapılmasını sağlar.
         route_id = self._selected_route_id()
         if not route_id:
             QMessageBox.information(self, "Bilgi", "Önce iş kalemi (hat) seçiniz.")
             return
-
-        # Sefer satırı oluştururken araç/şoför seçimi bu satırlara gömülür.
-        vid = self.cmb_arac_sec.currentData() if hasattr(self, "cmb_arac_sec") else None
-        did = self.cmb_surucu_sec.currentData() if hasattr(self, "cmb_surucu_sec") else None
-
-        route_name = self._selected_route_map.get(str(route_id), {}).get("route_name", "")
-        plate = self._vehicle_map.get(str(vid or ""), "")
-        dname = self._driver_map.get(str(did or ""), "")
-
-        for idx, g, c in self._time_pairs():
-            gtxt = g.time().toString("HH:mm")
-            ctxt = c.time().toString("HH:mm")
-
-            # Gidiş
-            rr = self.tbl_grid.rowCount()
-            self.tbl_grid.insertRow(rr)
-            it_route = QTableWidgetItem(route_name)
-            it_tb = QTableWidgetItem(f"G{idx}")
-            it_g = QTableWidgetItem(gtxt)
-            it_c = QTableWidgetItem("")
-            it_v = QTableWidgetItem(plate)
-            it_d = QTableWidgetItem(dname)
-            for it in (it_route, it_tb, it_g, it_c, it_v, it_d):
-                it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            it_tb.setData(Qt.ItemDataRole.UserRole + 1, str(route_id))
-            it_tb.setData(Qt.ItemDataRole.UserRole + 2, f"G{idx}")
-            it_tb.setData(Qt.ItemDataRole.UserRole + 3, (None if vid is None else str(vid)))
-            it_tb.setData(Qt.ItemDataRole.UserRole + 4, (None if did is None else str(did)))
-            self.tbl_grid.setItem(rr, 0, it_route)
-            self.tbl_grid.setItem(rr, 1, it_tb)
-            self.tbl_grid.setItem(rr, 2, it_g)
-            self.tbl_grid.setItem(rr, 3, it_c)
-            self.tbl_grid.setItem(rr, 4, it_v)
-            self.tbl_grid.setItem(rr, 5, it_d)
-
-            # Geliş
-            rr2 = self.tbl_grid.rowCount()
-            self.tbl_grid.insertRow(rr2)
-            it_route2 = QTableWidgetItem(route_name)
-            it_tb2 = QTableWidgetItem(f"C{idx}")
-            it_g2 = QTableWidgetItem("")
-            it_c2 = QTableWidgetItem(ctxt)
-            it_v2 = QTableWidgetItem(plate)
-            it_d2 = QTableWidgetItem(dname)
-            for it in (it_route2, it_tb2, it_g2, it_c2, it_v2, it_d2):
-                it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            it_tb2.setData(Qt.ItemDataRole.UserRole + 1, str(route_id))
-            it_tb2.setData(Qt.ItemDataRole.UserRole + 2, f"C{idx}")
-            it_tb2.setData(Qt.ItemDataRole.UserRole + 3, (None if vid is None else str(vid)))
-            it_tb2.setData(Qt.ItemDataRole.UserRole + 4, (None if did is None else str(did)))
-            self.tbl_grid.setItem(rr2, 0, it_route2)
-            self.tbl_grid.setItem(rr2, 1, it_tb2)
-            self.tbl_grid.setItem(rr2, 2, it_g2)
-            self.tbl_grid.setItem(rr2, 3, it_c2)
-            self.tbl_grid.setItem(rr2, 4, it_v2)
-            self.tbl_grid.setItem(rr2, 5, it_d2)
+        self._open_trips_dialog(str(route_id))
 
     def _remove_selected_grid_rows(self):
         if not hasattr(self, "tbl_grid"):
@@ -567,10 +869,25 @@ class TripsGridApp(QWidget):
         if not rows:
             return
         for r in rows:
-            self.table_sefer.removeRow(r)
+            self.tbl_grid.removeRow(r)
+
+    def _delete_selected_table_rows(self):
+        # UI uyumluluğu: bazı ekranlarda buton adı btn_satir_sil ve eski kod
+        # _delete_selected_table_rows metodunu bekliyor. Bu projede tablolar
+        # farklı isimlerle (tbl_grid / table_sefer) bulunabildiği için wrapper.
+        if hasattr(self, "tbl_grid"):
+            self._remove_selected_grid_rows()
+            return
+        if hasattr(self, "table_sefer"):
+            rows = sorted({it.row() for it in self.table_sefer.selectedItems()}, reverse=True)
+            if not rows:
+                return
+            for r in rows:
+                self.table_sefer.removeRow(r)
+            return
 
     def _delete_all_table_rows(self):
-        if not hasattr(self, "table_sefer"):
+        if not hasattr(self, "tbl_grid"):
             return
 
         msg = QMessageBox.question(
@@ -581,7 +898,7 @@ class TripsGridApp(QWidget):
         )
         if msg != QMessageBox.StandardButton.Yes:
             return
-        self.table_sefer.setRowCount(0)
+        self.tbl_grid.setRowCount(0)
 
         if self._selected_contract_id and self._service_type():
             self._delete_plan_for_context(
@@ -596,7 +913,7 @@ class TripsGridApp(QWidget):
         if not self._selected_contract_id or not self._service_type():
             QMessageBox.warning(self, "Uyarı", "Önce müşteri / sözleşme / tip seçiniz.")
             return
-        if not hasattr(self, "table_sefer") or self.table_sefer.rowCount() == 0:
+        if not hasattr(self, "tbl_grid") or self.tbl_grid.rowCount() == 0:
             QMessageBox.information(self, "Bilgi", "Kaydedilecek satır yok.")
             return
 
@@ -619,8 +936,8 @@ class TripsGridApp(QWidget):
                 (contract_id, month, service_type),
             )
 
-            for r in range(self.table_sefer.rowCount()):
-                it_tb = self.table_sefer.item(r, 1)
+            for r in range(self.tbl_grid.rowCount()):
+                it_tb = self.tbl_grid.item(r, 1)
                 if it_tb is None:
                     continue
 
@@ -632,14 +949,24 @@ class TripsGridApp(QWidget):
                 if not rid:
                     continue
 
-                # time_block alanını saat formatında normalize et.
-                tb_s = str(tb or "").strip()
-                legacy = self._legacy_tb_to_times(tb_s)
-                if legacy is not None:
-                    tin, tout = legacy
-                    tb_s = tin or tout
+                # Excel akışı: DB'de time_block 'HH:MM-HH:MM' formatında tutulur.
+                tb_s = (str(tb or "").strip() if tb is not None else "")
+                g_txt = (self.tbl_grid.item(r, 2).text().strip() if self.tbl_grid.item(r, 2) else "")
+                c_txt = (self.tbl_grid.item(r, 3).text().strip() if self.tbl_grid.item(r, 3) else "")
+                if (not tb_s) and (g_txt or c_txt):
+                    tb_s = f"{g_txt}-{c_txt}" if (g_txt or c_txt) else ""
                 if not tb_s:
                     continue
+                g_s, c_s = self._split_time_block(tb_s)
+                if g_s and self._parse_time(g_s) is None:
+                    QMessageBox.warning(self, "Uyarı", f"Saat formatı geçersiz: {g_s} (HH:MM)")
+                    return
+                if c_s and self._parse_time(c_s) is None:
+                    QMessageBox.warning(self, "Uyarı", f"Saat formatı geçersiz: {c_s} (HH:MM)")
+                    return
+                tb_s = f"{g_s}-{c_s}".strip("-")
+                if "-" not in tb_s:
+                    tb_s = f"{g_s}-{c_s}"
 
                 cursor.execute(
                     """
@@ -682,34 +1009,75 @@ class TripsGridApp(QWidget):
         self._reload_grid()
 
     def _reload_grid(self):
-        if not hasattr(self, "table_sefer"):
+        if not hasattr(self, "tbl_grid"):
             return
+
+        if not self._reload_debug_printed:
+            try:
+                print("[Trips] _reload_grid called")
+            except Exception:
+                pass
+            self._reload_debug_printed = True
+
+        if hasattr(self, "list_kalemler"):
+            try:
+                self.list_kalemler.setModel(self._kalem_model)
+            except Exception:
+                pass
 
         # Header'ı koru
         if self.tbl_grid.columnCount() == 0:
-            headers = ["Güzergah", "Blok", "Giriş", "Çıkış", "Araç", "Şoför"]
+            headers = ["Güzergah", "Duraklar", "Giriş", "Çıkış", "Araç", "Şoför"]
             self.tbl_grid.setColumnCount(len(headers))
             self.tbl_grid.setHorizontalHeaderLabels(headers)
 
         self._load_vehicle_driver_maps()
 
-        contract_id = self._selected_contract_id
+        contract_id = self._resolve_contract_id()
+        self._selected_contract_id = contract_id
         service_type = self._service_type()
         month = self._month_key()
 
-        self.table_sefer.setRowCount(0)
+        self.tbl_grid.setRowCount(0)
         self._selected_route_map = {}
         self._kalem_model.clear()
 
         if not contract_id or not service_type:
             return
 
-        self._apply_default_times_to_widgets()
-
         # Kalem listesi
         self._load_kalemler_from_contract(int(contract_id), str(service_type))
 
+        if self._kalem_model.rowCount() == 0:
+            key = (int(contract_id), str(service_type))
+            if self._last_kalem_warn_key != key:
+                self._last_kalem_warn_key = key
+                QMessageBox.information(
+                    self,
+                    "Bilgi",
+                    "Bu sözleşme ve hizmet tipi için rota kaydı bulunamadı.\n"
+                    f"Sözleşme ID: {contract_id}\n"
+                    f"Hizmet Tipi: {service_type}",
+                )
+
         plan_map = self._load_plan_map(int(contract_id), month, str(service_type))
+
+        planned_rids = set()
+        try:
+            planned_rids = {str(rid) for (rid, _tb) in (plan_map or {}).keys()}
+        except Exception:
+            planned_rids = set()
+        for r in range(self._kalem_model.rowCount()):
+            it = self._kalem_model.item(r)
+            rid = None if it is None else it.data(Qt.ItemDataRole.UserRole)
+            rid_s = str(rid) if rid is not None else ""
+            try:
+                if rid_s and rid_s in planned_rids:
+                    it.setForeground(QColor(0, 128, 0))
+                else:
+                    it.setForeground(QColor(200, 0, 0))
+            except Exception:
+                pass
         if not plan_map:
             return
 
@@ -720,23 +1088,32 @@ class TripsGridApp(QWidget):
             plate = self._vehicle_map.get(str(vid or ""), "")
             dname = self._driver_map.get(str(did or ""), "")
 
-            rr = self.table_sefer.rowCount()
-            self.table_sefer.insertRow(rr)
+            rr = self.tbl_grid.rowCount()
+            self.tbl_grid.insertRow(rr)
 
             it_route = QTableWidgetItem(route_name)
-            it_tb = QTableWidgetItem(str(tb or ""))
-            it_g = QTableWidgetItem("")
-            it_c = QTableWidgetItem("")
+            stops_txt = self._selected_route_map.get(str(rid), {}).get("stops", "")
+            it_tb = QTableWidgetItem(str(stops_txt or ""))
+
+            tb_s = str(tb or "")
+            g_txt, c_txt = self._split_time_block(tb_s)
+
+            it_g = QTableWidgetItem(g_txt)
+            it_c = QTableWidgetItem(c_txt)
             it_v = QTableWidgetItem(plate)
             it_d = QTableWidgetItem(dname)
-            for it in (it_route, it_stops, it_in, it_out, it_v, it_d):
+            for it in (it_route, it_tb, it_g, it_c, it_v, it_d):
                 it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
 
             # Data-roles: route_id / time_block / vehicle_id / driver_id
             it_tb.setData(Qt.ItemDataRole.UserRole + 1, str(rid))
-            it_tb.setData(Qt.ItemDataRole.UserRole + 2, str(tb or ""))
+            it_tb.setData(Qt.ItemDataRole.UserRole + 2, str(tb_s or ""))
             it_tb.setData(Qt.ItemDataRole.UserRole + 3, (None if vid is None else str(vid)))
             it_tb.setData(Qt.ItemDataRole.UserRole + 4, (None if did is None else str(did)))
+            try:
+                it_tb.setToolTip(str(tb_s))
+            except Exception:
+                pass
 
             self.tbl_grid.setItem(rr, 0, it_route)
             self.tbl_grid.setItem(rr, 1, it_tb)

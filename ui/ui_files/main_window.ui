@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1100</width>
-    <height>662</height>
+    <height>664</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -20,11 +20,11 @@
    <string>MainWindow</string>
   </property>
   <property name="styleSheet">
-   <string notr="true"></string>
+   <string notr="true"/>
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="styleSheet">
-    <string notr="true"></string>
+    <string notr="true"/>
    </property>
    <layout class="QGridLayout" name="gridLayout_2">
     <item row="0" column="0">
@@ -192,10 +192,6 @@
              <property name="text">
               <string>KULLANICILAR</string>
              </property>
-             <property name="icon">
-              <iconset resource="../icons/resource.qrc">
-               <normaloff>:/resim/users.png</normaloff>:/resim/users.png</iconset>
-             </property>
              <property name="flat">
               <bool>false</bool>
              </property>
@@ -233,10 +229,6 @@
              </property>
              <property name="text">
               <string>PERSONELLER</string>
-             </property>
-             <property name="icon">
-              <iconset resource="../icons/resource.qrc">
-               <normaloff>:/resim/istockphoto-671677466-612x612.jpg</normaloff>:/resim/istockphoto-671677466-612x612.jpg</iconset>
              </property>
             </widget>
            </item>
@@ -307,10 +299,6 @@
              </property>
              <property name="text">
               <string>ARAÇLAR</string>
-             </property>
-             <property name="icon">
-              <iconset resource="../icons/resource.qrc">
-               <normaloff>:/resim/istockphoto-671677466-612x612.jpg</normaloff>:/resim/istockphoto-671677466-612x612.jpg</iconset>
              </property>
             </widget>
            </item>
@@ -771,7 +759,7 @@
              <item row="0" column="0">
               <widget class="QFrame" name="frame">
                <property name="styleSheet">
-                <string notr="true"></string>
+                <string notr="true"/>
                </property>
                <property name="frameShape">
                 <enum>QFrame::Shape::StyledPanel</enum>
@@ -783,17 +771,17 @@
                 <item row="0" column="0">
                  <widget class="QLabel" name="label">
                   <property name="styleSheet">
-                   <string notr="true"></string>
+                   <string notr="true"/>
                   </property>
                   <property name="text">
-                   <string>TextLabel</string>
+                   <string/>
                   </property>
                  </widget>
                 </item>
                 <item row="1" column="0">
                  <widget class="QFrame" name="frame_2">
                   <property name="styleSheet">
-                   <string notr="true"></string>
+                   <string notr="true"/>
                   </property>
                   <property name="frameShape">
                    <enum>QFrame::Shape::StyledPanel</enum>
@@ -822,7 +810,7 @@
                       </font>
                      </property>
                      <property name="styleSheet">
-                      <string notr="true"></string>
+                      <string notr="true"/>
                      </property>
                      <property name="text">
                       <string>Sakarya Asil Tur Taşımacılık Hizmetleri Uygulaması Programına devam edebilmek için</string>
@@ -843,7 +831,7 @@
                       </font>
                      </property>
                      <property name="styleSheet">
-                      <string notr="true"></string>
+                      <string notr="true"/>
                      </property>
                      <property name="text">
                       <string>Sol tarafta bulunan menu butonlarını kullanabilirsiniz...!</string>
@@ -864,7 +852,7 @@
                       </font>
                      </property>
                      <property name="styleSheet">
-                      <string notr="true"></string>
+                      <string notr="true"/>
                      </property>
                      <property name="text">
                       <string>SATTUP v1.0 -2025-      Producted by Ayhan ERCAN </string>

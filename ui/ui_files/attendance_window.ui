@@ -417,6 +417,13 @@
         </widget>
        </item>
        <item>
+        <widget class="QPushButton" name="btn_plan_takip">
+         <property name="text">
+          <string>PLAN TAKİP</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QPushButton" name="btn_onayla_kilitle">
          <property name="text">
           <string>ONAYLA/KİLİTLE</string>

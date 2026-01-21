@@ -28,7 +28,9 @@ background-color: none;
 }
 /* Modern gradient butonlar */
 QPushButton {
- background-color: #3f6cd6;
+ background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 #3f6cd6, stop:1 #d1d1d3);
+
     border: 1px solid #ffffff;
     border-radius: 8px;
     color: white;
@@ -36,8 +38,8 @@ QPushButton {
     /*padding: 12px 24px;*/
     font-size: 12px;
     margin: 0px;
-	min-height:35px;
-min-width:140px;
+	min-height:30px;
+min-width:120px;
 }
 
 QPushButton:hover {

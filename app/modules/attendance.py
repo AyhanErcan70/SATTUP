@@ -51,13 +51,61 @@ class AttendanceApp(QMainWindow):
         self._selected_contract_id = None
 
         self._init_filters()
+        self._apply_active_month_defaults()
         self._setup_connections()
         self._refresh_lock_ui()
+
+    def _apply_active_month_defaults(self):
+        ym = str((self.user_data or {}).get("active_month") or "").strip()
+        if not ym or "-" not in ym:
+            return
+        try:
+            y_str, m_str = ym.split("-", 1)
+            y = int(y_str)
+            m = int(m_str)
+        except Exception:
+            return
+
+        ay_map = {
+            1: "OCAK",
+            2: "ŞUBAT",
+            3: "MART",
+            4: "NİSAN",
+            5: "MAYIS",
+            6: "HAZİRAN",
+            7: "TEMMUZ",
+            8: "AĞUSTOS",
+            9: "EYLÜL",
+            10: "EKİM",
+            11: "KASIM",
+            12: "ARALIK",
+        }
+        ay_txt = ay_map.get(m)
+        if not ay_txt:
+            return
+
+        if hasattr(self, "cmb_yil"):
+            try:
+                idx_y = self.cmb_yil.findText(str(y))
+                if idx_y >= 0:
+                    self.cmb_yil.setCurrentIndex(idx_y)
+            except Exception:
+                pass
+        if hasattr(self, "cmb_ay"):
+            try:
+                idx_m = self.cmb_ay.findText(str(ay_txt))
+                if idx_m >= 0:
+                    self.cmb_ay.setCurrentIndex(idx_m)
+            except Exception:
+                pass
 
     # ------------------------- UI wiring -------------------------
     def _setup_connections(self):
         if hasattr(self, "btn_toplu_cetele"):
             self.btn_toplu_cetele.clicked.connect(self._open_bulk_attendance)
+
+        if hasattr(self, "btn_plan_takip"):
+            self.btn_plan_takip.clicked.connect(self._open_plan_tracking)
 
         if hasattr(self, "btn_onayla_kilitle"):
             self.btn_onayla_kilitle.clicked.connect(self._lock_period)
@@ -444,6 +492,16 @@ class AttendanceApp(QMainWindow):
             QMessageBox.warning(self, "Uyarı", "Müşteri / Sözleşme / Hizmet seçiniz.")
             return
 
+        st_values = self._service_type_values(ctx.service_type) or [str(ctx.service_type)]
+        has_plan = self.db.has_trip_plan_for_context(int(ctx.contract_id), str(ctx.month), [str(x) for x in st_values])
+        if not has_plan:
+            QMessageBox.warning(
+                self,
+                "Uyarı",
+                "Bu dönem için sefer planı bulunamadı.\n\nÖnce sefer planlamasını yapın veya girişte şablon kopyalama ile dönemi oluşturun.",
+            )
+            return
+
         dlg = BulkAttendanceDialog(
             parent=self,
             db=self.db,
@@ -454,6 +512,22 @@ class AttendanceApp(QMainWindow):
         if dlg.exec() == QDialog.DialogCode.Accepted:
             self._reload_summary()
             self._refresh_lock_ui()
+
+    def _open_plan_tracking(self):
+        ctx = self._current_context()
+        if ctx is None:
+            QMessageBox.warning(self, "Uyarı", "Müşteri / Sözleşme / Hizmet seçiniz.")
+            return
+        dlg = PlanTrackingDialog(
+            parent=self,
+            db=self.db,
+            ctx=ctx,
+            year_month=self._selected_year_month(),
+            service_type_values=(self._service_type_values(ctx.service_type) or [str(ctx.service_type)]),
+        )
+        dlg.exec()
+
+
 
     # ------------------------- Navigation -------------------------
     def _return_to_main(self):
@@ -880,7 +954,12 @@ class BulkAttendanceDialog(QDialog):
                     planned_blocks.append(tbs)
                     seen.add(tbs)
 
-            for rid, rname, _km in self._route_rows:
+            for row in self._route_rows:
+                try:
+                    rid = int(row[0] or 0)
+                    rname = row[1] if len(row) > 1 else ""
+                except Exception:
+                    continue
                 for tb in planned_blocks:
                     if (int(rid), str(tb)) in self._planned_keys:
                         add_subrow(int(rid), rname or "", str(tb), str(tb))
@@ -1832,4 +1911,176 @@ class BulkAttendanceDialog(QDialog):
                 event.accept()
             except Exception:
                 pass
+
+
+class PlanTrackingDialog(QDialog):
+    def __init__(
+        self,
+        parent: QMainWindow,
+        db: DatabaseManager,
+        ctx: AttendanceContext,
+        year_month: tuple[int, int],
+        service_type_values: list[str],
+    ):
+        super().__init__(parent)
+        self.db = db
+        self.ctx = ctx
+        self.year, self.month = year_month
+        self.service_type_values = [str(x) for x in (service_type_values or []) if str(x).strip()]
+        if not self.service_type_values:
+            self.service_type_values = [str(ctx.service_type)]
+
+        self.setWindowTitle("Plan Takip (Günlük)")
+        self.setWindowState(Qt.WindowState.WindowMaximized)
+
+        self.table = QTableWidget(self)
+        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.table.verticalHeader().setVisible(False)
+        self.table.setAlternatingRowColors(True)
+
+        self.table.setColumnCount(4)
+        self.table.setHorizontalHeaderLabels(["Gün", "Planlanan", "Gerçekleşen", "Eksik"])
+        try:
+            self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        except Exception:
+            pass
+
+        btn_close = QPushButton("Kapat")
+        btn_close.clicked.connect(self.accept)
+
+        lay = QVBoxLayout()
+        lay.addWidget(self.table)
+        footer = QHBoxLayout()
+        footer.addStretch(1)
+        footer.addWidget(btn_close)
+        lay.addLayout(footer)
+        self.setLayout(lay)
+
+        self._load()
+
+    def _load(self):
+        days_in_month = QDate(self.year, self.month, 1).daysInMonth()
+        start_date = QDate(self.year, self.month, 1).toString("yyyy-MM-dd")
+        end_date = QDate(self.year, self.month, days_in_month).toString("yyyy-MM-dd")
+
+        planned_keys: set[tuple[int, str]] = set()
+        try:
+            conn = self.db.connect()
+            cursor = conn.cursor()
+            placeholders = ",".join(["?"] * len(self.service_type_values))
+            cursor.execute(
+                f"""
+                SELECT route_params_id, time_block
+                FROM trip_plan
+                WHERE contract_id = ?
+                  AND month = ?
+                  AND service_type IN ({placeholders})
+                """,
+                (int(self.ctx.contract_id), str(self.ctx.month), *self.service_type_values),
+            )
+            rows = cursor.fetchall() or []
+            conn.close()
+            planned_keys = {
+                (int(r[0] or 0), str(r[1] or ""))
+                for r in rows
+                if int(r[0] or 0) and str(r[1] or "")
+            }
+        except Exception:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            planned_keys = set()
+
+        planned_per_day = len(planned_keys)
+
+        actual_per_day = {d: 0.0 for d in range(1, days_in_month + 1)}
+        try:
+            conn2 = self.db.connect()
+            cur2 = conn2.cursor()
+            placeholders = ",".join(["?"] * len(self.service_type_values))
+            if planned_keys:
+                cur2.execute(
+                    f"""
+                    SELECT trip_date, route_params_id, time_block, COALESCE(SUM(qty),0)
+                    FROM trip_entries
+                    WHERE contract_id = ?
+                      AND service_type IN ({placeholders})
+                      AND trip_date BETWEEN ? AND ?
+                    GROUP BY trip_date, route_params_id, time_block
+                    """,
+                    (int(self.ctx.contract_id), *self.service_type_values, start_date, end_date),
+                )
+                for trip_date, rid, tb, qty_sum in (cur2.fetchall() or []):
+                    try:
+                        rid_i = int(rid or 0)
+                        tb_s = str(tb or "")
+                        if (rid_i, tb_s) not in planned_keys:
+                            continue
+                        qd = QDate.fromString(str(trip_date or ""), "yyyy-MM-dd")
+                        if not qd.isValid():
+                            continue
+                        day = int(qd.day())
+                        actual_per_day[day] = float(actual_per_day.get(day, 0) or 0) + float(qty_sum or 0)
+                    except Exception:
+                        continue
+            else:
+                # Bu ay için plan yoksa bile girilmiş puantaj değerlerini gün gün göster.
+                cur2.execute(
+                    f"""
+                    SELECT trip_date, COALESCE(SUM(qty),0)
+                    FROM trip_entries
+                    WHERE contract_id = ?
+                      AND service_type IN ({placeholders})
+                      AND trip_date BETWEEN ? AND ?
+                    GROUP BY trip_date
+                    """,
+                    (int(self.ctx.contract_id), *self.service_type_values, start_date, end_date),
+                )
+                for trip_date, qty_sum in (cur2.fetchall() or []):
+                    try:
+                        qd = QDate.fromString(str(trip_date or ""), "yyyy-MM-dd")
+                        if not qd.isValid():
+                            continue
+                        day = int(qd.day())
+                        actual_per_day[day] = float(actual_per_day.get(day, 0) or 0) + float(qty_sum or 0)
+                    except Exception:
+                        continue
+            conn2.close()
+        except Exception:
+            try:
+                conn2.close()
+            except Exception:
+                pass
+
+        self.table.setRowCount(0)
+        for day in range(1, days_in_month + 1):
+            actual = float(actual_per_day.get(day, 0) or 0)
+            planned = float(planned_per_day)
+            missing = planned - actual
+            if missing < 0:
+                missing = 0.0
+
+            row = self.table.rowCount()
+            self.table.insertRow(row)
+
+            it_day = QTableWidgetItem(str(day))
+            it_day.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.table.setItem(row, 0, it_day)
+
+            it_p = QTableWidgetItem(str(int(planned) if planned.is_integer() else planned))
+            it_p.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.table.setItem(row, 1, it_p)
+
+            it_a = QTableWidgetItem(str(int(actual) if actual.is_integer() else actual))
+            it_a.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.table.setItem(row, 2, it_a)
+
+            it_m = QTableWidgetItem(str(int(missing) if missing.is_integer() else missing))
+            it_m.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            if missing > 0:
+                it_m.setBackground(QColor("#f8d7da"))
+            self.table.setItem(row, 3, it_m)
 
