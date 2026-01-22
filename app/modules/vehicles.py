@@ -517,6 +517,7 @@ class VehiclesApp(QWidget):
         ]
         self.tableView.setColumnCount(len(headers))
         self.tableView.setHorizontalHeaderLabels(headers)
+        self.tableView.verticalHeader().setDefaultSectionSize(20)
         self.tableView.verticalHeader().setVisible(False)
         header = self.tableView.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)

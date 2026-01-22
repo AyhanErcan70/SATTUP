@@ -719,11 +719,11 @@ class ContractsApp(QWidget):
         tbl.verticalHeader().setVisible(False)
         header = tbl.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-
+        
         # Kolon genişlikleri
-        header.resizeSection(0, 90)   # kod
-        header.resizeSection(3, 110)  # başlangıç
-        header.resizeSection(4, 110)  # bitiş
+        header.resizeSection(0, 120)   # kod
+        header.resizeSection(3, 130)  # başlangıç
+        header.resizeSection(4, 130)  # bitiş
         header.resizeSection(5, 80)   # durum
 
         # Müşteri ve hizmet tipi alanı genişleyebilir

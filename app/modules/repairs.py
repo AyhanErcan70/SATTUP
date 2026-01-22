@@ -33,6 +33,8 @@ class RepairsApp(QWidget):
         self._setup_connections()
         self._load_combos()
         self._load_table()
+        self.table_bakim.verticalHeader().setDefaultSectionSize(20)
+        self.table_bakim.verticalHeader().setVisible(False)
 
     def _setup_ui(self):
         if hasattr(self, "table_bakim"):
