@@ -952,6 +952,7 @@ class DatabaseManager:
                     end_date TEXT,
                     service_type TEXT,
                     route_name TEXT,
+                    movement_type TEXT,
                     start_point TEXT,
                     stops TEXT,
                     distance_km REAL,
@@ -960,6 +961,14 @@ class DatabaseManager:
                 )
                 """
             )
+
+            try:
+                cursor.execute("PRAGMA table_info(route_params)")
+                cols = {row[1] for row in (cursor.fetchall() or [])}
+                if "movement_type" not in cols:
+                    cursor.execute("ALTER TABLE route_params ADD COLUMN movement_type TEXT")
+            except Exception:
+                pass
             conn.commit()
         finally:
             conn.close()
@@ -974,7 +983,11 @@ class DatabaseManager:
             try:
                 cursor.execute(
                     """
-                    SELECT id, COALESCE(route_name,''), COALESCE(distance_km,0), COALESCE(movement_type,'')
+                    SELECT id,
+                           COALESCE(route_name,''),
+                           COALESCE(stops,''),
+                           COALESCE(distance_km,0),
+                           COALESCE(movement_type,'')
                     FROM route_params
                     WHERE contract_id = ? AND service_type = ?
                     ORDER BY id ASC
@@ -985,7 +998,10 @@ class DatabaseManager:
             except Exception:
                 cursor.execute(
                     """
-                    SELECT id, COALESCE(route_name,''), COALESCE(distance_km,0)
+                    SELECT id,
+                           COALESCE(route_name,''),
+                           COALESCE(stops,''),
+                           COALESCE(distance_km,0)
                     FROM route_params
                     WHERE contract_id = ? AND service_type = ?
                     ORDER BY id ASC
@@ -993,6 +1009,37 @@ class DatabaseManager:
                     (int(contract_id), (service_type or "").strip()),
                 )
                 return cursor.fetchall()
+        finally:
+            conn.close()
+
+    def get_araclar_list_with_capacity(self, only_active: bool = True):
+        conn = self.connect()
+        if not conn:
+            return []
+        try:
+            cursor = conn.cursor()
+            if only_active:
+                cursor.execute(
+                    """
+                    SELECT vehicle_code, plate_number, COALESCE(capacity,0)
+                    FROM vehicles
+                    WHERE vehicle_code IS NOT NULL
+                      AND plate_number IS NOT NULL
+                      AND is_active = 1
+                    ORDER BY plate_number
+                    """
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT vehicle_code, plate_number, COALESCE(capacity,0)
+                    FROM vehicles
+                    WHERE vehicle_code IS NOT NULL
+                      AND plate_number IS NOT NULL
+                    ORDER BY plate_number
+                    """
+                )
+            return cursor.fetchall()
         finally:
             conn.close()
 
