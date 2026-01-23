@@ -117,6 +117,7 @@ class ContractsApp(QWidget):
                 self.cmb_ucret_tipi.addItems(["AYLIK", "GÜNLÜK", "SEFER BAŞI"])
         if hasattr(self, "cmb_musteri"):
             self.cmb_musteri.clear()
+            self.cmb_musteri.addItem("Seçiniz...")
             self._load_customers()
 
     def _load_customers(self):
@@ -129,7 +130,9 @@ class ContractsApp(QWidget):
             conn.close()
         except Exception:
             items = []
+            
         for _id, title in items:
+            
             self.cmb_musteri.addItem(title or "", _id)
 
     def _setup_connections(self):

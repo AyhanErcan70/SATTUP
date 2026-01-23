@@ -31,6 +31,7 @@ from PyQt6.QtWidgets import (
 )
 
 from app.core.db_manager import DatabaseManager
+from app.utils.excel_utils import create_excel
 from app.utils.style_utils import clear_all_styles
 from config import get_ui_path
 
@@ -119,6 +120,18 @@ class AttendanceApp(QWidget):
 
         if hasattr(self, "btn_onay_kaldir"):
             self.btn_onay_kaldir.clicked.connect(self._unlock_period)
+
+        if hasattr(self, "btn_excele_aktar"):
+            try:
+                self.btn_excele_aktar.clicked.connect(self._export_excel)
+            except Exception:
+                pass
+
+        if hasattr(self, "btn_yazdir"):
+            try:
+                self.btn_yazdir.clicked.connect(self._export_excel)
+            except Exception:
+                pass
 
         if hasattr(self, "sekmeli_form"):
             try:
@@ -504,6 +517,10 @@ class AttendanceApp(QWidget):
             if hasattr(self, "btn_onay_kaldir"):
                 self.btn_onay_kaldir.setEnabled(False)
                 self.btn_onay_kaldir.setVisible(False)
+            if hasattr(self, "btn_excele_aktar"):
+                self.btn_excele_aktar.setEnabled(False)
+            if hasattr(self, "btn_yazdir"):
+                self.btn_yazdir.setEnabled(False)
             return
 
         locked = False
@@ -521,6 +538,53 @@ class AttendanceApp(QWidget):
             can_unlock = locked and self._is_admin()
             self.btn_onay_kaldir.setVisible(can_unlock)
             self.btn_onay_kaldir.setEnabled(can_unlock)
+
+        if hasattr(self, "btn_excele_aktar"):
+            self.btn_excele_aktar.setEnabled(True)
+        if hasattr(self, "btn_yazdir"):
+            self.btn_yazdir.setEnabled(True)
+
+    def _export_excel(self):
+        ctx = self._current_context()
+        if ctx is None:
+            QMessageBox.warning(self, "Uyarı", "Müşteri / Sözleşme / Hizmet seçiniz.")
+            return
+
+        tab_name = "Puantaj"
+        tbl = None
+        try:
+            if hasattr(self, "sekmeli_form") and self.sekmeli_form is not None:
+                idx = int(self.sekmeli_form.currentIndex())
+            else:
+                idx = 0
+        except Exception:
+            idx = 0
+
+        if idx == 0 and hasattr(self, "tbl_plan_takip"):
+            tbl = self.tbl_plan_takip
+            tab_name = "Plan Takip"
+        elif idx == 1 and hasattr(self, "tbl_toplu_puantaj"):
+            tbl = self.tbl_toplu_puantaj
+            tab_name = "Toplu Puantaj"
+
+        if tbl is None:
+            QMessageBox.warning(self, "Uyarı", "Excel'e aktarılacak tablo bulunamadı.")
+            return
+
+        try:
+            if int(tbl.rowCount()) <= 0:
+                QMessageBox.information(self, "Bilgi", "Excel'e aktarılacak satır yok.")
+                return
+        except Exception:
+            pass
+
+        try:
+            user_txt = str((self.user_data or {}).get("full_name") or (self.user_data or {}).get("username") or "")
+        except Exception:
+            user_txt = ""
+
+        report_title = f"{tab_name} - {ctx.month}"
+        create_excel(tbl, report_title=report_title, username=user_txt or "", parent=self)
 
     def _lock_period(self):
         ctx = self._current_context()
