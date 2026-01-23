@@ -1165,6 +1165,132 @@ class BulkAttendanceDialog(QDialog):
                 pass
 
         self._apply_route_group_spans()
+
+    def _merge_row(self, row: int):
+        if row < 0 or row >= self.table.rowCount():
+            return
+
+        def _meta_at(r: int):
+            return self._row_meta[r] if r >= 0 and r < len(self._row_meta) else None
+
+        m0 = _meta_at(row) or {}
+        try:
+            rid0 = int(m0.get("route_params_id") or 0)
+        except Exception:
+            rid0 = 0
+        tb0 = str(m0.get("time_block") or "").strip()
+        if not rid0 or not tb0:
+            return
+
+        partner = None
+        for cand in (row + 1, row - 1):
+            if cand < 0 or cand >= self.table.rowCount():
+                continue
+            m1 = _meta_at(cand) or {}
+            try:
+                rid1 = int(m1.get("route_params_id") or 0)
+            except Exception:
+                rid1 = 0
+            tb1 = str(m1.get("time_block") or "").strip()
+            if rid1 == rid0 and tb1 == tb0:
+                partner = cand
+                break
+
+        if partner is None:
+            QMessageBox.information(self, "Bilgi", "Birleştirilecek eş satır bulunamadı.")
+            return
+
+        keep_row = min(row, partner)
+        drop_row = max(row, partner)
+
+        try:
+            self.table.blockSignals(True)
+
+            # Sum day values
+            for d in range(1, self.days_in_month + 1):
+                col = self._day_start + (d - 1)
+                it_keep = self.table.item(keep_row, col)
+                it_drop = self.table.item(drop_row, col)
+
+                v0 = 0
+                v1 = 0
+                try:
+                    t0 = (it_keep.text() if it_keep is not None else "").strip()
+                    v0 = int(t0) if t0.isdigit() else 0
+                except Exception:
+                    v0 = 0
+                try:
+                    t1 = (it_drop.text() if it_drop is not None else "").strip()
+                    v1 = int(t1) if t1.isdigit() else 0
+                except Exception:
+                    v1 = 0
+
+                total = int(v0) + int(v1)
+                if it_keep is None:
+                    it_keep = QTableWidgetItem("")
+                    it_keep.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                    it_keep.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+                    self.table.setItem(keep_row, col, it_keep)
+                it_keep.setText(str(total) if total > 0 else "")
+
+            # Merge time text (keep first non-empty)
+            try:
+                it_t0 = self.table.item(keep_row, self._col_time_text)
+                it_t1 = self.table.item(drop_row, self._col_time_text)
+                t0 = (it_t0.text() if it_t0 is not None else "").strip()
+                t1 = (it_t1.text() if it_t1 is not None else "").strip()
+                if (not t0) and t1:
+                    if it_t0 is None:
+                        it_t0 = QTableWidgetItem("")
+                        it_t0.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
+                        self.table.setItem(keep_row, self._col_time_text, it_t0)
+                    it_t0.setText(t1)
+            except Exception:
+                pass
+
+            # Price: sum
+            p0 = 0.0
+            p1 = 0.0
+            p_it0 = self.table.item(keep_row, self._col_price)
+            p_it1 = self.table.item(drop_row, self._col_price)
+            if p_it0 is not None:
+                p0 = self._parse_tr_float(p_it0.text() or "0")
+            if p_it1 is not None:
+                p1 = self._parse_tr_float(p_it1.text() or "0")
+            if p_it0 is None:
+                p_it0 = QTableWidgetItem("0")
+                p_it0.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.table.setItem(keep_row, self._col_price, p_it0)
+            p_it0.setText(self._format_tr_currency(float(p0) + float(p1)))
+
+            # Remove drop row
+            self.table.removeRow(drop_row)
+            if drop_row < len(self._row_meta):
+                try:
+                    self._row_meta.pop(drop_row)
+                except Exception:
+                    pass
+
+            # Recalc totals/styles
+            total_qty = 0
+            for day_col in range(self._day_start, self._day_start + self.days_in_month):
+                itx = self.table.item(keep_row, day_col)
+                if itx and (itx.text() or "").strip().isdigit():
+                    total_qty += int(itx.text().strip())
+            t_item = self.table.item(keep_row, self._col_total_qty)
+            if t_item is not None:
+                t_item.setText(str(total_qty))
+            self._recalc_price_total_for_row(keep_row)
+            for d in range(1, self.days_in_month + 1):
+                self._apply_day_cell_style(keep_row, self._day_start + (d - 1))
+
+        finally:
+            try:
+                self.table.blockSignals(False)
+            except Exception:
+                pass
+
+        self._apply_route_group_spans()
     def _extract_movement_type(self, rec: dict) -> str:
         if not isinstance(rec, dict):
             return ""
@@ -1468,6 +1594,33 @@ class BulkAttendanceDialog(QDialog):
                 return (1, hh * 60 + mm, 0)
             return (2, 9999, 0)
 
+        def _split_time_range(tb_val: str, max_minutes: int = 30) -> tuple[str, str] | None:
+            t = str(tb_val or "").strip()
+            if "-" not in t:
+                return None
+            left, right = (t.split("-", 1) + [""])[:2]
+            left = left.strip()
+            right = right.strip()
+            if not left or not right:
+                return None
+            p1 = _parse_time(left)
+            p2 = _parse_time(right)
+            if p1 is None or p2 is None:
+                return None
+
+            # Only treat short ranges as entry/exit pairs.
+            # Long ranges like 08:00-16:00 should not be auto-split.
+            try:
+                m1 = int(p1[0]) * 60 + int(p1[1])
+                m2 = int(p2[0]) * 60 + int(p2[1])
+                diff = abs(m2 - m1)
+                diff = min(diff, 1440 - diff)  # handle crossing midnight
+                if int(diff) > int(max_minutes):
+                    return None
+            except Exception:
+                return None
+            return left, right
+
         def _time_text_for_time_block(tb_val: str) -> str:
             tbs = str(tb_val or "").strip().upper()
             m = re.match(r"^([GC])(\d)$", tbs)
@@ -1486,7 +1639,54 @@ class BulkAttendanceDialog(QDialog):
                 return f"{hh:02d}:{mm:02d}"
             return str(tb_val or "")
 
-        def add_subrow(route_params_id: int, route_name: str, time_block: str, label: str):
+        def _route_movement_type_by_id(route_params_id: int) -> str:
+            try:
+                conn = self.db.connect()
+                if not conn:
+                    return ""
+                cur = conn.cursor()
+                try:
+                    cur.execute(
+                        "SELECT COALESCE(movement_type,'') FROM route_params WHERE id = ? LIMIT 1",
+                        (int(route_params_id),),
+                    )
+                    row = cur.fetchone()
+                    return str((row[0] if row else "") or "").strip()
+                finally:
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+            except Exception:
+                return ""
+
+        def _route_is_tek(route_row) -> bool:
+            try:
+                if route_row is None:
+                    return False
+                rid = 0
+                try:
+                    rid = int(route_row[0] or 0)
+                except Exception:
+                    rid = 0
+                mt = ""
+                if len(route_row) > 4:
+                    mt = str(route_row[4] or "")
+                elif len(route_row) > 3 and isinstance(route_row[3], str):
+                    mt = str(route_row[3] or "")
+                if (not str(mt or "").strip()) and int(rid or 0) > 0:
+                    mt = _route_movement_type_by_id(int(rid))
+                mt = mt.strip().lower()
+                if not mt:
+                    return False
+                # treat 'tek servis' as TEK
+                if "tek" in mt and ("çift" not in mt and "cift" not in mt):
+                    return True
+                return False
+            except Exception:
+                return False
+
+        def add_subrow(route_params_id: int, route_name: str, time_block: str, label: str, plan_time_block: str | None = None):
             row = self.table.rowCount()
             self.table.insertRow(row)
 
@@ -1550,7 +1750,8 @@ class BulkAttendanceDialog(QDialog):
                     it.setBackground(self._bg_weekend)
                 self.table.setItem(row, col, it)
 
-            is_planned = (int(route_params_id), str(time_block)) in (self._planned_keys or set())
+            plan_tb = str(plan_time_block) if plan_time_block is not None else str(time_block)
+            is_planned = (int(route_params_id), str(plan_tb)) in (self._planned_keys or set())
             if is_planned:
                 planned_bg = QColor("#fff3cd")
                 planned_font = QFont()
@@ -1590,6 +1791,7 @@ class BulkAttendanceDialog(QDialog):
                     "route_params_id": int(route_params_id),
                     "sub_index": 0,
                     "time_block": str(time_block),
+                    "plan_time_block": str(plan_tb),
                 }
             )
 
@@ -1601,25 +1803,25 @@ class BulkAttendanceDialog(QDialog):
         self._planned_keys = _planned_keys_for_context(int(self.contract_id), self.month_key, str(self.service_type))
 
         if self._planned_keys:
-            all_blocks = _time_blocks_for_context(int(self.contract_id), self.month_key, str(self.service_type))
-            planned_blocks = []
-            seen = set()
-            for b in all_blocks:
-                if not b:
+            planned_by_route: dict[int, list[str]] = {}
+            for _rid, tb in (self._planned_keys or set()):
+                try:
+                    rid_i = int(_rid or 0)
+                except Exception:
+                    rid_i = 0
+                tbs = str(tb or "").strip()
+                if not rid_i or not tbs:
                     continue
-                if b in seen:
-                    continue
-                for _rid, tb in self._planned_keys:
-                    if str(tb) == str(b):
-                        planned_blocks.append(str(b))
-                        seen.add(str(b))
-                        break
-
-            for _rid, tb in self._planned_keys:
-                tbs = str(tb)
-                if tbs and tbs not in seen:
-                    planned_blocks.append(tbs)
-                    seen.add(tbs)
+                planned_by_route.setdefault(rid_i, []).append(tbs)
+            for rid_i, blocks in list(planned_by_route.items()):
+                uniq = []
+                seen = set()
+                for b in blocks:
+                    if b in seen:
+                        continue
+                    seen.add(b)
+                    uniq.append(b)
+                planned_by_route[rid_i] = sorted([str(x) for x in uniq if str(x)], key=_tb_sort_key)
 
             for row in self._route_rows:
                 try:
@@ -1627,8 +1829,32 @@ class BulkAttendanceDialog(QDialog):
                     rname = row[1] if len(row) > 1 else ""
                 except Exception:
                     continue
-                for tb in planned_blocks:
-                    if (int(rid), str(tb)) in self._planned_keys:
+
+                blocks = planned_by_route.get(int(rid), [])
+                if not blocks:
+                    continue
+
+                has_range = False
+                try:
+                    for tb in blocks:
+                        if _split_time_range(tb) is not None:
+                            has_range = True
+                            break
+                except Exception:
+                    has_range = False
+
+                if _route_is_tek(row) or has_range:
+                    # TEK SERVİS (or planned range blocks): expand 'HH:MM-HH:MM' into entry/exit rows.
+                    for tb in blocks:
+                        rng = _split_time_range(tb)
+                        if rng is not None:
+                            g, c = rng
+                            add_subrow(int(rid), rname or "", str(g), str(g), str(tb))
+                            add_subrow(int(rid), rname or "", str(c), str(c), str(tb))
+                        else:
+                            add_subrow(int(rid), rname or "", str(tb), str(tb))
+                else:
+                    for tb in blocks:
                         add_subrow(int(rid), rname or "", str(tb), str(tb))
         else:
             time_blocks = ["G1", "C1", "G2", "C2", "G3", "C3"]
@@ -1644,8 +1870,16 @@ class BulkAttendanceDialog(QDialog):
                     rname = row[1] if len(row) > 1 else ""
                 except Exception:
                     continue
-                for tb in time_blocks:
-                    add_subrow(int(rid), rname or "", str(tb), str(tb))
+
+                if _route_is_tek(row):
+                    # TEK SERVİS: default to entry/exit rows for up to 3 shifts
+                    base_times = _time_blocks_for_context(int(self.contract_id), self.month_key, str(self.service_type))
+                    base_times = sorted([str(x) for x in (base_times or []) if str(x)], key=_tb_sort_key)
+                    for tb in base_times:
+                        add_subrow(int(rid), rname or "", str(tb), str(tb))
+                else:
+                    for tb in time_blocks:
+                        add_subrow(int(rid), rname or "", str(tb), str(tb))
 
         self.btn_save = QPushButton("KAYDET", self)
         self.btn_save.clicked.connect(self._save)
@@ -1758,9 +1992,12 @@ class BulkAttendanceDialog(QDialog):
         if c == self._col_time_text:
             menu = QMenu(self)
             act_split = menu.addAction("Satırı Ayır (ÇİFT)")
+            act_merge = menu.addAction("Satırı Birleştir")
             act = menu.exec(self.table.viewport().mapToGlobal(pos))
             if act == act_split:
                 self._split_row(r)
+            elif act == act_merge:
+                self._merge_row(r)
             return
 
         if c < self._day_start or c >= self._day_start + self.max_days:
@@ -2108,11 +2345,20 @@ class BulkAttendanceDialog(QDialog):
         start_date = QDate(self.year, self.month, 1).toString("yyyy-MM-dd")
         end_date = QDate(self.year, self.month, self.days_in_month).toString("yyyy-MM-dd")
 
-        row_index = {}
+        row_index_plan: dict[tuple[int, str], list[int]] = {}
+        row_index_time: dict[tuple[int, str], list[int]] = {}
         for idx, meta in enumerate(self._row_meta):
-            key = (int(meta.get("route_params_id") or 0), str(meta.get("time_block") or ""))
-            if key[0] and key[1]:
-                row_index[key] = idx
+            rid = int(meta.get("route_params_id") or 0)
+            if rid <= 0:
+                continue
+
+            tb_plan = str(meta.get("plan_time_block") or "").strip()
+            if tb_plan:
+                row_index_plan.setdefault((rid, tb_plan), []).append(int(idx))
+
+            tb_time = str(meta.get("time_block") or "").strip()
+            if tb_time:
+                row_index_time.setdefault((rid, tb_time), []).append(int(idx))
 
         rows = []
         try:
@@ -2337,18 +2583,19 @@ class BulkAttendanceDialog(QDialog):
         try:
             self.table.blockSignals(True)
 
-            for key, row_idx in row_index.items():
+            for key, row_idxs in row_index_plan.items():
                 pv, pd = plan_map.get(key, ("", ""))
-                cmb_v = self.table.cellWidget(row_idx, self._col_vehicle)
-                cmb_d = self.table.cellWidget(row_idx, self._col_driver)
-                if cmb_v is not None and pv:
-                    idx = cmb_v.findData(str(pv))
-                    if idx >= 0:
-                        cmb_v.setCurrentIndex(idx)
-                if cmb_d is not None and pd:
-                    idx = cmb_d.findData(str(pd))
-                    if idx >= 0:
-                        cmb_d.setCurrentIndex(idx)
+                for row_idx in (row_idxs or []):
+                    cmb_v = self.table.cellWidget(row_idx, self._col_vehicle)
+                    cmb_d = self.table.cellWidget(row_idx, self._col_driver)
+                    if cmb_v is not None and pv:
+                        idx2 = cmb_v.findData(str(pv))
+                        if idx2 >= 0:
+                            cmb_v.setCurrentIndex(idx2)
+                    if cmb_d is not None and pd:
+                        idx2 = cmb_d.findData(str(pd))
+                        if idx2 >= 0:
+                            cmb_d.setCurrentIndex(idx2)
 
             self._alloc_override_map = {}
             for rpid, trip_date, time_block, vehicle_id, driver_id, _qty0, _ttext0, note0 in alloc_rows or []:
@@ -2374,9 +2621,7 @@ class BulkAttendanceDialog(QDialog):
                 }
 
                 key = (rid_i, tb_s)
-                r = row_index.get(key)
-                if r is None:
-                    continue
+                rlist = row_index_time.get(key) or []
 
                 try:
                     day = int(str(d_s)[-2:])
@@ -2386,9 +2631,10 @@ class BulkAttendanceDialog(QDialog):
                     continue
                 col = self._day_start + (day - 1)
 
-                self._apply_day_cell_style(r, col)
+                for r in rlist:
+                    self._apply_day_cell_style(int(r), col)
 
-            for key, row_idx in row_index.items():
+            for key, row_idxs in row_index_time.items():
                 pr = price_map.get(key)
                 if pr is None:
                     rp = route_default_price.get(int(key[0] or 0))
@@ -2400,14 +2646,15 @@ class BulkAttendanceDialog(QDialog):
                 if pr is None:
                     continue
 
-                p_item = self.table.item(row_idx, self._col_price)
-                if p_item is not None:
-                    p_item.setText(self._format_tr_currency(pr))
+                for row_idx in (row_idxs or []):
+                    p_item = self.table.item(int(row_idx), self._col_price)
+                    if p_item is not None:
+                        p_item.setText(self._format_tr_currency(pr))
 
             for route_params_id, trip_date, time_block, qty, time_text in rows:
                 key = (int(route_params_id or 0), str(time_block or ""))
-                r = row_index.get(key)
-                if r is None:
+                rlist = row_index_time.get(key) or []
+                if not rlist:
                     continue
 
                 day = 0
@@ -2419,21 +2666,22 @@ class BulkAttendanceDialog(QDialog):
                     continue
 
                 col = self._day_start + (day - 1)
-                it = self.table.item(r, col)
-                if it is None:
-                    continue
                 try:
                     q = int(qty or 0)
                 except Exception:
                     q = 0
-                it.setText(str(q) if q != 0 else "")
-                self._apply_day_cell_style(r, col)
+                for r in rlist:
+                    it = self.table.item(int(r), col)
+                    if it is None:
+                        continue
+                    it.setText(str(q) if q != 0 else "")
+                    self._apply_day_cell_style(int(r), col)
 
-                if (time_text or "").strip():
-                    t_item = self.table.item(r, self._col_time_text)
-                    if t_item is not None:
-                        if not (t_item.text() or "").strip() or (t_item.text() or "").strip() in ("GİRİŞ", "ÇIKIŞ"):
-                            t_item.setText((time_text or "").strip())
+                    if (time_text or "").strip():
+                        t_item = self.table.item(int(r), self._col_time_text)
+                        if t_item is not None:
+                            if not (t_item.text() or "").strip() or (t_item.text() or "").strip() in ("GİRİŞ", "ÇIKIŞ"):
+                                t_item.setText((time_text or "").strip())
 
             for r in range(self.table.rowCount()):
                 total = 0
