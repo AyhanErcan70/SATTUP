@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1056</width>
-    <height>793</height>
+    <height>813</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -284,14 +284,14 @@ QStackedWidget, QStackedWidget &gt; QWidget {
     padding: 3px;
 }
 
-QPushButton[selected="true"] {
+QPushButton[selected=&quot;true&quot;] {
     background-color: #FFF3E0;
     color: #984C00;
     border-right: 4px solid #984C00;
     border-bottom: 5px solid #6B3A00;
 }
 
-QPushButton[flash="true"] {
+QPushButton[flash=&quot;true&quot;] {
     background-color: #FFE0B2;
 }
 
