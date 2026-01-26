@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="resim">
+    <file>logo_faded.png</file>
     <file>asiltur.png</file>
     <file>Photo.png</file>
     <file>istockphoto-671677466-612x612.jpg</file>
@@ -9,6 +10,28 @@
     <file>down-arrow.png</file>
     <file>../../assets/images/logo-w.png</file>
     <file>../../assets/images/logo.png</file>
+  </qresource>
+  <qresource prefix="menu">
+    <file>menu/bar-chart-box-line.svg</file>
+    <file>menu/bus-line.svg</file>
+    <file>menu/calendar-check-fill.svg</file>
+    <file>menu/calendar-check-line.svg</file>
+    <file>menu/car-line.svg</file>
+    <file>menu/contacts-book-line.svg</file>
+    <file>menu/file-text-line.svg</file>
+    <file>menu/money-dollar-circle-line.svg</file>
+    <file>menu/pie-chart-2-line.svg</file>
+    <file>menu/pie-chart-line.svg</file>
+    <file>menu/road-map-line.svg</file>
+    <file>menu/route-line.svg</file>
+    <file>menu/send-plane-line.svg</file>
+    <file>menu/settings-3-line.svg</file>
+    <file>menu/settings-line.svg</file>
+    <file>menu/steering-2-line.svg</file>
+    <file>menu/team-line.svg</file>
+    <file>menu/tools-line.svg</file>
+    <file>menu/user-3-line.svg</file>
+    <file>menu/user-voice-line.svg</file>
   </qresource>
   <qresource prefix="simgeler">
     <file>ekle.ico</file>

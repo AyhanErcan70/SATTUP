@@ -1292,6 +1292,8 @@ class DatabaseManager:
 
             migrations = [
                 ("vehicle_code", "TEXT"),
+                ("arac_sahibi", "TEXT"),
+                ("photo_path", "TEXT"),
                 ("arac_turu", "TEXT"),
                 ("hizmet_turu", "TEXT"),
                 ("kategori", "TEXT"),

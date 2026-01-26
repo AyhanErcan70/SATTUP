@@ -777,7 +777,7 @@ QCheckBox::indicator:checked {
 }</string>
                  </property>
                  <property name="text">
-                  <string>MESAİ-1 SEFER</string>
+                  <string>SABAH AKŞAM</string>
                  </property>
                 </widget>
                </item>
@@ -995,7 +995,7 @@ QCheckBox::indicator:checked {
 }</string>
                  </property>
                  <property name="text">
-                  <string>MESAİ-2 SEFER</string>
+                  <string>MESAİ SEFER</string>
                  </property>
                 </widget>
                </item>

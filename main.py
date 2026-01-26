@@ -114,10 +114,23 @@ def main():
     db = DatabaseManager()
 
     app = QApplication(sys.argv)
-    style_path = os.path.join(BASE_DIR, "ui", "styles", "main_style.qss")
-    if os.path.exists(style_path):
-        with open(style_path, "r", encoding="utf-8") as f:
-            app.setStyleSheet(f.read())
+    try:
+        enable_global_qss = str(os.environ.get("SATTUP_ENABLE_GLOBAL_QSS", "")).strip() in (
+            "1",
+            "true",
+            "True",
+            "yes",
+            "YES",
+        )
+    except Exception:
+        enable_global_qss = False
+
+    if enable_global_qss:
+        style_path = os.path.join(BASE_DIR, "ui", "styles", "main_style.qss")
+        if os.path.exists(style_path):
+            with open(style_path, "r", encoding="utf-8") as f:
+                app.setStyleSheet(f.read())
+
     login_window = AuthApp()
     
     # exec() sonucu QDialog.DialogCode.Accepted (1) ise devam et

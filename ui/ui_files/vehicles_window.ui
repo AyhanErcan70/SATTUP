@@ -6,582 +6,1662 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1098</width>
-    <height>547</height>
+    <width>1245</width>
+    <height>765</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">#main_form{
-background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(148, 191, 213, 255));
+   <string notr="true">QFrame#top_frame, QFrame#bottom_frame{
+background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(148, 191, 213, 255));}
+
+QFrame#middle_n_frame, QFrame#middle_s_frame{
+background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(151, 230, 255, 255));}
+
+QLineEdit#txt_arac_kodu{
+border: none;
+background-color:transparent;
+font-family: &quot;Nesatho&quot;;
+font-weight: bold;
+font-size: 12pt;
+text-align: center;
+color:#df141e;
+}
+QLineEdit, QDateEdit{
+background-color:#fff;
+border: 1px solid #162D6D;
+border-radius: 5px;
+min-height:30px;
+max-height: 30px;
+padding-left: 5px;
+}
+QComboBox {border: 1px solid #162d6d;
+min-height:28px;
+max-height: 28px;
+padding-left: 5px;
+border-radius: 5px; }
+QLineEdit:focus, QComboBox:focus, QDateEdit:focus{
+background-color:#ffffce;
+}
+QLabel{background-color:none;
+font-weight: bold;}
+
+/*QPushBotton#btn_kaydet, QPushBotton#btn_yeni, QPushBotton#btn_sil, QPushBotton#btn_excele_aktar, QPushBotton#btn_pdfye_aktar, QPushBotton#btn_excel_yukle, QPushBotton#btn_yeni, QPushButton#btn_temizle_f{
+background-color: #288EB2;
+color: #162D6D;
+font-size: 14px;
+min-widht:140px;
+min-height:40px;
+}*/
+/* Tablonun Genel Çerçevesi */
+QTableWidget {
+    background-color: #ffffff;
+    alternate-background-color: #cfd0d1; /* Zebra satır rengi */
+    gridline-color: #96999c;             /* Hücre çizgisi rengi */
+    border: 1px solid #4e4e50;
+    border-radius: 4px;
+    font-family: &quot;DaltonaPro&quot;;       /* Veya yeni yüklediğin font adı */
+    outline: 0;                          /* Seçimdeki kesikli çizgiyi kaldırır */
+}
+
+QHeaderView::section {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #2246AA, stop: 0.5 #1A3580,
+                                      stop: 0.6 #162d6d, stop:1 #20409c);
+    color: white;
+    padding-left: 4px;
+    border: 1px solid #6c6c6c;
+}
+
+
+/* Hücreler */
+QTableWidget::item {
+    padding: 5px;
+    border-bottom: 1px solid #757779;
+}
+
+/* Satır Seçildiğinde */
+QTableWidget::item:selected {
+    background-color: #e1f5fe;
+    color: #162D6D;
+    border-left: 3px solid #01c4ff;      /* Seçili satıra sol vurgu */
+}
+
+/* Köşe Bölgesi (Sol üst boşluk) */
+QTableWidget QTableCornerButton::section {
+    background-color: #162D6D;
+    border: none;
 }</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout_2">
-   <item row="0" column="0">
-    <widget class="QFrame" name="top_frame">
-     <property name="styleSheet">
-      <string notr="true">QFrame#top_frame{
-background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(148, 191, 213, 255));}
-QLabel{
-color: #000000;
-background-color: none;
-}
-/* Modern gradient butonlar */
-QPushButton {
- background-color: qlineargradient(spread:pad, x1:0.903, y1:0.880682, x2:0.203209, y2:0.21, stop:0.465241 rgba(41, 8, 106, 255), stop:0.59893 rgba(15, 42, 117, 255), stop:0.935829 rgba(0, 1, 37, 255));
-    border: 1px solid #ffffff;
-    border-radius: 6px;
-    color: white;
-    font-weight: bold;
-    /*padding: 12px 24px;*/
-    font-size: 12px;
-    margin: 2px;
-}
-
-QPushButton:hover {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 #764ba2, stop:1 #667eea);
-}
-
-QPushButton:pressed {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 #5a67d8, stop:1 #6b46c1);
-	border: 2px solid #ffffff;
-	padding-top: 2px;
-}
-
-QPushButton:disabled {
-    background: #cccccc;
-    color: #666666;
-}</string>
-     </property>
+  <layout class="QGridLayout" name="gridLayout_8">
+   <property name="leftMargin">
+    <number>10</number>
+   </property>
+   <property name="topMargin">
+    <number>20</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <item row="1" column="0">
+    <widget class="QFrame" name="middle_n_frame">
      <property name="frameShape">
       <enum>QFrame::Shape::StyledPanel</enum>
      </property>
      <property name="frameShadow">
       <enum>QFrame::Shadow::Raised</enum>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_3">
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout">
-        <item>
-         <widget class="QFrame" name="frame">
-          <property name="styleSheet">
-           <string notr="true">QFrame#frame{background-color: transparent;}
-QLineEdit,QComboBox,QDateEdit{
-border: 1px solid darkblue;
-background-color: none;}</string>
+     <layout class="QGridLayout" name="gridLayout_4">
+      <property name="leftMargin">
+       <number>20</number>
+      </property>
+      <property name="topMargin">
+       <number>2</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>2</number>
+      </property>
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <item row="0" column="0">
+       <layout class="QGridLayout" name="gridLayout_3">
+        <property name="horizontalSpacing">
+         <number>10</number>
+        </property>
+        <property name="verticalSpacing">
+         <number>0</number>
+        </property>
+        <item row="0" column="6">
+         <widget class="QPushButton" name="btn_sil">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
-          <property name="frameShape">
-           <enum>QFrame::Shape::StyledPanel</enum>
+          <property name="minimumSize">
+           <size>
+            <width>140</width>
+            <height>40</height>
+           </size>
           </property>
-          <property name="frameShadow">
-           <enum>QFrame::Shadow::Plain</enum>
+          <property name="maximumSize">
+           <size>
+            <width>140</width>
+            <height>40</height>
+           </size>
           </property>
-          <layout class="QFormLayout" name="formLayout">
-           <item row="0" column="0">
-            <widget class="QLabel" name="label">
-             <property name="text">
-              <string>Araç Kodu</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QLineEdit" name="txt_arac_kodu"/>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="label_2">
-             <property name="text">
-              <string>Plaka No</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QLineEdit" name="txt_arac_plaka"/>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_3">
-             <property name="text">
-              <string>Araç Türü</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="QComboBox" name="cmb_arac_turu"/>
-           </item>
-           <item row="3" column="0">
-            <widget class="QLabel" name="label_4">
-             <property name="text">
-              <string>Hizmet Türü</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="1">
-            <widget class="QComboBox" name="cmb_hizmet_turu"/>
-           </item>
-           <item row="4" column="0">
-            <widget class="QLabel" name="label_10">
-             <property name="text">
-              <string>Araç Sahibi</string>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="1">
-            <widget class="QLineEdit" name="txt_arac_sahibi"/>
-           </item>
-          </layout>
+          <property name="text">
+           <string>Sil</string>
+          </property>
          </widget>
         </item>
-        <item>
-         <widget class="QFrame" name="frame_2">
-          <property name="styleSheet">
-           <string notr="true">QFrame#frame_2{background-color: transparent;}
-QLineEdit,QComboBox,QDateEdit{
-border: 1px solid darkblue;
-background-color: none;}</string>
+        <item row="0" column="0">
+         <widget class="QPushButton" name="btn_kaydet">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
-          <property name="frameShape">
-           <enum>QFrame::Shape::StyledPanel</enum>
+          <property name="minimumSize">
+           <size>
+            <width>140</width>
+            <height>40</height>
+           </size>
           </property>
-          <property name="frameShadow">
-           <enum>QFrame::Shadow::Plain</enum>
+          <property name="maximumSize">
+           <size>
+            <width>140</width>
+            <height>40</height>
+           </size>
           </property>
-          <layout class="QFormLayout" name="formLayout_2">
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_5">
-             <property name="text">
-              <string>Kategori</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QComboBox" name="cmb_kategori"/>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="label_6">
-             <property name="text">
-              <string>Marka</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QComboBox" name="cmb_marka"/>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_7">
-             <property name="text">
-              <string>Model</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="QComboBox" name="cmb_model"/>
-           </item>
-           <item row="3" column="0">
-            <widget class="QLabel" name="label_8">
-             <property name="text">
-              <string>Yıl</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="1">
-            <widget class="QLineEdit" name="txt_yil"/>
-           </item>
-           <item row="4" column="0">
-            <widget class="QLabel" name="label_9">
-             <property name="text">
-              <string>Kapasite</string>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="1">
-            <widget class="QLineEdit" name="txt_kapasite"/>
-           </item>
-          </layout>
+          <property name="text">
+           <string>Kaydet</string>
+          </property>
          </widget>
         </item>
-        <item>
-         <widget class="QFrame" name="frame_3">
-          <property name="styleSheet">
-           <string notr="true">QFrame#frame_3{background-color: transparent;}
-QLineEdit,QComboBox,QDateEdit{
-border: 1px solid darkblue;
-background-color: none;}</string>
+        <item row="0" column="5">
+         <widget class="QPushButton" name="btn_aktifpasif">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
-          <property name="frameShape">
-           <enum>QFrame::Shape::StyledPanel</enum>
+          <property name="minimumSize">
+           <size>
+            <width>140</width>
+            <height>40</height>
+           </size>
           </property>
-          <property name="frameShadow">
-           <enum>QFrame::Shadow::Plain</enum>
+          <property name="maximumSize">
+           <size>
+            <width>140</width>
+            <height>40</height>
+           </size>
           </property>
-          <layout class="QFormLayout" name="formLayout_3">
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_19">
-             <property name="text">
-              <string>Muayene</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QDateEdit" name="date_muayene"/>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="label_20">
-             <property name="text">
-              <string>Sigorta</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QDateEdit" name="date_sigorta"/>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_21">
-             <property name="text">
-              <string>Koltuk</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="QDateEdit" name="date_koltuk"/>
-           </item>
-           <item row="3" column="0">
-            <widget class="QLabel" name="label_22">
-             <property name="text">
-              <string>Kasko</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="1">
-            <widget class="QDateEdit" name="date_kasko"/>
-           </item>
-           <item row="4" column="0">
-            <widget class="QLabel" name="label_23">
-             <property name="text">
-              <string>Ruhsat</string>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="1">
-            <widget class="QDateEdit" name="date_calisma_ruhsati"/>
-           </item>
-           <item row="5" column="0">
-            <widget class="QLabel" name="label_24">
-             <property name="text">
-              <string>Güzergah</string>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="1">
-            <widget class="QDateEdit" name="date_guzergah_izin"/>
-           </item>
-          </layout>
+          <property name="text">
+           <string>Aktif/Pasif</string>
+          </property>
          </widget>
         </item>
-        <item>
-         <widget class="QFrame" name="frame_4">
-          <property name="styleSheet">
-           <string notr="true">QFrame#frame_4{background-color: transparent;}
-QLineEdit,QComboBox,QDateEdit,QCheckBox{
-border: 1px solid darkblue;
-background-color: none;}
-QPushButton {
- background-color: #3f6cd6;
-    border: 1px solid #ffffff;
-    border-radius: 8px;
-    color: white;
-    font-weight: bold;
-    /*padding: 12px 24px;*/
-    font-size: 12px;
-    margin: 0px;
-	min-height:35px;
-min-width:140px;
-}
-
-QPushButton:hover {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 #8b8f90, stop:1 #d1d1d3);
-border:2px solid #ffffff;
-
-}
-
-QPushButton:pressed {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 #5a67d8, stop:1 #6b46c1);
-	border: 2px solid #ffffff;
-	padding-top: 5px;
-   margin: 3px;
-}
-
-QPushButton:disabled {
-    background: #cccccc;
-    color: #666666;}</string>
+        <item row="0" column="4">
+         <widget class="QPushButton" name="btn_excel_yukle">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
-          <property name="frameShape">
-           <enum>QFrame::Shape::StyledPanel</enum>
+          <property name="minimumSize">
+           <size>
+            <width>140</width>
+            <height>40</height>
+           </size>
           </property>
-          <property name="frameShadow">
-           <enum>QFrame::Shadow::Raised</enum>
+          <property name="maximumSize">
+           <size>
+            <width>140</width>
+            <height>40</height>
+           </size>
           </property>
-          <layout class="QVBoxLayout" name="verticalLayout">
-           <item>
-            <widget class="QCheckBox" name="chk_arac_takip">
-             <property name="text">
-              <string>araç Takip Cihazı</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QCheckBox" name="chk_arac_cam">
-             <property name="text">
-              <string>Araç Kamera</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="btn_aktifpasif">
-             <property name="text">
-              <string>Aktif/Pasif</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="btn_sil">
-             <property name="text">
-              <string>Sil</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="btn_kaydet">
-             <property name="text">
-              <string>Kaydet</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
+          <property name="text">
+           <string>Excelden Al</string>
+          </property>
          </widget>
         </item>
-        <item>
-         <widget class="QFrame" name="frame_5">
-          <property name="styleSheet">
-           <string notr="true">QFrame#frame_5{background-color: transparent;}
-QLineEdit,QComboBox,QDateEdit,QCheckBox{
-border: 1px solid darkblue;
-background-color: none;}
-QPushButton {
- background-color: #3f6cd6;
-    border: 1px solid #ffffff;
-    border-radius: 8px;
-    color: white;
-    font-weight: bold;
-    /*padding: 12px 24px;*/
-    font-size: 12px;
-    margin: 0px;
-	min-height:35px;
-min-width:140px;
-}
-
-QPushButton:hover {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 #8b8f90, stop:1 #d1d1d3);
-border:2px solid #ffffff;
-
-}
-
-QPushButton:pressed {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 #5a67d8, stop:1 #6b46c1);
-	border: 2px solid #ffffff;
-	padding-top: 5px;
-   margin: 3px;
-}
-
-QPushButton:disabled {
-    background: #cccccc;
-    color: #666666;}</string>
+        <item row="0" column="3">
+         <widget class="QPushButton" name="btn_excele_aktar">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
-          <property name="frameShape">
-           <enum>QFrame::Shape::StyledPanel</enum>
+          <property name="minimumSize">
+           <size>
+            <width>140</width>
+            <height>40</height>
+           </size>
           </property>
-          <property name="frameShadow">
-           <enum>QFrame::Shadow::Raised</enum>
+          <property name="maximumSize">
+           <size>
+            <width>140</width>
+            <height>40</height>
+           </size>
           </property>
-          <layout class="QVBoxLayout" name="verticalLayout_2">
-           <item>
-            <widget class="QPushButton" name="btn_pdfye_aktar">
-             <property name="text">
-              <string>Pdf Aktar</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="btn_excele_aktar">
-             <property name="text">
-              <string>Excele Aktar</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="btn_excel_yukle">
-             <property name="text">
-              <string>Excelden Al</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="btn_yeni">
-             <property name="text">
-              <string>Yeni</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
+          <property name="text">
+           <string>Excele Aktar</string>
+          </property>
          </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QPushButton" name="btn_yeni">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>140</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>140</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Yeni</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QPushButton" name="btn_pdfye_aktar">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>140</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>140</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Pdf Aktar</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="7">
+         <spacer name="horizontalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Orientation::Horizontal</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Policy::Fixed</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>150</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
         </item>
        </layout>
-      </item>
-      <item>
-       <spacer name="horizontalSpacer">
-        <property name="orientation">
-         <enum>Qt::Orientation::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
       </item>
      </layout>
     </widget>
    </item>
-   <item row="1" column="0">
-    <widget class="QFrame" name="mittle_frame">
-     <property name="styleSheet">
-      <string notr="true">QFrame{background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(148, 191, 213, 255));}
-QPushButton {
- background-color: #3f6cd6;
-    border: 1px solid #ffffff;
-    border-radius: 8px;
-    color: white;
-    font-weight: bold;
-    /*padding: 12px 24px;*/
-    font-size: 12px;
-    margin: 0px;
-	min-height:30px;
-min-width:140px;
-}
-QLabel{background-color: none;}
-QPushButton:hover {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 #8b8f90, stop:1 #d1d1d3);
-border:2px solid #ffffff;
-
-}
-
-QPushButton:pressed {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 #5a67d8, stop:1 #6b46c1);
-	border: 2px solid #ffffff;
-	padding-top: 5px;
-   margin: 3px;
-}
-
-QPushButton:disabled {
-    background: #cccccc;
-    color: #666666;
-}</string>
-     </property>
+   <item row="3" column="0">
+    <widget class="QFrame" name="bottom_frame">
      <property name="frameShape">
       <enum>QFrame::Shape::StyledPanel</enum>
      </property>
      <property name="frameShadow">
       <enum>QFrame::Shadow::Raised</enum>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_2">
-      <item>
-       <spacer name="horizontalSpacer_2">
-        <property name="orientation">
-         <enum>Qt::Orientation::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item>
-       <widget class="QLabel" name="label_25">
-        <property name="text">
-         <string>Araç Türü</string>
-        </property>
+     <layout class="QGridLayout" name="gridLayout_7">
+      <item row="0" column="0">
+       <widget class="QTableWidget" name="tableView">
+        <column>
+         <property name="text">
+          <string>ARAC KODU</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>ARAC TÜRÜ</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>HİZMET TÜRÜ</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>ARAÇ PLAKA NO</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>ARAÇ SAHİBİ</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>KATEGORİ</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>MARKA</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>MODEL</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>YIL</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>KAPASİTE</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>DURUM</string>
+         </property>
+        </column>
        </widget>
       </item>
-      <item>
-       <widget class="QComboBox" name="cmb_arac_turu_f"/>
-      </item>
-      <item>
-       <widget class="QLabel" name="label_26">
-        <property name="text">
-         <string>Hizmet Türü</string>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QFrame" name="top_frame">
+     <property name="frameShape">
+      <enum>QFrame::Shape::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Shadow::Raised</enum>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <property name="leftMargin">
+       <number>50</number>
+      </property>
+      <property name="topMargin">
+       <number>10</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>2</number>
+      </property>
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <item row="0" column="0">
+       <layout class="QGridLayout" name="gridLayout">
+        <property name="topMargin">
+         <number>5</number>
         </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QComboBox" name="cmb_hizmet_turu_f"/>
-      </item>
-      <item>
-       <widget class="QLabel" name="label_27">
-        <property name="text">
-         <string>Marka</string>
+        <property name="bottomMargin">
+         <number>5</number>
         </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QComboBox" name="cmb_marka_f"/>
-      </item>
-      <item>
-       <widget class="QLabel" name="label_28">
-        <property name="text">
-         <string>Plaka No</string>
+        <property name="horizontalSpacing">
+         <number>15</number>
         </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="txt_plaka_f"/>
-      </item>
-      <item>
-       <widget class="QPushButton" name="btn_temizle_f">
-        <property name="text">
-         <string>Temizle</string>
+        <property name="verticalSpacing">
+         <number>3</number>
         </property>
-       </widget>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Araç Kodu</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="label_3">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Araç Türü</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="5">
+         <widget class="QDateEdit" name="date_kasko">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>140</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+          </property>
+          <property name="displayFormat">
+           <string>dd.MM.yyyy</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="7" rowspan="6">
+         <widget class="QLabel" name="lbl_arac_foto">
+          <property name="frameShape">
+           <enum>QFrame::Shape::Box</enum>
+          </property>
+          <property name="frameShadow">
+           <enum>QFrame::Shadow::Raised</enum>
+          </property>
+          <property name="text">
+           <string>Araç Foto Yükle...</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="4">
+         <widget class="QLabel" name="label_20">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Sigorta</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="6">
+         <widget class="QCheckBox" name="chk_arac_cam">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>120</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Araç Kamera</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <widget class="QLabel" name="label_6">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Marka</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QLabel" name="label_5">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Kategori</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="3">
+         <widget class="QComboBox" name="cmb_marka">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>180</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>180</width>
+            <height>30</height>
+           </size>
+          </property>
+          <item>
+           <property name="text">
+            <string>Seçiniz..</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="2" column="5">
+         <widget class="QDateEdit" name="date_koltuk">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>140</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+          </property>
+          <property name="displayFormat">
+           <string>dd.MM.yyyy</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="6">
+         <widget class="QCheckBox" name="chk_arac_takip">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>120</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>araç Takip Cihazı</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="1">
+         <widget class="QLineEdit" name="txt_arac_sahibi">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>180</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>180</width>
+            <height>32</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="4">
+         <widget class="QLabel" name="label_23">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Ruhsat</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="5">
+         <widget class="QDateEdit" name="date_sigorta">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>140</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+          </property>
+          <property name="displayFormat">
+           <string>dd.MM.yyyy</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="3">
+         <widget class="QLineEdit" name="txt_yil">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>180</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>180</width>
+            <height>32</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="4">
+         <widget class="QLabel" name="label_22">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Kasko</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="2">
+         <widget class="QLabel" name="label_9">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Kapasite</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="5">
+         <widget class="QDateEdit" name="date_muayene">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>140</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+          </property>
+          <property name="displayFormat">
+           <string>dd.MM.yyyy</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="label_4">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Hizmet Türü</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_2">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Plaka No</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QComboBox" name="cmb_arac_turu">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>180</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>180</width>
+            <height>30</height>
+           </size>
+          </property>
+          <item>
+           <property name="text">
+            <string>Seçiniz..</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>ŞİRKET ARACI</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>TAŞERON ARACI</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLineEdit" name="txt_arac_plaka">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>180</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>180</width>
+            <height>32</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0">
+         <widget class="QLabel" name="label_10">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Araç Sahibi</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="3">
+         <widget class="QLineEdit" name="txt_kapasite">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>180</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>180</width>
+            <height>32</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="4">
+         <widget class="QLabel" name="label_19">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Muayene</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="3">
+         <widget class="QComboBox" name="cmb_model">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>180</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>180</width>
+            <height>30</height>
+           </size>
+          </property>
+          <item>
+           <property name="text">
+            <string>Seçiniz..</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="5" column="5">
+         <widget class="QDateEdit" name="date_guzergah_izin">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>140</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+          </property>
+          <property name="displayFormat">
+           <string>dd.MM.yyyy</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="2">
+         <widget class="QLabel" name="label_7">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Model</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="5">
+         <widget class="QDateEdit" name="date_calisma_ruhsati">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>140</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+          </property>
+          <property name="displayFormat">
+           <string>dd.MM.yyyy</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QComboBox" name="cmb_hizmet_turu">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>180</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>180</width>
+            <height>30</height>
+           </size>
+          </property>
+          <item>
+           <property name="text">
+            <string>Seçiniz..</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>SERVİS ARACI</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>HİZMET ARACI</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLineEdit" name="txt_arac_kodu">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>180</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>180</width>
+            <height>30</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="2">
+         <widget class="QLabel" name="label_8">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Yıl</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="4">
+         <widget class="QLabel" name="label_24">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Güzergah</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="4">
+         <widget class="QLabel" name="label_21">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>60</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Koltuk</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="3">
+         <widget class="QComboBox" name="cmb_kategori">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>180</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>180</width>
+            <height>30</height>
+           </size>
+          </property>
+          <item>
+           <property name="text">
+            <string>Seçiniz..</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="0" column="8">
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Orientation::Horizontal</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Policy::Fixed</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>
    </item>
    <item row="2" column="0">
-    <widget class="QFrame" name="bottom_frame">
-     <property name="styleSheet">
-      <string notr="true">QFrame#bottom_frame{
-background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(148, 191, 213, 255));
-}</string>
-     </property>
+    <widget class="QFrame" name="middle_s_frame">
      <property name="frameShape">
       <enum>QFrame::Shape::StyledPanel</enum>
      </property>
      <property name="frameShadow">
       <enum>QFrame::Shadow::Raised</enum>
      </property>
-     <layout class="QGridLayout" name="gridLayout">
+     <layout class="QGridLayout" name="gridLayout_6">
+      <property name="leftMargin">
+       <number>20</number>
+      </property>
+      <property name="topMargin">
+       <number>2</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>2</number>
+      </property>
+      <property name="spacing">
+       <number>0</number>
+      </property>
       <item row="0" column="0">
-       <widget class="QTableWidget" name="tableView"/>
+       <layout class="QGridLayout" name="gridLayout_5">
+        <property name="horizontalSpacing">
+         <number>10</number>
+        </property>
+        <property name="verticalSpacing">
+         <number>0</number>
+        </property>
+        <item row="0" column="6">
+         <widget class="QLabel" name="label_28">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Plaka No</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QComboBox" name="cmb_arac_turu_f">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>120</width>
+            <height>30</height>
+           </size>
+          </property>
+          <item>
+           <property name="text">
+            <string>Tümü</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>ŞİRKET ARACI</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>TAŞERON ARACI</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="0" column="5">
+         <widget class="QComboBox" name="cmb_marka_f">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>120</width>
+            <height>30</height>
+           </size>
+          </property>
+          <item>
+           <property name="text">
+            <string>Tümü</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="0" column="4">
+         <widget class="QLabel" name="label_27">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Marka</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_25">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Araç Türü</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="8">
+         <widget class="QPushButton" name="btn_temizle_f">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>140</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>140</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Temizle</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="7">
+         <widget class="QLineEdit" name="txt_plaka_f">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>120</width>
+            <height>32</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="3">
+         <widget class="QComboBox" name="cmb_hizmet_turu_f">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>120</width>
+            <height>30</height>
+           </size>
+          </property>
+          <item>
+           <property name="text">
+            <string>Tümü</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>SERVİS ARACI</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>HİZMET ARACI</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QLabel" name="label_26">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Hizmet Türü</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="9">
+         <spacer name="horizontalSpacer_3">
+          <property name="orientation">
+           <enum>Qt::Orientation::Horizontal</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Policy::Fixed</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>150</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>

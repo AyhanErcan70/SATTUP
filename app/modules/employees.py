@@ -20,9 +20,13 @@ class EmployeesApp(QWidget):
 
     def __init__(self, user_data=None, parent=None): # Ebeveyn kuralı gereği parent=None ekledik
         super().__init__(parent)
-        uic.loadUi(get_ui_path("personel.ui"), self)
+        uic.loadUi(get_ui_path("employees_window.ui"), self)
         clear_all_styles(self)
-        self._relax_ui_constraints()
+        try:
+            if str(os.environ.get("SATTUP_RELAX_UI_CONSTRAINTS", "")).strip() in ("1", "true", "True", "yes", "YES"):
+                self._relax_ui_constraints()
+        except Exception:
+            pass
         self.db = DatabaseManager()
 
         self.user_data = user_data
@@ -235,7 +239,7 @@ class EmployeesApp(QWidget):
     def load_data(self):
         """Tabloyu kurumsal renklere boyar, sütun genişliklerini sabitler ve verileri yükler"""
         # 1. Başlık ve Temel Ayarlar
-        headers = ["KOD", "TÜR", "TCKN", "ADI SOYADI", "GÖREVİ", "TELEFON", "e-POSTA", "KAN GR.", "DURUMU"]
+        headers = ["PERSONEL KODU", "PERSONEL TÜR", "TCKN", "ADI SOYADI", "GÖREVİ", "TELEFON", "e-POSTA", "KAN GR.", "DURUMU"]
         
         self.tableView.setColumnCount(len(headers))
         self.tableView.setHorizontalHeaderLabels(headers)
@@ -252,7 +256,7 @@ class EmployeesApp(QWidget):
         # --- GÜNCEL GENİŞLİKLER (İsteğine göre revize edildi) ---
         header = self.tableView.horizontalHeader()
         # TCKN 100->90'a düştü, Kan Grubu 60->70'e çıktı (+10 fazlalık eklendi)
-        widths = {0: 80, 1: 120, 2: 90, 4: 100, 5: 110, 7: 70, 8: 60}
+        widths = {0: 110, 1: 150, 2: 110, 4: 100, 5: 120, 7: 70, 8: 70}
         for col, width in widths.items():
             header.resizeSection(col, width)
             
@@ -287,7 +291,7 @@ class EmployeesApp(QWidget):
                     item = QTableWidgetItem(display_text)
                     
                     # Hücre içindeki yazıyı ortala (Kan grubu ve Durum için iyi olur)
-                    if col_idx in [0, 7, 8]:
+                    if col_idx in [0, 1, 2, 4, 5,  7, 8]:
                         item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                         
                     # Pasif personelleri belirtmek için kırmızı font

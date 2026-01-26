@@ -1,0 +1,23 @@
+<RCC>
+  <qresource prefix="/resimler">
+    <file>ap15.jpg</file>
+    <file>a22.jpg</file>
+    <file>a22.png</file>
+    <file>2732x2732-gray-blue-solid-color-background.jpg</file>
+    <file>ap1.jpg</file>
+    <file>ap2.jpg</file>
+    <file>ap3.jpg</file>
+    <file>ap4.jpg</file>
+    <file>ap5.jpg</file>
+    <file>ap6.jpeg</file>
+    <file>ap7.jpeg</file>
+    <file>ap8.jpg</file>
+    <file>ap9.png</file>
+    <file>ap10.jpg</file>
+    <file>ap11.jpg</file>
+    <file>ap12.jpg</file>
+    <file>ap13.jpg</file>
+    <file>asiltur.png</file>
+    <file>company_name.png</file>
+  </qresource>
+</RCC>

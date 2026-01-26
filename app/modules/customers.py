@@ -154,9 +154,14 @@ class CustomersApp(QWidget):
         self.cmb_ilce.blockSignals(False)
 
     def load_data(self):
-        headers = ["KOD", "TÜR", "KİŞİLİK", "FİRMA/UNVAN", "VERGİ/TCKN", "İL", "İLÇE", "TELEFON", "E-POSTA", "DURUM"]
+        headers = ["MÜŞ.KODU", "MÜŞ.TÜRÜ", "KİŞİLİK", "FİRMA/UNVAN", "VERGİ/TCKN", "İL", "İLÇE", "TELEFON", "E-POSTA", "DURUM"]
         if not hasattr(self, "tableView"):
             return
+
+        try:
+            self.tableView.setAlternatingRowColors(True)
+        except Exception:
+            pass
 
         self.tableView.setColumnCount(len(headers))
         self.tableView.setHorizontalHeaderLabels(headers)
@@ -573,14 +578,14 @@ class CustomersApp(QWidget):
         if hasattr(self, "btn_kaydet"):
             self.btn_kaydet.setText("GÜNCELLE")
     def table_size_changed(self):
-        self.tableView.setColumnWidth(0, 70)
+        self.tableView.setColumnWidth(0, 80)
         self.tableView.setColumnWidth(1, 80)
-        self.tableView.setColumnWidth(2, 70)
+        self.tableView.setColumnWidth(2, 80)
         self.tableView.setColumnWidth(3, 650)
-        self.tableView.setColumnWidth(4, 90)
-        self.tableView.setColumnWidth(5, 80)
-        self.tableView.setColumnWidth(6, 90)
-        self.tableView.setColumnWidth(7, 100)
+        self.tableView.setColumnWidth(4, 100)
+        self.tableView.setColumnWidth(5, 100)
+        self.tableView.setColumnWidth(6, 100)
+        self.tableView.setColumnWidth(7, 120)
         self.tableView.setColumnWidth(8, 180)
-        self.tableView.setColumnWidth(9, 55)
+        self.tableView.setColumnWidth(9, 60)
         
