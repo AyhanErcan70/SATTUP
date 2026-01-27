@@ -11,7 +11,6 @@ from config import BASE_DIR
 from PyQt6.QtCore import QDate
 from PyQt6.QtWidgets import QApplication, QComboBox, QDialog, QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout
 from app.core.db_manager import DatabaseManager
-from app.modules.auth import AuthApp
 from app.modules.main_menu import MainMenuApp
 
 
@@ -114,6 +113,7 @@ def main():
     db = DatabaseManager()
 
     app = QApplication(sys.argv)
+
     try:
         enable_global_qss = str(os.environ.get("SATTUP_ENABLE_GLOBAL_QSS", "")).strip() in (
             "1",
@@ -131,50 +131,11 @@ def main():
             with open(style_path, "r", encoding="utf-8") as f:
                 app.setStyleSheet(f.read())
 
-    login_window = AuthApp()
-    
-    # exec() sonucu QDialog.DialogCode.Accepted (1) ise devam et
-    if login_window.exec():
-        print("Giriş Başarılı! Ana menü yükleniyor...")
+    user_data = {}
+    main_window = MainMenuApp(user_data=user_data, start_passive=True, offline_timeout_ms=120000)
+    main_window.showMaximized()
+    sys.exit(app.exec())
 
-        user_data = getattr(login_window, "user_data", None) or {}
-        dlg = PeriodSelectDialog(initial_month=(user_data or {}).get("active_month"))
-        if dlg.exec() != QDialog.DialogCode.Accepted:
-            app.quit()
-            return
-        selected_month = dlg.selected_month()
-        if not selected_month:
-            app.quit()
-            return
-
-        user_data["active_month"] = str(selected_month)
-
-        if not db.month_has_operational_template(str(selected_month)):
-            prev = _prev_month_key(str(selected_month))
-            if prev and db.month_has_operational_template(prev):
-                ok = QMessageBox.question(
-                    None,
-                    "Şablon Kopyalama",
-                    f"{selected_month} dönemi için şablon bulunamadı.\n\n{prev} dönemindeki şablonlar kopyalansın mı?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                )
-                if ok == QMessageBox.StandardButton.Yes:
-                    done = db.copy_month_operational_template(prev, str(selected_month))
-                    if not done:
-                        QMessageBox.warning(None, "Uyarı", "Şablon kopyalama yapılamadı.")
-            else:
-                QMessageBox.information(
-                    None,
-                    "Bilgi",
-                    f"{selected_month} dönemi için şablon bulunamadı ve kopyalanacak önceki dönem yok.",
-                )
-
-        main_window = MainMenuApp(user_data=user_data)
-        main_window.showMaximized()
-        sys.exit(app.exec())
-    
-    # Programdan tamamen çıkış yap ve terminali serbest bırak
-    app.quit() 
 
 if __name__ == "__main__":
     main()

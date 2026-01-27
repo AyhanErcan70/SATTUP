@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="/resimler">
+    <file>logo-w.png</file>
     <file>ap15.jpg</file>
     <file>a22.jpg</file>
     <file>a22.png</file>

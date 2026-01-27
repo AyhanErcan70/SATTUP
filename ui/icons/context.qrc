@@ -1,0 +1,39 @@
+<RCC>
+  <qresource prefix="resimler">
+    <file>logo_faded2.png</file>
+    <file>logo_faded480.png</file>
+    <file>logo_faded720.png</file>
+    <file>a22.jpg</file>
+    <file>a22.png</file>
+    <file>logo.png</file>
+    <file>logo_faded.png</file>
+    <file>logo-w.png</file>
+  </qresource>
+  <qresource prefix="simgeler">
+    <file>arrow-down.png</file>
+    <file>ekle.ico</file>
+    <file>remove.ico</file>
+  </qresource>
+  <qresource prefix="menu">
+    <file>menu/bar-chart-box-line.svg</file>
+    <file>menu/bus-line.svg</file>
+    <file>menu/calendar-check-fill.svg</file>
+    <file>menu/calendar-check-line.svg</file>
+    <file>menu/car-line.svg</file>
+    <file>menu/contacts-book-line.svg</file>
+    <file>menu/file-text-line.svg</file>
+    <file>menu/money-dollar-circle-line.svg</file>
+    <file>menu/pie-chart-2-line.svg</file>
+    <file>menu/pie-chart-line.svg</file>
+    <file>menu/road-map-line.svg</file>
+    <file>menu/route-line.svg</file>
+    <file>menu/send-plane-line.svg</file>
+    <file>menu/settings-3-line.svg</file>
+    <file>menu/settings-line.svg</file>
+    <file>menu/steering-2-line.svg</file>
+    <file>menu/team-line.svg</file>
+    <file>menu/tools-line.svg</file>
+    <file>menu/user-3-line.svg</file>
+    <file>menu/user-voice-line.svg</file>
+  </qresource>
+</RCC>

@@ -3,7 +3,7 @@ from PyQt6.QtCore import Qt, QRegularExpression, QSize
 from PyQt6 import uic
 from PyQt6.QtGui import QIntValidator, QRegularExpressionValidator, QPixmap
 from app.core.db_manager import DatabaseManager
-import ui.icons.resource_rc
+import ui.icons.context_rc
 
 from config import get_ui_path, BASE_DIR
 from app.utils.style_utils import clear_all_styles

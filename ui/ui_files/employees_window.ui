@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1175</width>
-    <height>0</height>
+    <height>425</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -48,13 +48,13 @@ background-color:#ffffce;
 QLabel{background-color:none;
 font-weight: bold;}
 
-QPushBotton#btn_kaydet, QPushBotton#btn_yeni, QPushBotton#btn_sil, QPushBotton#btn_excele_aktar, QPushBotton#btn_pdfye_aktar, QPushBotton#btn_excel_yukle, QPushBotton#btn_yeni, QPushButton#btn_temizle_f{
+/*QPushButton#btn_kaydet, QPushButton#btn_yeni, QPushButton#btn_sil, QPushButton#btn_excele_aktar, QPushButton#btn_pdfye_aktar, QPushButton#btn_excel_yukle, QPushButton#btn_yeni, QPushButton#btn_aktifpasif,  QPushButton#btn_temizle_f{
 background-color: #288EB2;
 color: #162D6D;
 font-size: 14px;
 min-widht:140px;
 min-height:40px;
-}
+}*/
 /* Tablonun Genel Çerçevesi */
 QTableWidget {
     background-color: #ffffff;
@@ -413,8 +413,7 @@ image: url(:/resim/Photo.png);</string>
            </font>
           </property>
           <property name="styleSheet">
-           <string notr="true">
-</string>
+           <string notr="true"/>
           </property>
           <property name="placeholderText">
            <string/>
@@ -1652,6 +1651,12 @@ image: url(:/resim/Photo.png);</string>
    </item>
    <item row="1" column="0">
     <widget class="QFrame" name="middle_n_frame">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>50</height>
+      </size>
+     </property>
      <property name="frameShape">
       <enum>QFrame::Shape::StyledPanel</enum>
      </property>
@@ -1693,7 +1698,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="minimumSize">
            <size>
             <width>140</width>
-            <height>40</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -1726,7 +1731,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="minimumSize">
            <size>
             <width>140</width>
-            <height>40</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -1759,7 +1764,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="minimumSize">
            <size>
             <width>140</width>
-            <height>40</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -1805,7 +1810,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="minimumSize">
            <size>
             <width>140</width>
-            <height>40</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -1841,7 +1846,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="minimumSize">
            <size>
             <width>140</width>
-            <height>40</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -1877,7 +1882,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="minimumSize">
            <size>
             <width>140</width>
-            <height>40</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -1916,7 +1921,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="minimumSize">
            <size>
             <width>140</width>
-            <height>40</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -1945,6 +1950,12 @@ image: url(:/resim/Photo.png);</string>
    </item>
    <item row="2" column="0">
     <widget class="QFrame" name="middle_s_frame">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>50</height>
+      </size>
+     </property>
      <property name="frameShape">
       <enum>QFrame::Shape::StyledPanel</enum>
      </property>
@@ -2322,7 +2333,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="minimumSize">
            <size>
             <width>140</width>
-            <height>44</height>
+            <height>40</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -2334,7 +2345,6 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Century Gothic</family>
-            <pointsize>-1</pointsize>
             <bold>true</bold>
             <kerning>false</kerning>
            </font>

@@ -11,7 +11,7 @@ from PyQt6.QtCore import QPropertyAnimation, QPoint, QEasingCurve, QSequentialAn
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PyQt6 import uic
 from PyQt6.QtCore import QTimer
-import ui.icons.resource_rc
+import ui.icons.context_rc
 from config import get_ui_path, BASE_DIR
 from app.core.db_manager import DatabaseManager
 from app.utils.style_utils import clear_all_styles

@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QListWidgetItem, QMessageBox, QTableWidgetItem
 from PyQt6.QtCore import Qt
 from PyQt6 import uic, QtCore
-import ui.icons.resource_rc 
+import ui.icons.context_rc 
 from config import get_ui_path
 from app.utils.style_utils import clear_all_styles
 

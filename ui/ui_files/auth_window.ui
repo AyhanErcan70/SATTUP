@@ -26,10 +26,56 @@
    <string>Oturum Açma Paneli</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">#auth_form{
+   <string notr="true">*#auth_form{
 background-color: #162D6D;
 }
-QPushButton#btn_login {
+QPushButton {
+	background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #dcdcdd, stop: 0.5 #acacac,
+                                      stop: 0.6 #959595, stop:1 #828282);
+    color: #00007f;
+	
+    font-family: '', sans-serif;
+	font: 10pt &quot;&quot;;
+	font: 900 9pt &quot;&quot;;
+	font: 9pt &quot;&quot;;
+	font: 700 10pt &quot;DaytonaPro&quot;;
+    
+    font-size: 12px;
+    border-radius: 8px;
+	border-top: 1px solid #C0C0C0;
+    border-left: 1px solid #C0C0C0;
+    border-right: 2px solid #000;  /* Sağ gölge kalınlığı */
+    border-bottom: 3px solid #000; /* Alt gölge kalınlığı */
+    
+    margin-right: 4px; /* Gölgenin kesilmemesi için alan bırakıyoruz */
+    margin-bottom: 5px;
+    
+}
+/* Üzerine gelince gölge rengini biraz açabiliriz */
+QPushButton:hover {
+	background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #dcdcdd, stop: 0.5 #acacac,
+                                      stop: 0.6 #959595, stop:1 #828282);
+    border-right: 4px solid #A9A9A9;
+    border-bottom: 5px solid #808080;
+	margin-top: 2px;
+}
+QPushButton#btn_login:hover {color:#007900;}
+QPushButton#btn_cancel:hover {color:#b10000;}
+
+/* Basıldığında gölgeler küçülmeli ki buton çökmüş görünsün */
+QPushButton:pressed {
+    color: #ffaa00;
+    border: 2px solid #ffffff;  /* Sağ gölge kaybolur */      
+    margin-top: 4px;    /* Butonu fiziksel olarak aşağı kaydırır */
+    margin-left: 2px;   /* Butonu fiziksel olarak sağa kaydırır */
+    margin-bottom: 1px;
+    margin-right: 2px;
+    padding-top: 8px;  /* Metni buton içinde aşağı kaydırır */
+}
+
+/*QPushButton#btn_login {
 background-color: green;
 font: 12pt &quot;Century Gothic&quot;;
 font-weight: bold;
@@ -38,7 +84,7 @@ QPushButton#btn_cancel {
 background-color: red;
 font: 12pt &quot;Century Gothic&quot;;
 font-weight: bold;
-}
+}*/
 
 QLineEdit {
 font: 11pt &quot;Century Gothic&quot;;
@@ -49,19 +95,9 @@ color:#ebebeb;
 }
 
 
-#btn_login:hover, #btn_cancel:hover {
-background-color: #2349b0;
-border: 3px solid #ffffff;
-border-radius: 6px;
-padding-top: 8px;
-}
 
-#btn_login:pressed, #btn_cancel:pressed {
-background-color: #ffaa00;
-border: 3px solid #ffffff;
-border-radius: 6px;
-padding-top: 8px;
-}</string>
+
+</string>
   </property>
   <property name="sizeGripEnabled">
    <bool>false</bool>
@@ -69,175 +105,241 @@ padding-top: 8px;
   <property name="modal">
    <bool>false</bool>
   </property>
-  <layout class="QGridLayout" name="gridLayout_2">
+  <layout class="QGridLayout" name="gridLayout_4">
    <item row="0" column="0">
     <widget class="QWidget" name="logo_wid" native="true">
      <property name="styleSheet">
-      <string notr="true">image:url(:/resim/assets/images/logo-w.png)
+      <string notr="true">
+image: url(:/resimler/logo-w.png);
 </string>
      </property>
     </widget>
    </item>
    <item row="0" column="1">
-    <layout class="QGridLayout" name="gridLayout">
-     <item row="0" column="0" colspan="2">
-      <widget class="QLabel" name="lbl_welcome">
-       <property name="font">
-        <font>
-         <family>Grenada</family>
-         <pointsize>17</pointsize>
-         <italic>false</italic>
-         <bold>false</bold>
-        </font>
-       </property>
-       <property name="text">
-        <string>HOŞGELDİNİZ</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignmentFlag::AlignCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0" colspan="2">
-      <widget class="QLabel" name="lbl_login">
-       <property name="font">
-        <font>
-         <family>Microsoft Sans Serif</family>
-         <pointsize>8</pointsize>
-         <italic>false</italic>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="text">
-        <string>Lütfen Oturum Açınız..</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignmentFlag::AlignCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="0" colspan="2">
-      <widget class="QLineEdit" name="txt_user">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>240</width>
-         <height>40</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>220</width>
-         <height>40</height>
-        </size>
-       </property>
-       <property name="text">
-        <string>admin</string>
-       </property>
-       <property name="placeholderText">
-        <string>Kullanıcı Adı ...</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="0" colspan="2">
-      <widget class="QLineEdit" name="txt_pass">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>240</width>
-         <height>40</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>220</width>
-         <height>40</height>
-        </size>
-       </property>
-       <property name="text">
-        <string>1234</string>
-       </property>
-       <property name="echoMode">
-        <enum>QLineEdit::EchoMode::Password</enum>
-       </property>
-       <property name="placeholderText">
-        <string>Şifre ...</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="0">
-      <widget class="QPushButton" name="btn_login">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>110</width>
-         <height>35</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>110</width>
-         <height>35</height>
-        </size>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">#btn_login:pressed {
-background-color: #ffaa00;
-border: 3px solid #ffffff;
-padding-top: 8px;
-}</string>
-       </property>
-       <property name="text">
-        <string>GİRİŞ</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="1">
-      <widget class="QPushButton" name="btn_cancel">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>110</width>
-         <height>35</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>110</width>
-         <height>35</height>
-        </size>
-       </property>
-       <property name="text">
-        <string>İPTAL</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
+    <widget class="QFrame" name="frame">
+     <property name="frameShape">
+      <enum>QFrame::Shape::NoFrame</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Shadow::Raised</enum>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_3">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <item row="0" column="0">
+       <layout class="QGridLayout" name="gridLayout_2" rowstretch="0,0,0,0,1">
+        <property name="horizontalSpacing">
+         <number>2</number>
+        </property>
+        <property name="verticalSpacing">
+         <number>6</number>
+        </property>
+        <item row="4" column="1" alignment="Qt::AlignmentFlag::AlignLeft">
+         <widget class="QPushButton" name="btn_cancel">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>110</width>
+            <height>35</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>110</width>
+            <height>35</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>İPTAL</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0" alignment="Qt::AlignmentFlag::AlignRight">
+         <widget class="QPushButton" name="btn_login">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>110</width>
+            <height>35</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>110</width>
+            <height>35</height>
+           </size>
+          </property>
+          <property name="styleSheet">
+           <string notr="true"/>
+          </property>
+          <property name="text">
+           <string>GİRİŞ</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0" colspan="2" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignBottom">
+         <widget class="QLabel" name="lbl_welcome">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Grenada</family>
+            <pointsize>17</pointsize>
+            <italic>false</italic>
+            <bold>false</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>HOŞGELDİNİZ</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0" colspan="2" alignment="Qt::AlignmentFlag::AlignBottom">
+         <widget class="QLabel" name="lbl_login">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Microsoft Sans Serif</family>
+            <pointsize>8</pointsize>
+            <italic>false</italic>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>Lütfen Oturum Açınız..</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0" colspan="2" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignBottom">
+         <widget class="QLineEdit" name="txt_user">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>200</width>
+            <height>35</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>200</width>
+            <height>35</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>admin</string>
+          </property>
+          <property name="placeholderText">
+           <string>Kullanıcı Adı ...</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0" colspan="2" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignTop">
+         <widget class="QLineEdit" name="txt_pass">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>200</width>
+            <height>35</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>200</width>
+            <height>35</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>1234</string>
+          </property>
+          <property name="echoMode">
+           <enum>QLineEdit::EchoMode::Password</enum>
+          </property>
+          <property name="placeholderText">
+           <string>Şifre ...</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
    </item>
   </layout>
  </widget>
  <resources>
-  <include location="../icons/resource.qrc"/>
+  <include location="../icons/context.qrc"/>
  </resources>
  <connections/>
 </ui>

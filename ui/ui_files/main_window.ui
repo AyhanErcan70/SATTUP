@@ -26,7 +26,7 @@
 	
 	border-image: url(:/resimler/a22.jpg) 0,0,0,0 stretch, stretch;
     background-position: center;
-    background-repeat: no-repeat;
+	 background-repeat: no-repeat;
 }
 QPushButton {
 	background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
@@ -122,7 +122,8 @@ QComboBox::drop-down {
 
 QComboBox::down-arrow {
     
-	image: url(:/resim/arrow-down.png);
+	
+	image: url(:/simgeler/arrow-down.png);
 }
 
 QComboBox::down-arrow:on { /* shift the arrow when popup is open */
@@ -163,23 +164,46 @@ QStackedWidget, QStackedWidget &gt; QWidget {
         <property name="frameShadow">
          <enum>QFrame::Shadow::Plain</enum>
         </property>
-        <layout class="QHBoxLayout" name="horizontalLayout">
-         <item>
-          <widget class="QLabel" name="lbl_title">
-           <property name="font">
-            <font>
-             <family>Grenada</family>
-             <pointsize>20</pointsize>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>BAŞLIK METNİ</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignmentFlag::AlignCenter</set>
-           </property>
-          </widget>
+        <layout class="QGridLayout" name="gridLayout_9">
+         <item row="0" column="0">
+          <layout class="QGridLayout" name="gridLayout_8">
+           <item row="0" column="0">
+            <widget class="QLabel" name="lbl_title">
+             <property name="font">
+              <font>
+               <family>Grenada</family>
+               <pointsize>20</pointsize>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>BAŞLIK METNİ</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QPushButton" name="btn_session_toggle">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>110</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Oturum Aç</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </item>
         </layout>
        </widget>
@@ -943,7 +967,7 @@ QPushButton:pressed {
              <item row="0" column="0">
               <widget class="QFrame" name="frame">
                <property name="styleSheet">
-                <string notr="true"/>
+                <string notr="true">image: url(:/resimler/logo_faded480.png) 0,0,0,0 stretch, stretch;</string>
                </property>
                <property name="frameShape">
                 <enum>QFrame::Shape::NoFrame</enum>
@@ -979,8 +1003,7 @@ QPushButton:pressed {
   </widget>
  </widget>
  <resources>
-  <include location="../icons/resource.qrc"/>
-  <include location="../../assets/images/kaynaklar.qrc"/>
+  <include location="../icons/context.qrc"/>
  </resources>
  <connections/>
 </ui>
