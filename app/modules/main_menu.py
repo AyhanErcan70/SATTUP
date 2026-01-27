@@ -48,6 +48,7 @@ class MainMenuApp(QMainWindow):
 
         self._session_active = False
         self._offline_timeout_ms = int(offline_timeout_ms or 0)
+        self._offline_warning_ms = 30000
         self._offline_timer = None
         self._offline_warn_timer = None
         self._offline_countdown_timer = None
@@ -56,6 +57,8 @@ class MainMenuApp(QMainWindow):
         self._offline_warning_label = None
         self._offline_warning_active = False
         self._offline_seconds_left = 0
+        self._footer_user_label = None
+        self._footer_user_timer = None
         self._welcome_overlay = None
         self._welcome_dismissed = False
         self._welcome_year_label = None
@@ -120,6 +123,7 @@ class MainMenuApp(QMainWindow):
         self._ensure_title_anim_layer()
 
         self._ensure_welcome_overlay()
+        self._load_onoff_settings_from_db()
         self.set_mode(active=not bool(start_passive))
 
         self._setup_session_toggle()
@@ -295,11 +299,61 @@ class MainMenuApp(QMainWindow):
         except Exception:
             pass
 
-        warn_ms = max(0, int(self._offline_timeout_ms) - 30000)
+        warn_before = int(getattr(self, "_offline_warning_ms", 30000) or 0)
+        warn_ms = max(0, int(self._offline_timeout_ms) - warn_before)
         try:
             self._offline_warn_timer.start(warn_ms)
         except Exception:
             pass
+
+        self._start_footer_user_timer()
+        self._update_footer_user_label()
+
+    def set_offline_policy(self, online_ms: int, warning_ms: int):
+        try:
+            online_ms = int(online_ms)
+        except Exception:
+            online_ms = 0
+        try:
+            warning_ms = int(warning_ms)
+        except Exception:
+            warning_ms = 0
+
+        if online_ms <= 0:
+            online_ms = 120000
+        if warning_ms < 0:
+            warning_ms = 0
+        if warning_ms >= online_ms:
+            warning_ms = max(0, online_ms - 1000)
+
+        self._offline_timeout_ms = int(online_ms)
+        self._offline_warning_ms = int(warning_ms)
+
+        if self._session_active:
+            self._start_offline_timer()
+
+    def _load_onoff_settings_from_db(self):
+        try:
+            from app.core.db_manager import DatabaseManager
+
+            db = DatabaseManager()
+            online_ms = 120000
+            warning_ms = 30000
+            try:
+                rows = db.get_constants("onoff_online_ms")
+                if rows:
+                    online_ms = int(rows[0][1])
+            except Exception:
+                pass
+            try:
+                rows = db.get_constants("onoff_warning_ms")
+                if rows:
+                    warning_ms = int(rows[0][1])
+            except Exception:
+                pass
+            self.set_offline_policy(online_ms=online_ms, warning_ms=warning_ms)
+        except Exception:
+            return
 
     def _stop_offline_timer(self):
         try:
@@ -309,11 +363,95 @@ class MainMenuApp(QMainWindow):
                 self._offline_warn_timer.stop()
             if self._offline_countdown_timer is not None:
                 self._offline_countdown_timer.stop()
+            if self._footer_user_timer is not None:
+                self._footer_user_timer.stop()
             self._stop_offline_sound()
             self._offline_warning_active = False
             self._hide_offline_warning_dialog()
         except Exception:
             return
+
+    def _ensure_footer_user_label(self):
+        if self._footer_user_label is not None:
+            return
+        try:
+            from PyQt6.QtWidgets import QLabel
+
+            self._footer_user_label = self.findChild(QLabel, "lbl_user")
+        except Exception:
+            self._footer_user_label = None
+
+    def _ensure_footer_user_timer(self):
+        if self._footer_user_timer is not None:
+            return
+        self._footer_user_timer = QTimer(self)
+        self._footer_user_timer.setInterval(1000)
+        self._footer_user_timer.timeout.connect(self._update_footer_user_label)
+
+    def _start_footer_user_timer(self):
+        self._ensure_footer_user_timer()
+        try:
+            if self._footer_user_timer is not None and self._session_active:
+                self._footer_user_timer.start()
+        except Exception:
+            pass
+
+    def _get_current_username(self) -> str:
+        try:
+            if isinstance(self.user_data, dict):
+                for k in ("username", "user", "kullanici", "kullanici_adi", "kullaniciAdi", "name"):
+                    v = self.user_data.get(k)
+                    if v:
+                        return str(v)
+        except Exception:
+            pass
+        return ""
+
+    def _format_ms_as_hhmmss(self, ms: int) -> str:
+        try:
+            ms = int(ms or 0)
+        except Exception:
+            ms = 0
+        if ms < 0:
+            ms = 0
+        sec = ms // 1000
+        h = sec // 3600
+        m = (sec % 3600) // 60
+        s = sec % 60
+        if h > 0:
+            return f"{h:02d}:{m:02d}:{s:02d}"
+        return f"{m:02d}:{s:02d}"
+
+    def _update_footer_user_label(self):
+        self._ensure_footer_user_label()
+        if self._footer_user_label is None:
+            return
+
+        if not self._session_active:
+            try:
+                self._footer_user_label.setText("")
+            except Exception:
+                pass
+            return
+
+        username = self._get_current_username()
+
+        remaining_ms = 0
+        try:
+            if self._offline_timer is not None:
+                remaining_ms = int(self._offline_timer.remainingTime())
+        except Exception:
+            remaining_ms = 0
+
+        time_txt = self._format_ms_as_hhmmss(remaining_ms)
+        if username:
+            txt = f"{username}  |  {time_txt}"
+        else:
+            txt = f"{time_txt}"
+        try:
+            self._footer_user_label.setText(txt)
+        except Exception:
+            pass
 
     def _reset_offline_timer(self):
         if not self._session_active:
@@ -398,7 +536,11 @@ class MainMenuApp(QMainWindow):
         if not self._session_active:
             return
         self._offline_warning_active = True
-        self._offline_seconds_left = 30
+        try:
+            warn_before = int(getattr(self, "_offline_warning_ms", 30000) or 0)
+        except Exception:
+            warn_before = 30000
+        self._offline_seconds_left = max(1, int((warn_before + 999) // 1000))
         self._ensure_offline_warning_dialog()
         self._update_offline_warning_text()
         try:
@@ -2133,6 +2275,11 @@ class MainMenuApp(QMainWindow):
         from app.modules.constants import ConstantsApp
         # Dosya adını senin istediğin gibi "constants_window.ui" olarak bıraktım
         self.constants_module = ConstantsApp(db_manager=db_mng, parent=self) 
+
+        try:
+            self.constants_module.onoff_settings_changed.connect(self.set_offline_policy)
+        except Exception:
+            pass
         
         self.mainStack.addWidget(self.constants_module)
         self.mainStack.setCurrentWidget(self.constants_module)

@@ -1,11 +1,13 @@
 from PyQt6.QtWidgets import QWidget, QListWidgetItem, QMessageBox, QTableWidgetItem
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal, QTime
 from PyQt6 import uic, QtCore
 import ui.icons.context_rc 
 from config import get_ui_path
 from app.utils.style_utils import clear_all_styles
 
 class ConstantsApp(QWidget):
+    onoff_settings_changed = pyqtSignal(int, int)
+
     def __init__(self, db_manager, parent=None):
         super().__init__(parent)
         uic.loadUi(get_ui_path("constants_window.ui"), self)
@@ -48,6 +50,7 @@ class ConstantsApp(QWidget):
         self._load_vize_surucu_values()
         self._setup_belge_tanimlari_ui()
         self._load_belge_tanimlari_table()
+        self._load_onoff_settings()
 
     def setup_connections(self):
         # --- EKLEME BUTONLARI ---
@@ -125,6 +128,9 @@ class ConstantsApp(QWidget):
         if hasattr(self, "table_belge_tanimlari"):
             self.table_belge_tanimlari.itemSelectionChanged.connect(self._belge_on_select)
 
+        if hasattr(self, "btn_onoff_kaydet"):
+            self.btn_onoff_kaydet.clicked.connect(self._save_onoff_settings)
+
         # İl seçilince ilçeleri filtrele
         self.list_iller.itemSelectionChanged.connect(self.load_districts)
         self.all_lists = [
@@ -146,6 +152,94 @@ class ConstantsApp(QWidget):
         # Her liste için "tıklandığında diğerlerini temizle" kuralını bağla
         for lst in self.all_lists:
             lst.itemPressed.connect(lambda item, current_list=lst: self.clear_other_selections(current_list))
+
+    def _set_time_ms(self, time_edit, total_ms: int):
+        try:
+            total_ms = int(total_ms or 0)
+        except Exception:
+            total_ms = 0
+        if total_ms < 0:
+            total_ms = 0
+        sec = total_ms // 1000
+        h = int(sec // 3600)
+        m = int((sec % 3600) // 60)
+        s = int(sec % 60)
+        try:
+            time_edit.setTime(QTime(h, m, s))
+        except Exception:
+            pass
+
+    def _get_time_ms(self, time_edit) -> int:
+        try:
+            t = time_edit.time()
+            return int((t.hour() * 3600 + t.minute() * 60 + t.second()) * 1000)
+        except Exception:
+            return 0
+
+    def _load_onoff_settings(self):
+        if not hasattr(self, "time_online") or not hasattr(self, "time_warning"):
+            return
+
+        try:
+            self.time_online.setDisplayFormat("HH:mm:ss")
+            self.time_warning.setDisplayFormat("HH:mm:ss")
+        except Exception:
+            pass
+
+        default_online_ms = 120000
+        default_warn_ms = 30000
+
+        try:
+            rows = self.db.get_constants("onoff_online_ms")
+            online_ms = int(rows[0][1]) if rows else default_online_ms
+        except Exception:
+            online_ms = default_online_ms
+
+        try:
+            rows = self.db.get_constants("onoff_warning_ms")
+            warn_ms = int(rows[0][1]) if rows else default_warn_ms
+        except Exception:
+            warn_ms = default_warn_ms
+
+        if warn_ms < 0:
+            warn_ms = 0
+        if online_ms <= 0:
+            online_ms = default_online_ms
+        if warn_ms >= online_ms:
+            warn_ms = min(default_warn_ms, max(0, online_ms - 1000))
+
+        self._set_time_ms(self.time_online, online_ms)
+        self._set_time_ms(self.time_warning, warn_ms)
+
+    def _save_onoff_settings(self):
+        if not hasattr(self, "time_online") or not hasattr(self, "time_warning"):
+            return
+
+        online_ms = self._get_time_ms(self.time_online)
+        warn_ms = self._get_time_ms(self.time_warning)
+
+        if online_ms <= 0:
+            QMessageBox.warning(self, "Uyarı", "Online süresi 00:00:01'den büyük olmalıdır.")
+            return
+        if warn_ms < 0:
+            warn_ms = 0
+        if warn_ms >= online_ms:
+            QMessageBox.warning(self, "Uyarı", "Uyarı süresi online süresinden küçük olmalıdır.")
+            return
+
+        try:
+            self._upsert_single_constant("onoff_online_ms", str(int(online_ms)))
+            self._upsert_single_constant("onoff_warning_ms", str(int(warn_ms)))
+        except Exception:
+            QMessageBox.warning(self, "Uyarı", "Ayarlar kaydedilemedi.")
+            return
+
+        try:
+            self.onoff_settings_changed.emit(int(online_ms), int(warn_ms))
+        except Exception:
+            pass
+
+        QMessageBox.information(self, "Bilgi", "On-Off süreleri kaydedildi.")
 
     def clear_other_selections(self, active_list):
         """Aktif liste dışındaki tüm listelerin seçimlerini temizler."""

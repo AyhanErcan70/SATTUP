@@ -115,7 +115,7 @@ QPushButton:disabled {
        <enum>QTabWidget::TabShape::Triangular</enum>
       </property>
       <property name="currentIndex">
-       <number>5</number>
+       <number>6</number>
       </property>
       <property name="documentMode">
        <bool>false</bool>
@@ -176,7 +176,7 @@ QPushButton:disabled {
                 <string/>
                </property>
                <property name="icon">
-                <iconset resource="../icons/resource.qrc">
+                <iconset>
                  <normaloff>:/simgeler/ekle.ico</normaloff>:/simgeler/ekle.ico</iconset>
                </property>
               </widget>
@@ -193,7 +193,7 @@ QPushButton:disabled {
                 <string/>
                </property>
                <property name="icon">
-                <iconset resource="../icons/resource.qrc">
+                <iconset>
                  <normaloff>:/simgeler/remove.ico</normaloff>:/simgeler/remove.ico</iconset>
                </property>
               </widget>
@@ -259,7 +259,7 @@ QListWidget::item {
                 <string/>
                </property>
                <property name="icon">
-                <iconset resource="../icons/resource.qrc">
+                <iconset>
                  <normaloff>:/simgeler/ekle.ico</normaloff>:/simgeler/ekle.ico</iconset>
                </property>
               </widget>
@@ -276,7 +276,7 @@ QListWidget::item {
                 <string/>
                </property>
                <property name="icon">
-                <iconset resource="../icons/resource.qrc">
+                <iconset>
                  <normaloff>:/simgeler/remove.ico</normaloff>:/simgeler/remove.ico</iconset>
                </property>
               </widget>
@@ -342,7 +342,7 @@ QListWidget::item {
                 <string/>
                </property>
                <property name="icon">
-                <iconset resource="../icons/resource.qrc">
+                <iconset>
                  <normaloff>:/simgeler/ekle.ico</normaloff>:/simgeler/ekle.ico</iconset>
                </property>
               </widget>
@@ -359,7 +359,7 @@ QListWidget::item {
                 <string/>
                </property>
                <property name="icon">
-                <iconset resource="../icons/resource.qrc">
+                <iconset>
                  <normaloff>:/simgeler/remove.ico</normaloff>:/simgeler/remove.ico</iconset>
                </property>
               </widget>
@@ -425,7 +425,7 @@ QListWidget::item {
                 <string/>
                </property>
                <property name="icon">
-                <iconset resource="../icons/resource.qrc">
+                <iconset>
                  <normaloff>:/simgeler/ekle.ico</normaloff>:/simgeler/ekle.ico</iconset>
                </property>
               </widget>
@@ -442,7 +442,7 @@ QListWidget::item {
                 <string/>
                </property>
                <property name="icon">
-                <iconset resource="../icons/resource.qrc">
+                <iconset>
                  <normaloff>:/simgeler/remove.ico</normaloff>:/simgeler/remove.ico</iconset>
                </property>
               </widget>
@@ -519,7 +519,7 @@ QListWidget::item {
                 <string/>
                </property>
                <property name="icon">
-                <iconset resource="../icons/resource.qrc">
+                <iconset>
                  <normaloff>:/simgeler/ekle.ico</normaloff>:/simgeler/ekle.ico</iconset>
                </property>
               </widget>
@@ -530,7 +530,7 @@ QListWidget::item {
                 <string/>
                </property>
                <property name="icon">
-                <iconset resource="../icons/resource.qrc">
+                <iconset>
                  <normaloff>:/simgeler/remove.ico</normaloff>:/simgeler/remove.ico</iconset>
                </property>
               </widget>
@@ -602,7 +602,7 @@ QListWidget::item {
                 <string/>
                </property>
                <property name="icon">
-                <iconset resource="../icons/resource.qrc">
+                <iconset>
                  <normaloff>:/simgeler/ekle.ico</normaloff>:/simgeler/ekle.ico</iconset>
                </property>
               </widget>
@@ -613,7 +613,7 @@ QListWidget::item {
                 <string/>
                </property>
                <property name="icon">
-                <iconset resource="../icons/resource.qrc">
+                <iconset>
                  <normaloff>:/simgeler/remove.ico</normaloff>:/simgeler/remove.ico</iconset>
                </property>
               </widget>
@@ -731,7 +731,7 @@ QListWidget::item {
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../icons/resource.qrc">
+             <iconset>
               <normaloff>:/simgeler/remove.ico</normaloff>:/simgeler/remove.ico</iconset>
             </property>
            </widget>
@@ -757,7 +757,7 @@ QListWidget::item {
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../icons/resource.qrc">
+             <iconset>
               <normaloff>:/simgeler/ekle.ico</normaloff>:/simgeler/ekle.ico</iconset>
             </property>
            </widget>
@@ -806,7 +806,7 @@ QListWidget::item {
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../icons/resource.qrc">
+             <iconset>
               <normaloff>:/simgeler/ekle.ico</normaloff>:/simgeler/ekle.ico</iconset>
             </property>
            </widget>
@@ -829,7 +829,7 @@ QListWidget::item {
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../icons/resource.qrc">
+             <iconset>
               <normaloff>:/simgeler/remove.ico</normaloff>:/simgeler/remove.ico</iconset>
             </property>
            </widget>
@@ -878,7 +878,7 @@ QListWidget::item {
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../icons/resource.qrc">
+             <iconset>
               <normaloff>:/simgeler/ekle.ico</normaloff>:/simgeler/ekle.ico</iconset>
             </property>
            </widget>
@@ -901,7 +901,7 @@ QListWidget::item {
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../icons/resource.qrc">
+             <iconset>
               <normaloff>:/simgeler/remove.ico</normaloff>:/simgeler/remove.ico</iconset>
             </property>
            </widget>
@@ -999,7 +999,7 @@ QListWidget::item {
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../icons/resource.qrc">
+               <iconset>
                 <normaloff>:/simgeler/ekle.ico</normaloff>:/simgeler/ekle.ico</iconset>
               </property>
              </widget>
@@ -1016,7 +1016,7 @@ QListWidget::item {
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../icons/resource.qrc">
+               <iconset>
                 <normaloff>:/simgeler/remove.ico</normaloff>:/simgeler/remove.ico</iconset>
               </property>
              </widget>
@@ -1048,7 +1048,7 @@ QListWidget::item {
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../icons/resource.qrc">
+               <iconset>
                 <normaloff>:/simgeler/ekle.ico</normaloff>:/simgeler/ekle.ico</iconset>
               </property>
              </widget>
@@ -1065,7 +1065,7 @@ QListWidget::item {
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../icons/resource.qrc">
+               <iconset>
                 <normaloff>:/simgeler/remove.ico</normaloff>:/simgeler/remove.ico</iconset>
               </property>
              </widget>
@@ -1656,6 +1656,94 @@ QListWidget::item {
          </widget>
         </item>
        </layout>
+      </widget>
+      <widget class="QWidget" name="tab_onoff">
+       <attribute name="title">
+        <string>On-Off</string>
+       </attribute>
+       <widget class="QPushButton" name="btn_onoff_kaydet">
+        <property name="geometry">
+         <rect>
+          <x>260</x>
+          <y>200</y>
+          <width>122</width>
+          <height>32</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>KAYDET</string>
+        </property>
+       </widget>
+       <widget class="QTimeEdit" name="time_online">
+        <property name="geometry">
+         <rect>
+          <x>340</x>
+          <y>90</y>
+          <width>100</width>
+          <height>30</height>
+         </rect>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>100</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>80</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
+       <widget class="QTimeEdit" name="time_warning">
+        <property name="geometry">
+         <rect>
+          <x>340</x>
+          <y>140</y>
+          <width>100</width>
+          <height>30</height>
+         </rect>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>100</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>80</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
+       <widget class="QLabel" name="lbl_online">
+        <property name="geometry">
+         <rect>
+          <x>220</x>
+          <y>90</y>
+          <width>90</width>
+          <height>30</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Online Süresi</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="lbl_warning">
+        <property name="geometry">
+         <rect>
+          <x>220</x>
+          <y>140</y>
+          <width>90</width>
+          <height>30</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Uyarı süresi</string>
+        </property>
+       </widget>
       </widget>
      </widget>
     </widget>
