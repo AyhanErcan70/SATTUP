@@ -319,6 +319,36 @@ class RoutesApp(QWidget):
     def _table_rotalar_widget(self):
         return getattr(self, "table_rotalar", None) or getattr(self, "table_rota", None)
 
+    def _fetch_route_params_stops(self, contract_id: int, route_name: str, movement_type: str):
+        rid = None
+        stops = ""
+        try:
+            conn = self.db.connect()
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, COALESCE(stops,''), COALESCE(movement_type,'')
+                FROM route_params
+                WHERE contract_id = ? AND COALESCE(route_name,'') = ?
+                ORDER BY id DESC
+                """,
+                (int(contract_id), str(route_name or "").strip()),
+            )
+            rows = cursor.fetchall() or []
+            conn.close()
+        except Exception:
+            rows = []
+
+        mt_in = str(movement_type or "").strip()
+        for r_id, r_stops, r_mt in rows:
+            mt_db = str(r_mt or "").strip()
+            if mt_in and mt_db != mt_in:
+                continue
+            rid = int(r_id)
+            stops = str(r_stops or "")
+            break
+        return rid, stops
+
     def _load_kalemler_from_contract(self):
         """Seçili sözleşmedeki aday güzergahları list_kalemler'e yükler."""
         self._kalem_model.clear()
@@ -451,29 +481,39 @@ class RoutesApp(QWidget):
             s2 = re.sub(r"[^0-9a-zA-ZğüşöçıİĞÜŞÖÇ]", "", s2)
             return s2
 
-        existing_names = set()
+        existing_keys = set()
         try:
             conn = self.db.connect()
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT COALESCE(route_name,'')
+                SELECT COALESCE(route_name,''), COALESCE(movement_type,'')
                 FROM route_params
                 WHERE contract_id = ?
                 """,
                 (contract_id,),
             )
-            for (rname,) in cursor.fetchall() or []:
-                rn = _norm_name(str(rname or ""))
-                if rn:
-                    existing_names.add(rn)
+            for rname, mtype in cursor.fetchall() or []:
+                rn0 = str(rname or "").strip()
+                mt0 = str(mtype or "").strip()
+                if not rn0:
+                    continue
+                # Legacy: route_name içine " - " ile hareket türü gömülmüş olabilir
+                if not mt0 and " - " in rn0:
+                    p1, p2 = rn0.split(" - ", 1)
+                    rn0 = p1.strip()
+                    mt0 = p2.strip()
+
+                nk = (_norm_name(rn0), _norm_name(mt0))
+                if nk[0]:
+                    existing_keys.add(nk)
             conn.close()
         except Exception:
             try:
                 conn.close()
             except Exception:
                 pass
-            existing_names = set()
+            existing_keys = set()
         for k in kalem_list:
             rn = str((k or {}).get("route_name") or "").strip()
             mt = str((k or {}).get("movement_type") or "").strip()
@@ -482,13 +522,16 @@ class RoutesApp(QWidget):
             it.setEditable(False)
 
             try:
-                if _norm_name(rn) in existing_names:
+                if (_norm_name(rn), _norm_name(mt)) in existing_keys:
                     it.setForeground(QColor(0, 128, 0))
                 else:
                     it.setForeground(QColor(200, 0, 0))
             except Exception:
                 pass
-            it.setData(json.dumps({"route_name": rn, "movement_type": mt}, ensure_ascii=False), Qt.ItemDataRole.UserRole)
+            it.setData(
+                json.dumps({"route_name": rn, "movement_type": mt, "km": (k or {}).get("km")}, ensure_ascii=False),
+                Qt.ItemDataRole.UserRole,
+            )
             it.setData(contract_type, Qt.ItemDataRole.UserRole + 1)  # hizmet tipi 1-A
             self._kalem_model.appendRow(it)
 
@@ -546,28 +589,32 @@ class RoutesApp(QWidget):
         if tbl is None:
             return
 
-        # Eğer tabloda satır varsa mevcut durakları dialoga bas
         existing_row = None
         existing_stops = ""
-        for r in range(tbl.rowCount()):
-            it1 = tbl.item(r, 1)
-            rn = ""
-            mv = ""
-            if it1 is not None:
-                rn = (it1.data(Qt.ItemDataRole.UserRole + 201) or "").strip() or (it1.text().strip())
-                mv = (it1.data(Qt.ItemDataRole.UserRole + 202) or "").strip()
-            it0 = tbl.item(r, 0)
-            raw_st = ""
-            if it0 is not None:
-                raw_st = (it0.data(Qt.ItemDataRole.UserRole + 102) or "").strip()
-            if not raw_st:
-                raw_st = (it0.text().strip() if it0 is not None else "")
+        existing_rid, db_stops = self._fetch_route_params_stops(
+            int(self._selected_contract_id),
+            str(route_name or "").strip(),
+            str(movement_type or "").strip(),
+        )
+        if db_stops:
+            existing_stops = db_stops
 
-            # Aynı isimli iş kalemleri olabildiği için ilk eşleşmede durmayıp
-            # en son (en güncel) eşleşen satırı seçiyoruz.
-            if rn == route_name and mv == (movement_type or "").strip() and (not service_type or raw_st == (service_type or "").strip()):
-                existing_row = r
-                existing_stops = (tbl.item(r, 2).text() if tbl.item(r, 2) else "")
+        if existing_rid is not None:
+            for r in range(tbl.rowCount()):
+                it0 = tbl.item(r, 0)
+                rid0 = it0.data(Qt.ItemDataRole.UserRole + 101) if it0 is not None else None
+                try:
+                    if rid0 is not None and int(rid0) == int(existing_rid):
+                        existing_row = r
+                        break
+                except Exception:
+                    pass
+
+        if btn_save is not None:
+            try:
+                btn_save.setText("GÜNCELLE" if existing_row is not None else "KAYDET")
+            except Exception:
+                pass
 
         if txt is not None:
             try:
@@ -585,13 +632,23 @@ class RoutesApp(QWidget):
             raw_service_type = (service_type or "").strip()
             it0 = QTableWidgetItem(self._display_service_type(raw_service_type) or "")
             it0.setFlags(it0.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            it0.setData(Qt.ItemDataRole.UserRole + 102, raw_service_type)
+            if existing_rid is not None:
+                it0.setData(Qt.ItemDataRole.UserRole + 101, int(existing_rid))
             disp = f"{route_name} - {movement_type}" if (movement_type or "").strip() else (route_name or "")
             it1 = QTableWidgetItem(disp)
             it1.setFlags(it1.flags() & ~Qt.ItemFlag.ItemIsEditable)
             it1.setData(Qt.ItemDataRole.UserRole + 201, (route_name or "").strip())
             it1.setData(Qt.ItemDataRole.UserRole + 202, (movement_type or "").strip())
             it2 = QTableWidgetItem("")
-            it3 = QTableWidgetItem("")
+            km_txt = ""
+            try:
+                km_val = self._contract_route_km_map.get(str(route_name or "").strip().lower())
+                if km_val is not None and str(km_val).strip() != "":
+                    km_txt = str(km_val)
+            except Exception:
+                km_txt = ""
+            it3 = QTableWidgetItem(km_txt)
             it3.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             tbl.setItem(r, 0, it0)
             tbl.setItem(r, 1, it1)
@@ -673,16 +730,34 @@ class RoutesApp(QWidget):
         for rid, stype, rname, mtype, stops, km in rows:
             r = tbl.rowCount()
             tbl.insertRow(r)
-            values = [stype or "", rname or "", stops or "", "" if km is None else str(km)]
-            for c, v in enumerate(values):
-                it = QTableWidgetItem(str(v))
-                if c in (0, 1):
-                    it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                if c == 3:
-                    it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-                if c == 0:
-                    it.setData(Qt.ItemDataRole.UserRole + 101, int(rid))
-                tbl.setItem(r, c, it)
+            raw_st = str(stype or "").strip()
+            it0 = QTableWidgetItem(self._display_service_type(raw_st) or raw_st)
+            it0.setFlags(it0.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            it0.setData(Qt.ItemDataRole.UserRole + 101, int(rid))
+            it0.setData(Qt.ItemDataRole.UserRole + 102, raw_st)
+
+            rn = str(rname or "").strip()
+            mv = str(mtype or "").strip()
+            disp = f"{rn} - {mv}" if mv else rn
+            it1 = QTableWidgetItem(disp)
+            it1.setFlags(it1.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            it1.setData(Qt.ItemDataRole.UserRole + 201, rn)
+            it1.setData(Qt.ItemDataRole.UserRole + 202, mv)
+
+            it2 = QTableWidgetItem(str(stops or ""))
+            km_txt = "" if km is None else str(km)
+            try:
+                km2 = self._contract_route_km_map.get(str(rn or "").strip().lower())
+                if km2 is not None and str(km2).strip() != "":
+                    km_txt = str(km2)
+            except Exception:
+                pass
+            it3 = QTableWidgetItem(km_txt)
+            it3.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            tbl.setItem(r, 0, it0)
+            tbl.setItem(r, 1, it1)
+            tbl.setItem(r, 2, it2)
+            tbl.setItem(r, 3, it3)
         tbl.blockSignals(False)
 
     def _selected_kalem_texts(self):
@@ -729,6 +804,7 @@ class RoutesApp(QWidget):
                 obj = {}
             rn = str((obj or {}).get("route_name") or "").strip()
             mv = str((obj or {}).get("movement_type") or "").strip()
+            km_val = (obj or {}).get("km")
             if not rn:
                 continue
             if (rn.lower(), mv.lower()) in existing:
@@ -737,13 +813,20 @@ class RoutesApp(QWidget):
             tbl.insertRow(r)
             it0 = QTableWidgetItem(disp_stype)
             it0.setFlags(it0.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            it0.setData(Qt.ItemDataRole.UserRole + 102, raw_stype)
             disp = f"{rn} - {mv}" if (mv or "").strip() else rn
             it1 = QTableWidgetItem(disp)
             it1.setFlags(it1.flags() & ~Qt.ItemFlag.ItemIsEditable)
             it1.setData(Qt.ItemDataRole.UserRole + 201, rn)
             it1.setData(Qt.ItemDataRole.UserRole + 202, mv)
             it2 = QTableWidgetItem("")
-            it3 = QTableWidgetItem("")
+            km_txt = ""
+            try:
+                if km_val is not None and str(km_val).strip() != "":
+                    km_txt = str(km_val)
+            except Exception:
+                km_txt = ""
+            it3 = QTableWidgetItem(km_txt)
             it3.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             tbl.setItem(r, 0, it0)
             tbl.setItem(r, 1, it1)
@@ -790,8 +873,21 @@ class RoutesApp(QWidget):
                     except Exception:
                         mtype = ""
 
-                stype = (tbl.item(r, 0).text().strip() if tbl.item(r, 0) else "")
-                rname = (tbl.item(r, 1).text().strip() if tbl.item(r, 1) else "")
+                # Raw alanlar (DataRole ile) varsa onları kullan
+                raw_stype = ""
+                if it0 is not None:
+                    try:
+                        raw_stype = str(it0.data(Qt.ItemDataRole.UserRole + 102) or "").strip()
+                    except Exception:
+                        raw_stype = ""
+
+                stype = raw_stype or (tbl.item(r, 0).text().strip() if tbl.item(r, 0) else "")
+                rname = ""
+                if it1 is not None:
+                    rname = str(it1.data(Qt.ItemDataRole.UserRole + 201) or "").strip() or it1.text().strip()
+                    if " - " in rname and not (it1.data(Qt.ItemDataRole.UserRole + 201) or ""):
+                        # Legacy display text: "hat - hareket" -> sadece hat
+                        rname = rname.split(" - ", 1)[0].strip()
                 stops = (tbl.item(r, 2).text().strip() if tbl.item(r, 2) else "")
                 km_txt = (tbl.item(r, 3).text().strip() if tbl.item(r, 3) else "")
                 if not rname:
@@ -850,6 +946,7 @@ class RoutesApp(QWidget):
                 pass
 
         self._load_saved_routes_into_table()
+        self._load_kalemler_from_contract()
 
     def _delete_selected_rows_from_db(self):
         tbl = self._table_rotalar_widget()
@@ -904,6 +1001,7 @@ class RoutesApp(QWidget):
                 pass
 
         self._load_saved_routes_into_table()
+        self._load_kalemler_from_contract()
 
     def _load_contract_details_and_fill_rota(self):
         # Yeni UI (routes_window.ui) tek tablo: table_rotalar (4 kolon).
