@@ -20,122 +20,7 @@
    <string>MainWindow</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">/* Ana Pencerenin merkezindeki temel alanı hedef alır */
-
-#centralwidget {
-	
-	border-image: url(:/resimler/a22.jpg) 0,0,0,0 stretch, stretch;
-    background-position: center;
-	 background-repeat: no-repeat;
-}
-QPushButton {
-	background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                      stop:0 #828282, stop: 0.5 #797979,
-                                      stop: 0.6 #737373, stop:1 #3D3D3D);
-    color: #fff;
-    font-family: 'Nesatho', sans-serif;
-    
-    font-size: 12px;
-    border-radius: 8px;
-	border-top: 1px solid #C0C0C0;
-    border-left: 1px solid #C0C0C0;
-    border-right: 2px solid #000;  /* Sağ gölge kalınlığı */
-    border-bottom: 3px solid #000; /* Alt gölge kalınlığı */
-    
-    margin-right: 4px; /* Gölgenin kesilmemesi için alan bırakıyoruz */
-    margin-bottom: 5px;
-    
-}
-/* Üzerine gelince gölge rengini biraz açabiliriz */
-QPushButton:hover {
-    color: #ffff00;
-    border-right: 4px solid #A9A9A9;
-    border-bottom: 5px solid #808080;
-}
-
-/* Basıldığında gölgeler küçülmeli ki buton çökmüş görünsün */
-QPushButton:pressed {
-    color: #ffaa00;
-    border-top: 2px solid #696969;
-    border-left: 2px solid #696969;
-    border-right: 1px solid #808080;   /* Sağ gölge kaybolur */
-    border-bottom: 1px solid #808080;  /* Alt gölge kaybolur */
-    
-    margin-top: 4px;    /* Butonu fiziksel olarak aşağı kaydırır */
-    margin-left: 2px;   /* Butonu fiziksel olarak sağa kaydırır */
-    margin-bottom: 1px;
-    margin-right: 2px;
-    
-    padding-top: 10px;  /* Metni buton içinde aşağı kaydırır */
-}
-
-QLabel#lbl_footer, QLabel#lbl_user{color: #fff;}
-
-QLabel#lbl_title {
-color: #ffe101; 
-font-family: &quot;Grenada&quot;; 
-font-size: 20pt;}
-
-
-QComboBox {
-    border: 1px solid #162d6d;
-    border-radius: 3px;
-    padding: 1px 18px 1px 3px;
-    min-width: 6em;
-	min-height:28px;
-	max-height: 28px;
-}
-
-QComboBox:editable {
-    background: #ffffce;
-}
-
-QComboBox:!editable, QComboBox::drop-down:editable {
-     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                 stop: 0 #ffffff, stop: 0.4 #f7f7f7,
-                                 stop: 0.5 #f9f9f9, stop: 1.0 #fefefe);
-}
-
-/* QComboBox gets the &quot;on&quot; state when the popup is open */
-QComboBox:!editable:on, QComboBox::drop-down:editable:on {
-    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                stop: 0 #fefefe, stop: 0.4 #f9f9f9,
-                                stop: 0.5 #f7f7f7, stop: 1.0 #ffffff);
-}
-
-QComboBox:on { /* shift the text when the popup opens */
-    padding-top: 3px;
-    padding-left: 4px;
-}
-
-QComboBox::drop-down {
-    subcontrol-origin: padding;
-    subcontrol-position: top right;
-    width: 15px;
-
-    border-left-width: 1px;
-    border-left-color: darkgray;
-    border-left-style: solid; /* just a single line */
-    border-top-right-radius: 3px; /* same radius as the QComboBox */
-    border-bottom-right-radius: 3px;
-}
-
-QComboBox::down-arrow {
-    
-	
-	image: url(:/simgeler/arrow-down.png);
-}
-
-QComboBox::down-arrow:on { /* shift the arrow when popup is open */
-    top: 1px;
-    left: 1px;
-}
-
-QStackedWidget, QStackedWidget &gt; QWidget {
-    background: transparent;
-    background-color: transparent;
-    border: none;
-}</string>
+   <string notr="true"/>
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="styleSheet">
@@ -304,55 +189,7 @@ QStackedWidget, QStackedWidget &gt; QWidget {
          </size>
         </property>
         <property name="styleSheet">
-         <string notr="true">QPushButton {
-	background-color: #E8E8E8;
-    color: #000;
-    font-family: 'DaytonaPro', sans-serif;
-    font-weight: bold;
-    font-size: 11pt;
-    border-radius: 10px;
-	border-top: 1px solid #C0C0C0;
-    border-left: 1px solid #C0C0C0;
-    border-right: 4px solid #808080;  /* Sağ gölge kalınlığı */
-    border-bottom: 5px solid #696969; /* Alt gölge kalınlığı */
-    text-align: left;
-    margin-right: 4px; /* Gölgenin kesilmemesi için alan bırakıyoruz */
-    margin-bottom: 5px;
-    padding: 3px;
-}
-
-QPushButton[selected=&quot;true&quot;] {
-    background-color: #FFF3E0;
-    color: #984C00;
-    border-right: 4px solid #984C00;
-    border-bottom: 5px solid #6B3A00;
-}
-
-QPushButton[flash=&quot;true&quot;] {
-    background-color: #FFE0B2;
-}
-
-/* Üzerine gelince gölge rengini biraz açabiliriz */
-QPushButton:hover {
-    color: #984C00;
-    border-right: 4px solid #A9A9A9;
-    border-bottom: 5px solid #808080;
-}
-
-/* Basıldığında gölgeler küçülmeli ki buton çökmüş görünsün */
-QPushButton:pressed {
-    border-top: 2px solid #696969;
-    border-left: 2px solid #696969;
-    border-right: 1px solid #808080;   /* Sağ gölge kaybolur */
-    border-bottom: 1px solid #808080;  /* Alt gölge kaybolur */
-    
-    margin-top: 4px;    /* Butonu fiziksel olarak aşağı kaydırır */
-    margin-left: 2px;   /* Butonu fiziksel olarak sağa kaydırır */
-    margin-bottom: 1px;
-    margin-right: 2px;
-    
-    padding-top: 10px;  /* Metni buton içinde aşağı kaydırır */
-}</string>
+         <string notr="true"/>
         </property>
         <property name="frameShape">
          <enum>QFrame::Shape::Box</enum>
@@ -954,6 +791,9 @@ QPushButton:pressed {
       </item>
       <item row="1" column="1">
        <widget class="QFrame" name="content_frame">
+        <property name="styleSheet">
+         <string notr="true"/>
+        </property>
         <property name="frameShape">
          <enum>QFrame::Shape::Box</enum>
         </property>
@@ -970,39 +810,13 @@ QPushButton:pressed {
             </sizepolicy>
            </property>
            <property name="styleSheet">
-            <string notr="true"/>
+            <string notr="true">mainStack{image: url(:/resimler/logo_faded480.png) 0,0,0,0 stretch, stretch;}</string>
            </property>
            <property name="currentIndex">
             <number>0</number>
            </property>
            <widget class="QWidget" name="page_main">
-            <layout class="QGridLayout" name="gridLayout_5">
-             <item row="0" column="0">
-              <widget class="QFrame" name="frame">
-               <property name="styleSheet">
-                <string notr="true">image: url(:/resimler/logo_faded480.png) 0,0,0,0 stretch, stretch;</string>
-               </property>
-               <property name="frameShape">
-                <enum>QFrame::Shape::NoFrame</enum>
-               </property>
-               <property name="frameShadow">
-                <enum>QFrame::Shadow::Plain</enum>
-               </property>
-               <layout class="QGridLayout" name="gridLayout_6">
-                <item row="0" column="0">
-                 <widget class="QLabel" name="label">
-                  <property name="styleSheet">
-                   <string notr="true"/>
-                  </property>
-                  <property name="text">
-                   <string/>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </widget>
-             </item>
-            </layout>
+            <layout class="QGridLayout" name="gridLayout_5"/>
            </widget>
            <widget class="QWidget" name="page_modul_container"/>
           </widget>

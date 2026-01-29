@@ -73,7 +73,19 @@ FORM_STYLE = f"""
         font-family: 'Daytona', 'Segoe UI', sans-serif;
         font-size: 10pt;
     }}
-    
+
+    QTableWidget QComboBox {{
+        padding: 1px 4px;
+        min-height: 18px;
+        border-radius: 4px;
+        font-size: 10pt;
+    }}
+
+    QTableWidget QComboBox::drop-down {{
+        width: 14px;
+        border: none;
+    }}
+
     /* 2. Header (Başlıklar) Ayrımı ve Radius */
     QHeaderView::section {{
         background-color: {COLOR_PRIMARY};

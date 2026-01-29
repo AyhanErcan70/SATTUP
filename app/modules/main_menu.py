@@ -2,10 +2,10 @@ import os
 
 import traceback
 
-from PyQt6.QtWidgets import QMainWindow, QScrollArea, QSizePolicy, QGraphicsOpacityEffect, QLabel, QGraphicsColorizeEffect, QFrame, QMessageBox, QComboBox, QPushButton
+from PyQt6.QtWidgets import QMainWindow, QScrollArea, QSizePolicy, QGraphicsOpacityEffect, QLabel, QGraphicsColorizeEffect, QFrame, QMessageBox, QComboBox, QPushButton, QGraphicsBlurEffect
 from PyQt6.QtGui import QPixmap, QIcon, QColor, QFontMetrics
 from PyQt6.QtCore import QSize
-from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, QSequentialAnimationGroup, QEvent, QPoint, QRect, QParallelAnimationGroup, QUrl
+from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, QSequentialAnimationGroup, QEvent, QPoint, QRect, QParallelAnimationGroup, QUrl, QVariantAnimation
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 
 from PyQt6 import uic
@@ -22,6 +22,57 @@ from app.modules.routes import RoutesApp
 from app.modules.trips import TripsGridApp
 from app.modules.attendance import AttendanceApp
 from assets.images import kaynaklar_rc
+
+
+_MENU_FRAME_QSS = """
+QPushButton {
+	background-color: #E8E8E8;
+    color: #000;
+    font-family: 'DaytonaPro', sans-serif;
+    font-weight: bold;
+    font-size: 11pt;
+    border-radius: 10px;
+	border-top: 1px solid #C0C0C0;
+    border-left: 1px solid #C0C0C0;
+    border-right: 4px solid #808080;
+    border-bottom: 5px solid #696969;
+    text-align: left;
+    margin-right: 4px;
+    margin-bottom: 5px;
+    padding: 3px;
+}
+
+QPushButton[selected="true"] {
+    background-color: #FFF3E0;
+    color: #984C00;
+    border-right: 4px solid #984C00;
+    border-bottom: 5px solid #6B3A00;
+}
+
+QPushButton[flash="true"] {
+    background-color: #FFE0B2;
+}
+
+QPushButton:hover {
+    color: #984C00;
+    border-right: 4px solid #A9A9A9;
+    border-bottom: 5px solid #808080;
+}
+
+QPushButton:pressed {
+    border-top: 2px solid #696969;
+    border-left: 2px solid #696969;
+    border-right: 1px solid #808080;
+    border-bottom: 1px solid #808080;
+    
+    margin-top: 4px;
+    margin-left: 2px;
+    margin-bottom: 1px;
+    margin-right: 2px;
+    
+    padding-top: 10px;
+}
+"""
 
 class DownComboBox(QComboBox):
     def showPopup(self):
@@ -46,6 +97,33 @@ class MainMenuApp(QMainWindow):
         # clear_all_styles(self)
         self.user_data = user_data
 
+        try:
+            if hasattr(self, "menu_frame") and self.menu_frame is not None:
+                self.menu_frame.setStyleSheet(_MENU_FRAME_QSS)
+        except Exception:
+            pass
+
+        try:
+            if hasattr(self, "top_frame") and self.top_frame is not None:
+                self.top_frame.setProperty("mw_header", True)
+            if hasattr(self, "bottom_frame") and self.bottom_frame is not None:
+                self.bottom_frame.setProperty("mw_header", True)
+        except Exception:
+            pass
+
+        try:
+            for _w in (getattr(self, "top_frame", None), getattr(self, "bottom_frame", None)):
+                if _w is None:
+                    continue
+                try:
+                    _w.style().unpolish(_w)
+                    _w.style().polish(_w)
+                    _w.update()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         self._session_active = False
         self._offline_timeout_ms = int(offline_timeout_ms or 0)
         self._offline_warning_ms = 30000
@@ -57,12 +135,17 @@ class MainMenuApp(QMainWindow):
         self._offline_warning_label = None
         self._offline_warning_active = False
         self._offline_seconds_left = 0
+        self._offline_warning_pulse_anim = None
         self._footer_user_label = None
         self._footer_user_timer = None
         self._welcome_overlay = None
         self._welcome_dismissed = False
         self._welcome_year_label = None
         self._welcome_month_combo = None
+        self._welcome_overlay_opacity = None
+        self._welcome_overlay_fade_anim = None
+        self._welcome_overlay_geom_anim = None
+        self._startup_title_gating = True
         self._offline_audio_output = None
         self._offline_player = None
 
@@ -72,6 +155,8 @@ class MainMenuApp(QMainWindow):
         self._sidebar_collapsed_width = 60
         self._sidebar_animation = None
         self._sidebar_is_collapsed = False
+        self._sidebar_text_anims = {}
+        self._sidebar_text_base_styles = {}
         self._fade_anims = {}
         self._title_pulse_anim = None
         self._title_base_stylesheet = ""
@@ -130,6 +215,8 @@ class MainMenuApp(QMainWindow):
 
         # İlk açılışta da full title animasyonu
         try:
+            # Başlık animasyonu bitene kadar dönem overlay'ı pasif ve soluk kalsın
+            self._set_welcome_overlay_interactive(False, animate=False)
             QTimer.singleShot(120, lambda: self._animate_title_type_in(self._default_title_text))
         except Exception:
             pass
@@ -517,7 +604,78 @@ class MainMenuApp(QMainWindow):
     def _hide_offline_warning_dialog(self):
         try:
             if self._offline_warning_dialog is not None:
+                try:
+                    if self._offline_warning_pulse_anim is not None:
+                        self._offline_warning_pulse_anim.stop()
+                except Exception:
+                    pass
+                self._offline_warning_pulse_anim = None
+                try:
+                    self._offline_warning_dialog.setWindowOpacity(1.0)
+                except Exception:
+                    pass
                 self._offline_warning_dialog.hide()
+        except Exception:
+            return
+
+    def _pulse_offline_warning_dialog(self):
+        try:
+            dlg = self._offline_warning_dialog
+            if dlg is None:
+                return
+
+            try:
+                if self._offline_warning_pulse_anim is not None:
+                    self._offline_warning_pulse_anim.stop()
+            except Exception:
+                pass
+            self._offline_warning_pulse_anim = None
+
+            try:
+                dlg.setWindowOpacity(1.0)
+            except Exception:
+                pass
+
+            a1 = QPropertyAnimation(dlg, b"windowOpacity", dlg)
+            a1.setDuration(140)
+            a1.setStartValue(1.0)
+            a1.setEndValue(0.88)
+            a1.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+            a2 = QPropertyAnimation(dlg, b"windowOpacity", dlg)
+            a2.setDuration(220)
+            a2.setStartValue(0.88)
+            a2.setEndValue(1.0)
+            a2.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+            a3 = QPropertyAnimation(dlg, b"windowOpacity", dlg)
+            a3.setDuration(140)
+            a3.setStartValue(1.0)
+            a3.setEndValue(0.92)
+            a3.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+            a4 = QPropertyAnimation(dlg, b"windowOpacity", dlg)
+            a4.setDuration(220)
+            a4.setStartValue(0.92)
+            a4.setEndValue(1.0)
+            a4.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+            group = QSequentialAnimationGroup(dlg)
+            group.addAnimation(a1)
+            group.addAnimation(a2)
+            group.addAnimation(a3)
+            group.addAnimation(a4)
+
+            def _finish():
+                try:
+                    dlg.setWindowOpacity(1.0)
+                except Exception:
+                    pass
+                self._offline_warning_pulse_anim = None
+
+            group.finished.connect(_finish)
+            self._offline_warning_pulse_anim = group
+            group.start()
         except Exception:
             return
 
@@ -550,6 +708,11 @@ class MainMenuApp(QMainWindow):
                 self._offline_warning_dialog.show()
                 self._offline_warning_dialog.raise_()
                 self._offline_warning_dialog.activateWindow()
+        except Exception:
+            pass
+
+        try:
+            self._pulse_offline_warning_dialog()
         except Exception:
             pass
 
@@ -639,6 +802,14 @@ class MainMenuApp(QMainWindow):
         self._welcome_overlay.setStyleSheet(
             "background-color: rgba(15, 15, 15, 160); border-radius: 14px;"
         )
+
+        try:
+            eff = QGraphicsOpacityEffect(self._welcome_overlay)
+            eff.setOpacity(1.0)
+            self._welcome_overlay.setGraphicsEffect(eff)
+            self._welcome_overlay_opacity = eff
+        except Exception:
+            self._welcome_overlay_opacity = None
         self._welcome_overlay.setVisible(True)
 
         from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout
@@ -741,6 +912,99 @@ class MainMenuApp(QMainWindow):
             self._welcome_overlay.raise_()
         except Exception:
             pass
+
+    def _set_welcome_overlay_interactive(self, interactive: bool, animate: bool = True):
+        if self._welcome_overlay is None:
+            return
+
+        try:
+            if self._welcome_overlay_fade_anim is not None:
+                try:
+                    self._welcome_overlay_fade_anim.stop()
+                except Exception:
+                    pass
+                self._welcome_overlay_fade_anim = None
+        except Exception:
+            pass
+
+        try:
+            if self._welcome_overlay_geom_anim is not None:
+                try:
+                    self._welcome_overlay_geom_anim.stop()
+                except Exception:
+                    pass
+                self._welcome_overlay_geom_anim = None
+        except Exception:
+            pass
+
+        try:
+            self._welcome_overlay.setAttribute(
+                Qt.WidgetAttribute.WA_TransparentForMouseEvents,
+                not bool(interactive),
+            )
+        except Exception:
+            pass
+
+        eff = self._welcome_overlay_opacity
+        if eff is None:
+            try:
+                eff = self._welcome_overlay.graphicsEffect()
+            except Exception:
+                eff = None
+        if not isinstance(eff, QGraphicsOpacityEffect):
+            try:
+                eff = QGraphicsOpacityEffect(self._welcome_overlay)
+                self._welcome_overlay.setGraphicsEffect(eff)
+                self._welcome_overlay_opacity = eff
+            except Exception:
+                eff = None
+
+        target = 1.0 if interactive else 0.35
+        if not animate or eff is None:
+            try:
+                if eff is not None:
+                    eff.setOpacity(target)
+            except Exception:
+                pass
+            return
+
+        try:
+            a = QPropertyAnimation(eff, b"opacity", self._welcome_overlay)
+            a.setDuration(380)
+            a.setStartValue(float(eff.opacity()))
+            a.setEndValue(float(target))
+            a.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+            group = QParallelAnimationGroup(self._welcome_overlay)
+            group.addAnimation(a)
+
+            # Interactive açılırken hafif scale-in (geometry tabanlı, minimal)
+            if interactive:
+                try:
+                    g = self._welcome_overlay.geometry()
+                    dx = max(1, int(g.width() * 0.015))
+                    dy = max(1, int(g.height() * 0.015))
+                    start_g = QRect(g.x() + dx, g.y() + dy, max(10, g.width() - 2 * dx), max(10, g.height() - 2 * dy))
+                    self._welcome_overlay.setGeometry(start_g)
+                    ag = QPropertyAnimation(self._welcome_overlay, b"geometry", self._welcome_overlay)
+                    ag.setDuration(420)
+                    ag.setStartValue(start_g)
+                    ag.setEndValue(g)
+                    ag.setEasingCurve(QEasingCurve.Type.OutCubic)
+                    group.addAnimation(ag)
+                except Exception:
+                    pass
+
+            def _finish():
+                self._welcome_overlay_fade_anim = None
+                self._welcome_overlay_geom_anim = None
+
+            group.finished.connect(_finish)
+            self._welcome_overlay_fade_anim = group
+            self._welcome_overlay_geom_anim = group
+            group.start()
+        except Exception:
+            return
 
     def _on_welcome_continue(self):
         try:
@@ -914,17 +1178,40 @@ class MainMenuApp(QMainWindow):
 
     def request_login(self):
         try:
+            try:
+                dlg_existing = getattr(self, "_login_dialog", None)
+                if dlg_existing is not None:
+                    try:
+                        dlg_existing.raise_()
+                        dlg_existing.activateWindow()
+                        dlg_existing.show()
+                    except Exception:
+                        pass
+                    return
+            except Exception:
+                pass
+
             from app.modules.auth import AuthApp
 
             dlg = AuthApp()
+            self._login_dialog = dlg
             try:
                 dlg.setParent(self)
                 dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
+                dlg.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+                dlg.show()
                 dlg.raise_()
                 dlg.activateWindow()
             except Exception:
                 pass
-            if dlg.exec():
+
+            result = None
+            try:
+                result = dlg.exec()
+            except Exception:
+                result = 0
+
+            if result:
                 ud = getattr(dlg, "user_data", None) or {}
                 if self.user_data is None:
                     self.user_data = {}
@@ -942,6 +1229,11 @@ class MainMenuApp(QMainWindow):
             except Exception:
                 pass
             traceback.print_exc()
+        finally:
+            try:
+                self._login_dialog = None
+            except Exception:
+                pass
 
     def _on_offline_timeout(self):
         try:
@@ -1006,7 +1298,7 @@ class MainMenuApp(QMainWindow):
                 from PyQt6.QtWidgets import QGraphicsDropShadowEffect
 
                 eff = QGraphicsDropShadowEffect(btn)
-                eff.setColor(QColor(0, 0, 0, 110))
+                eff.setColor(QColor(0, 0, 0, 0))
                 eff.setBlurRadius(0.0)
                 eff.setXOffset(0.0)
                 eff.setYOffset(0.0)
@@ -1019,25 +1311,39 @@ class MainMenuApp(QMainWindow):
                 except Exception:
                     pass
 
-            end_blur = 18.0 if entering else 0.0
-            end_y = 4.0 if entering else 0.0
+            # Premium hover: subtle amber glow + tiny lift (no geometry scaling)
+            end_blur = 22.0 if entering else 0.0
+            end_y = 2.0 if entering else 0.0
+            end_color = QColor(152, 76, 0, 160) if entering else QColor(0, 0, 0, 0)
+
+            dur = 200 if entering else 220
+            curve = QEasingCurve(QEasingCurve.Type.OutQuart)
 
             a1 = QPropertyAnimation(eff, b"blurRadius", btn)
-            a1.setDuration(140)
+            a1.setDuration(dur)
             a1.setStartValue(float(eff.blurRadius()))
             a1.setEndValue(end_blur)
-            a1.setEasingCurve(QEasingCurve.Type.OutCubic)
+            a1.setEasingCurve(curve)
 
             a2 = QPropertyAnimation(eff, b"yOffset", btn)
-            a2.setDuration(140)
+            a2.setDuration(dur)
             a2.setStartValue(float(eff.yOffset()))
             a2.setEndValue(end_y)
-            a2.setEasingCurve(QEasingCurve.Type.OutCubic)
+            a2.setEasingCurve(curve)
 
-            group = QSequentialAnimationGroup(btn)
+            a3 = QPropertyAnimation(eff, b"color", btn)
+            a3.setDuration(dur)
+            try:
+                a3.setStartValue(eff.color())
+            except Exception:
+                a3.setStartValue(QColor(0, 0, 0, 0))
+            a3.setEndValue(end_color)
+            a3.setEasingCurve(curve)
+
+            group = QParallelAnimationGroup(btn)
             group.addAnimation(a1)
-            group.addPause(140)
             group.addAnimation(a2)
+            group.addAnimation(a3)
 
             def _finish():
                 try:
@@ -1048,6 +1354,88 @@ class MainMenuApp(QMainWindow):
             group.finished.connect(_finish)
             self._hover_anims[btn] = group
             group.start()
+        except Exception:
+            return
+
+    def _transition_between_pages(self, prev_widget, new_widget):
+        try:
+            if prev_widget is None or new_widget is None:
+                if new_widget is not None:
+                    self._animate_page_intro(new_widget)
+                return
+            if prev_widget is new_widget:
+                return
+
+            def _stack_contains(w):
+                try:
+                    if w is None:
+                        return False
+                    if not hasattr(self, "mainStack") or self.mainStack is None:
+                        return False
+                    for i in range(self.mainStack.count()):
+                        if self.mainStack.widget(i) is w:
+                            return True
+                except Exception:
+                    return False
+                return False
+
+            # Bazı open_* fonksiyonları eski sayfayı hemen remove/delete ediyor.
+            # Böyle durumlarda blur-out yapmayalım; sadece yeni sayfaya intro uygula.
+            if not _stack_contains(prev_widget):
+                try:
+                    new_widget.setVisible(True)
+                except Exception:
+                    pass
+                self._animate_page_intro(new_widget)
+                return
+
+            # Outgoing blur-out (short, subtle)
+            blur = prev_widget.graphicsEffect()
+            if not isinstance(blur, QGraphicsBlurEffect):
+                blur = QGraphicsBlurEffect(prev_widget)
+                blur.setBlurRadius(0.0)
+                prev_widget.setGraphicsEffect(blur)
+            try:
+                blur.setBlurRadius(0.0)
+            except Exception:
+                pass
+
+            if not hasattr(self, "_page_out_anims"):
+                self._page_out_anims = {}
+            prev_anim = self._page_out_anims.get(prev_widget)
+            if prev_anim is not None:
+                try:
+                    prev_anim.stop()
+                except Exception:
+                    pass
+
+            a = QPropertyAnimation(blur, b"blurRadius", prev_widget)
+            a.setDuration(150)
+            a.setStartValue(float(getattr(blur, "blurRadius", lambda: 0.0)()))
+            a.setEndValue(6.0)
+            a.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+            def _finish():
+                try:
+                    prev_widget.setGraphicsEffect(None)
+                except Exception:
+                    pass
+                try:
+                    self._page_out_anims.pop(prev_widget, None)
+                except Exception:
+                    pass
+                try:
+                    new_widget.setVisible(True)
+                except Exception:
+                    pass
+                try:
+                    self._animate_page_intro(new_widget)
+                except Exception:
+                    pass
+
+            a.finished.connect(_finish)
+            self._page_out_anims[prev_widget] = a
+            a.start()
         except Exception:
             return
 
@@ -1131,10 +1519,12 @@ class MainMenuApp(QMainWindow):
         fm = QFontMetrics(self.lbl_title.font())
         base_y = max(0, (self._title_anim_layer.height() - fm.height()) // 2)
 
-        # Harf sayısı arttıkça stagger düşsün (toplam süre uzamasın)
+        # Toplam süreyi daha stabil tut: çok uzun başlıklarda bile akış aynı kalsın
         letters_only = [ch for ch in (text or "") if ch != " "]
         n = max(1, len(letters_only))
-        stagger = max(26, int(520 / min(n, 10)))
+        target_total = 520  # ms
+        stagger = int(target_total / max(1, n - 1)) if n > 1 else target_total
+        stagger = max(14, min(34, stagger))
 
         # Her harf aynı sağ başlangıç noktasından gelsin (senin çizdiğin şema gibi)
         start_x = max(0, self._title_anim_layer.width() + 40)
@@ -1167,13 +1557,13 @@ class MainMenuApp(QMainWindow):
             def _start_letter(letter_lbl=lbl, effect=op, tp=target_pos):
                 try:
                     pos_anim = QPropertyAnimation(letter_lbl, b"pos", letter_lbl)
-                    pos_anim.setDuration(320)
+                    pos_anim.setDuration(260)
                     pos_anim.setStartValue(letter_lbl.pos())
                     pos_anim.setEndValue(tp)
-                    pos_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+                    pos_anim.setEasingCurve(QEasingCurve.Type.OutQuart)
 
                     op_anim = QPropertyAnimation(effect, b"opacity", letter_lbl)
-                    op_anim.setDuration(320)
+                    op_anim.setDuration(240)
                     op_anim.setStartValue(effect.opacity())
                     op_anim.setEndValue(1.0)
                     op_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
@@ -1205,7 +1595,7 @@ class MainMenuApp(QMainWindow):
             idx += 1
 
         # Animasyon bittikten sonra gerçek title'ı set et ve overlay'i temizle
-        total_ms = (idx * stagger) + 740
+        total_ms = (idx * stagger) + 520
         end_timer = QTimer(self)
         end_timer.setSingleShot(True)
 
@@ -1213,6 +1603,19 @@ class MainMenuApp(QMainWindow):
             self._title_anim_running = False
             self.lbl_title.setText(text)
             self._clear_title_letter_items()
+
+            # Açılışta başlık animasyonu bittikten sonra dönem overlay'ını aktif et
+            try:
+                if (
+                    not self._session_active
+                    and self._welcome_overlay is not None
+                    and self._welcome_overlay.isVisible()
+                    and getattr(self, "_startup_title_gating", False)
+                ):
+                    self._startup_title_gating = False
+                    self._set_welcome_overlay_interactive(True, animate=True)
+            except Exception:
+                pass
 
             # Tüm metin tamamlanınca tek seferlik glow/parlama
             try:
@@ -1357,10 +1760,27 @@ class MainMenuApp(QMainWindow):
         self._animate_title_type_in(text)
         button.setChecked(True)
         self._set_active_menu_button(button)
+
+        prev_widget = None
+        try:
+            prev_widget = self.mainStack.currentWidget() if hasattr(self, "mainStack") and self.mainStack is not None else None
+        except Exception:
+            prev_widget = None
         try:
             open_func()
         except Exception:
             traceback.print_exc()
+
+        new_widget = None
+        try:
+            new_widget = self.mainStack.currentWidget() if hasattr(self, "mainStack") and self.mainStack is not None else None
+        except Exception:
+            new_widget = None
+
+        try:
+            self._transition_between_pages(prev_widget, new_widget)
+        except Exception:
+            pass
 
         current = None
         try:
@@ -1476,7 +1896,7 @@ class MainMenuApp(QMainWindow):
             margin = 16
             x = max(margin, parent.width() - self._toast.width() - margin)
             y = max(margin, parent.height() - self._toast.height() - margin)
-            self._toast.move(x, y)
+            target_pos = QPoint(x, y)
 
             eff = self._toast.graphicsEffect()
             if not isinstance(eff, QGraphicsOpacityEffect):
@@ -1489,24 +1909,60 @@ class MainMenuApp(QMainWindow):
                 except Exception:
                     pass
 
+            try:
+                start_opacity = float(eff.opacity())
+            except Exception:
+                start_opacity = 0.0
+
+            start_pos = self._toast.pos()
+            if not self._toast.isVisible():
+                start_pos = QPoint(target_pos.x(), target_pos.y() + 6)
+                try:
+                    eff.setOpacity(0.0)
+                    start_opacity = 0.0
+                except Exception:
+                    pass
+
+            self._toast.move(start_pos)
+
             self._toast.setVisible(True)
 
-            a_in = QPropertyAnimation(eff, b"opacity", self._toast)
-            a_in.setDuration(120)
-            a_in.setStartValue(0.0)
-            a_in.setEndValue(1.0)
-            a_in.setEasingCurve(QEasingCurve.Type.OutCubic)
+            a_in_op = QPropertyAnimation(eff, b"opacity", self._toast)
+            a_in_op.setDuration(160)
+            a_in_op.setStartValue(start_opacity)
+            a_in_op.setEndValue(1.0)
+            a_in_op.setEasingCurve(QEasingCurve.Type.OutCubic)
 
-            a_out = QPropertyAnimation(eff, b"opacity", self._toast)
-            a_out.setDuration(220)
-            a_out.setStartValue(1.0)
-            a_out.setEndValue(0.0)
-            a_out.setEasingCurve(QEasingCurve.Type.OutCubic)
+            a_in_pos = QPropertyAnimation(self._toast, b"pos", self._toast)
+            a_in_pos.setDuration(200)
+            a_in_pos.setStartValue(start_pos)
+            a_in_pos.setEndValue(target_pos)
+            a_in_pos.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+            in_group = QParallelAnimationGroup(self._toast)
+            in_group.addAnimation(a_in_op)
+            in_group.addAnimation(a_in_pos)
+
+            a_out_op = QPropertyAnimation(eff, b"opacity", self._toast)
+            a_out_op.setDuration(240)
+            a_out_op.setStartValue(1.0)
+            a_out_op.setEndValue(0.0)
+            a_out_op.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+            a_out_pos = QPropertyAnimation(self._toast, b"pos", self._toast)
+            a_out_pos.setDuration(240)
+            a_out_pos.setStartValue(target_pos)
+            a_out_pos.setEndValue(QPoint(target_pos.x(), target_pos.y() - 4))
+            a_out_pos.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+            out_group = QParallelAnimationGroup(self._toast)
+            out_group.addAnimation(a_out_op)
+            out_group.addAnimation(a_out_pos)
 
             group = QSequentialAnimationGroup(self._toast)
-            group.addAnimation(a_in)
-            group.addPause(900)
-            group.addAnimation(a_out)
+            group.addAnimation(in_group)
+            group.addPause(1250)
+            group.addAnimation(out_group)
 
             def _finish():
                 try:
@@ -1571,29 +2027,46 @@ class MainMenuApp(QMainWindow):
                 except Exception:
                     pass
 
-            anim = QPropertyAnimation(self._active_indicator, b"geometry", self._active_indicator)
             start_rect = self._active_indicator.geometry()
-            anim.setStartValue(start_rect)
-            anim.setEndValue(target)
 
             # Mesafeye göre süre: kısa mesafe hızlı, uzun mesafe daha yumuşak
             try:
                 dist = abs(target.y() - start_rect.y())
             except Exception:
                 dist = 0
-            duration = int(180 + min(260, dist * 1.2))
-            anim.setDuration(duration)
-
-            # Premium hissiyat: kontrollü easing (bounce yerine)
+            duration = int(160 + min(240, dist * 1.1))
             curve = QEasingCurve(QEasingCurve.Type.OutCubic)
-            anim.setEasingCurve(curve)
-            self._active_indicator_anim = anim
-            anim.start()
+
+            # Subtle settle: hedefi çok hafif geçip yerine otursun
+            overshoot = QRect(target)
+            try:
+                delta = 2 if (target.y() - start_rect.y()) >= 0 else -2
+                overshoot.moveTop(target.y() + delta)
+            except Exception:
+                pass
+
+            a1 = QPropertyAnimation(self._active_indicator, b"geometry", self._active_indicator)
+            a1.setDuration(int(duration * 0.7))
+            a1.setStartValue(start_rect)
+            a1.setEndValue(overshoot)
+            a1.setEasingCurve(curve)
+
+            a2 = QPropertyAnimation(self._active_indicator, b"geometry", self._active_indicator)
+            a2.setDuration(int(duration * 0.45))
+            a2.setStartValue(overshoot)
+            a2.setEndValue(target)
+            a2.setEasingCurve(QEasingCurve.Type.OutQuart)
+
+            group = QSequentialAnimationGroup(self._active_indicator)
+            group.addAnimation(a1)
+            group.addAnimation(a2)
+            self._active_indicator_anim = group
+            group.start()
         except Exception:
             return
 
     def _animate_page_intro(self, widget):
-        """AuthApp'teki gibi: sağdan gelişi + OutBounce + aynı anda fade-in (güvenli cleanup)."""
+        """Premium: küçük translate + fade-in (bounce yok, controlled easing)."""
         try:
             if widget is None:
                 return
@@ -1611,10 +2084,7 @@ class MainMenuApp(QMainWindow):
                     pass
 
             end_pos = widget.pos()
-            # 4K'da da belirgin olacak mesafe
-            start_pos = QPoint(end_pos.x() + 260, end_pos.y())
-            mid_pos = QPoint(end_pos.x() + 70, end_pos.y())
-
+            start_pos = QPoint(end_pos.x() + 18, end_pos.y() + 4)
             widget.move(start_pos)
 
             # Opacity effect (bitince kaldırıyoruz)
@@ -1624,33 +2094,21 @@ class MainMenuApp(QMainWindow):
                 widget.setGraphicsEffect(eff)
             eff.setOpacity(0.0)
 
-            # 1) Hızlı yaklaşma
-            anim1 = QPropertyAnimation(widget, b"pos", widget)
-            anim1.setDuration(260)
-            anim1.setStartValue(start_pos)
-            anim1.setEndValue(mid_pos)
-            anim1.setEasingCurve(QEasingCurve.Type.InOutQuad)
-
-            # 2) Bounce ile yerine oturma
-            anim2 = QPropertyAnimation(widget, b"pos", widget)
-            anim2.setDuration(780)
-            anim2.setStartValue(mid_pos)
-            anim2.setEndValue(end_pos)
-            anim2.setEasingCurve(QEasingCurve.Type.OutBounce)
-
-            pos_group = QSequentialAnimationGroup(widget)
-            pos_group.addAnimation(anim1)
-            pos_group.addAnimation(anim2)
+            pos_anim = QPropertyAnimation(widget, b"pos", widget)
+            pos_anim.setDuration(220)
+            pos_anim.setStartValue(start_pos)
+            pos_anim.setEndValue(end_pos)
+            pos_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
 
             # Fade-in (login'deki gibi)
             fade = QPropertyAnimation(eff, b"opacity", widget)
-            fade.setDuration(850)
+            fade.setDuration(200)
             fade.setStartValue(0.0)
             fade.setEndValue(1.0)
             fade.setEasingCurve(QEasingCurve.Type.OutCubic)
 
             group = QParallelAnimationGroup(widget)
-            group.addAnimation(pos_group)
+            group.addAnimation(pos_anim)
             group.addAnimation(fade)
 
             def _finish():
@@ -1807,7 +2265,7 @@ class MainMenuApp(QMainWindow):
 
             self.menu_frame.setMinimumWidth(0)
             self._sidebar_animation = QPropertyAnimation(self.menu_frame, b"maximumWidth")
-            self._sidebar_animation.setDuration(220)
+            self._sidebar_animation.setDuration(420)
             self._sidebar_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
             self._sidebar_animation.setStartValue(self.menu_frame.maximumWidth())
             self._sidebar_animation.setEndValue(target_width)
@@ -1819,19 +2277,127 @@ class MainMenuApp(QMainWindow):
         if not animate:
             self.menu_frame.setMinimumWidth(target_width)
 
-        # Text / tooltip yönetimi
-        for btn in getattr(self, "_menu_buttons", []):
-            full_text = self._menu_button_texts.get(btn, "")
+        if animate:
+            self._sidebar_apply_text_stagger(collapsed=collapsed)
+        else:
+            # Text / tooltip yönetimi
+            for btn in getattr(self, "_menu_buttons", []):
+                full_text = self._menu_button_texts.get(btn, "")
+                if collapsed:
+                    btn.setToolTip(full_text)
+                    btn.setText("")
+                    btn.setStyleSheet("text-align:center; padding-left:0px; padding-right:0px;")
+                    btn.setIconSize(QSize(24, 24))
+                else:
+                    btn.setText(full_text)
+                    btn.setToolTip("")
+                    btn.setStyleSheet("")
+                    btn.setIconSize(QSize(22, 22))
+
+    def _sidebar_apply_text_stagger(self, collapsed: bool):
+        try:
+            btns = list(getattr(self, "_menu_buttons", []) or [])
+            if not btns:
+                return
+
+            for b in btns:
+                try:
+                    a = self._sidebar_text_anims.get(b)
+                    if a is not None:
+                        a.stop()
+                except Exception:
+                    pass
+                try:
+                    self._sidebar_text_anims.pop(b, None)
+                except Exception:
+                    pass
+
+            delay_step = 120
+            duration = 650
+
+            for i, btn in enumerate(btns):
+                full_text = self._menu_button_texts.get(btn, "")
+
+                if collapsed:
+                    btn.setToolTip(full_text)
+                    btn.setStyleSheet("text-align:center; padding-left:0px; padding-right:0px;")
+                    btn.setIconSize(QSize(24, 24))
+                else:
+                    btn.setText(full_text)
+                    btn.setToolTip("")
+                    btn.setStyleSheet("")
+                    btn.setIconSize(QSize(22, 22))
+
+                base_style = btn.styleSheet() or ""
+                self._sidebar_text_base_styles[btn] = base_style
+
+                try:
+                    c = btn.palette().buttonText().color()
+                    r, g, bb = int(c.red()), int(c.green()), int(c.blue())
+                except Exception:
+                    r, g, bb = 255, 255, 255
+
+                start_a = 255 if collapsed else 0
+                end_a = 0 if collapsed else 255
+
+                anim = QVariantAnimation(btn)
+                anim.setDuration(duration)
+                anim.setStartValue(start_a)
+                anim.setEndValue(end_a)
+                anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+                # İlk frame'i zorla: böylece fade-in gerçekten 0'dan başlar.
+                try:
+                    st = self._sidebar_text_base_styles.get(btn, "")
+                    btn.setStyleSheet(st + f"color: rgba({r},{g},{bb},{start_a});")
+                except Exception:
+                    pass
+
+                def _on_val(v, b=btn, rr=r, gg=g, bbb=bb):
+                    try:
+                        a = int(v)
+                    except Exception:
+                        a = 255
+                    try:
+                        st = self._sidebar_text_base_styles.get(b, "")
+                        b.setStyleSheet(st + f"color: rgba({rr},{gg},{bbb},{a});")
+                    except Exception:
+                        pass
+
+                anim.valueChanged.connect(_on_val)
+
+                def _finish(b=btn, is_collapsed=collapsed):
+                    try:
+                        st = self._sidebar_text_base_styles.get(b, "")
+                        b.setStyleSheet(st)
+                    except Exception:
+                        pass
+                    if is_collapsed:
+                        try:
+                            b.setText("")
+                        except Exception:
+                            pass
+                    try:
+                        self._sidebar_text_anims.pop(b, None)
+                    except Exception:
+                        pass
+
+                anim.finished.connect(_finish)
+                self._sidebar_text_anims[btn] = anim
+
+                try:
+                    QTimer.singleShot(i * delay_step, anim.start)
+                except Exception:
+                    anim.start()
+
             if collapsed:
-                btn.setToolTip(full_text)
-                btn.setText("")
-                btn.setStyleSheet("text-align:center; padding-left:0px; padding-right:0px;")
-                btn.setIconSize(QSize(24, 24))
-            else:
-                btn.setText(full_text)
-                btn.setToolTip("")
-                btn.setStyleSheet("")
-                btn.setIconSize(QSize(22, 22))
+                try:
+                    if hasattr(self, "btn_menu_toggle") and self.btn_menu_toggle is not None:
+                        self.btn_menu_toggle.setText("»")
+                except Exception:
+                    pass
+        except Exception:
+            return
 
     def _apply_menu_icons(self):
         if not getattr(self, "_menu_buttons", None):

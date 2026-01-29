@@ -14,86 +14,7 @@
    <string>Form</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">QFrame#top_frame, QFrame#bottom_frame{
-background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(148, 191, 213, 255));}
-
-QFrame#middle_n_frame, QFrame#middle_s_frame{
-background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(151, 230, 255, 255));}
-
-QLineEdit#txt_arac_kodu{
-border: none;
-background-color:transparent;
-font-family: &quot;Nesatho&quot;;
-font-weight: bold;
-font-size: 12pt;
-text-align: center;
-color:#df141e;
-}
-QLineEdit, QDateEdit{
-background-color:#fff;
-border: 1px solid #162D6D;
-border-radius: 5px;
-min-height:30px;
-max-height: 30px;
-padding-left: 5px;
-}
-QComboBox {border: 1px solid #162d6d;
-min-height:28px;
-max-height: 28px;
-padding-left: 5px;
-border-radius: 5px; }
-QLineEdit:focus, QComboBox:focus, QDateEdit:focus{
-background-color:#ffffce;
-}
-QLabel{background-color:none;
-font-weight: bold;}
-
-/*QPushBotton#btn_kaydet, QPushBotton#btn_yeni, QPushBotton#btn_sil, QPushBotton#btn_excele_aktar, QPushBotton#btn_pdfye_aktar, QPushBotton#btn_excel_yukle, QPushBotton#btn_yeni, QPushButton#btn_temizle_f{
-background-color: #288EB2;
-color: #162D6D;
-font-size: 14px;
-min-widht:140px;
-min-height:40px;
-}*/
-/* Tablonun Genel Çerçevesi */
-QTableWidget {
-    background-color: #ffffff;
-    alternate-background-color: #cfd0d1; /* Zebra satır rengi */
-    gridline-color: #96999c;             /* Hücre çizgisi rengi */
-    border: 1px solid #4e4e50;
-    border-radius: 4px;
-    font-family: &quot;DaltonaPro&quot;;       /* Veya yeni yüklediğin font adı */
-    outline: 0;                          /* Seçimdeki kesikli çizgiyi kaldırır */
-}
-
-QHeaderView::section {
-    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                      stop:0 #2246AA, stop: 0.5 #1A3580,
-                                      stop: 0.6 #162d6d, stop:1 #20409c);
-    color: white;
-    padding-left: 4px;
-    border: 1px solid #6c6c6c;
-}
-
-
-/* Hücreler */
-QTableWidget::item {
-    padding: 5px;
-    border-bottom: 1px solid #757779;
-}
-
-/* Satır Seçildiğinde */
-QTableWidget::item:selected {
-    background-color: #e1f5fe;
-    color: #162D6D;
-    border-left: 3px solid #01c4ff;      /* Seçili satıra sol vurgu */
-}
-
-/* Köşe Bölgesi (Sol üst boşluk) */
-QTableWidget QTableCornerButton::section {
-    background-color: #162D6D;
-    border: none;
-}</string>
+   <string notr="true"/>
   </property>
   <layout class="QGridLayout" name="gridLayout_8">
    <property name="leftMargin">
@@ -350,6 +271,9 @@ QTableWidget QTableCornerButton::section {
      <layout class="QGridLayout" name="gridLayout_7">
       <item row="0" column="0">
        <widget class="QTableWidget" name="tableView">
+        <property name="focusPolicy">
+         <enum>Qt::FocusPolicy::NoFocus</enum>
+        </property>
         <column>
          <property name="text">
           <string>ARAC KODU</string>
@@ -509,13 +433,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>140</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>16777215</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="alignment">
@@ -528,6 +452,9 @@ QTableWidget QTableCornerButton::section {
         </item>
         <item row="0" column="7" rowspan="6">
          <widget class="QLabel" name="lbl_arac_foto">
+          <property name="focusPolicy">
+           <enum>Qt::FocusPolicy::StrongFocus</enum>
+          </property>
           <property name="frameShape">
            <enum>QFrame::Shape::Box</enum>
           </property>
@@ -653,13 +580,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>30</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>30</height>
+            <height>16777215</height>
            </size>
           </property>
           <item>
@@ -680,13 +607,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>140</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>16777215</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="alignment">
@@ -733,13 +660,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
          </widget>
@@ -780,13 +707,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>140</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>16777215</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="alignment">
@@ -808,13 +735,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
          </widget>
@@ -880,13 +807,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>140</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>16777215</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="alignment">
@@ -958,13 +885,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>30</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>30</height>
+            <height>16777215</height>
            </size>
           </property>
           <item>
@@ -995,13 +922,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
          </widget>
@@ -1042,13 +969,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
          </widget>
@@ -1089,13 +1016,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>30</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>30</height>
+            <height>16777215</height>
            </size>
           </property>
           <item>
@@ -1116,13 +1043,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>140</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>16777215</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="alignment">
@@ -1169,13 +1096,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>140</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>16777215</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="alignment">
@@ -1197,13 +1124,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>30</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>30</height>
+            <height>16777215</height>
            </size>
           </property>
           <item>
@@ -1234,14 +1161,17 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>30</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>30</height>
+            <height>16777215</height>
            </size>
+          </property>
+          <property name="focusPolicy">
+           <enum>Qt::FocusPolicy::NoFocus</enum>
           </property>
          </widget>
         </item>
@@ -1331,13 +1261,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>30</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>30</height>
+            <height>16777215</height>
            </size>
           </property>
           <item>
@@ -1436,13 +1366,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>120</width>
-            <height>30</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>120</width>
-            <height>30</height>
+            <height>16777215</height>
            </size>
           </property>
           <item>
@@ -1473,13 +1403,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>120</width>
-            <height>30</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>120</width>
-            <height>30</height>
+            <height>16777215</height>
            </size>
           </property>
           <item>
@@ -1575,13 +1505,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>120</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>120</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
          </widget>
@@ -1597,13 +1527,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>120</width>
-            <height>30</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>120</width>
-            <height>30</height>
+            <height>16777215</height>
            </size>
           </property>
           <item>
@@ -1671,6 +1601,40 @@ QTableWidget QTableCornerButton::section {
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>txt_arac_plaka</tabstop>
+  <tabstop>cmb_arac_turu</tabstop>
+  <tabstop>cmb_hizmet_turu</tabstop>
+  <tabstop>txt_arac_sahibi</tabstop>
+  <tabstop>cmb_kategori</tabstop>
+  <tabstop>cmb_marka</tabstop>
+  <tabstop>cmb_model</tabstop>
+  <tabstop>txt_yil</tabstop>
+  <tabstop>txt_kapasite</tabstop>
+  <tabstop>date_muayene</tabstop>
+  <tabstop>date_sigorta</tabstop>
+  <tabstop>date_koltuk</tabstop>
+  <tabstop>date_kasko</tabstop>
+  <tabstop>date_calisma_ruhsati</tabstop>
+  <tabstop>date_guzergah_izin</tabstop>
+  <tabstop>chk_arac_takip</tabstop>
+  <tabstop>chk_arac_cam</tabstop>
+  <tabstop>lbl_arac_foto</tabstop>
+  <tabstop>btn_kaydet</tabstop>
+  <tabstop>btn_yeni</tabstop>
+  <tabstop>btn_pdfye_aktar</tabstop>
+  <tabstop>btn_excele_aktar</tabstop>
+  <tabstop>btn_excel_yukle</tabstop>
+  <tabstop>btn_aktifpasif</tabstop>
+  <tabstop>btn_sil</tabstop>
+  <tabstop>cmb_arac_turu_f</tabstop>
+  <tabstop>cmb_hizmet_turu_f</tabstop>
+  <tabstop>cmb_marka_f</tabstop>
+  <tabstop>txt_plaka_f</tabstop>
+  <tabstop>btn_temizle_f</tabstop>
+  <tabstop>txt_arac_kodu</tabstop>
+  <tabstop>tableView</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

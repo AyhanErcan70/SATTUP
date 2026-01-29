@@ -14,106 +14,28 @@
    <string>Form</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">#main_form{
-background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(148, 191, 213, 255));
-}
-QWidget{font-family: &quot;Century Gothic&quot;, &quot;Calibri&quot;; font-size: 10pt; background-color:#f3f3f3;}
-QPushButton{background-color:#01c4ff; border-radius:4px; border:1px solid black;}
-QPushButton:hover{color:#ffffff;background-color:#162D6D; border-radius:6px; border:2px solid #EBEBEB;}
-QPushButton:pressed{color:#ffffff;background-color:red; border-radius:4px; border:3px solid #EBEBEB;padding-top: 4px;}
-QComboBox, QDateEdit, QLineEdit {
-	background-color:#ffffff;
-    border: 1px solid #162D6D;
-    border-radius: 4px;
-    padding: 1px 18px 1px 3px;
-   min-width: 7em;
-}
-QLabel{color: #000000;}
-QComboBox:editable {
-    background-color: white;
-}
-
-QComboBox:!editable, QComboBox::drop-down:editable {
-     background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                 stop: 0 #E1E1E1, stop: 0.4 #DDDDDD,
-                                 stop: 0.5 #D8D8D8, stop: 1.0 #D3D3D3);
-}
-
-/* QComboBox gets the &quot;on&quot; state when the popup is open */
-QComboBox:!editable:on, QComboBox::drop-down:editable:on {
-    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                stop: 0 #D3D3D3, stop: 0.4 #D8D8D8,
-                                stop: 0.5 #DDDDDD, stop: 1.0 #E1E1E1);
-}
-
-QComboBox:on { /* shift the text when the popup opens */
-    padding-top: 3px;
-    padding-left: 4px;
-}
-
-QComboBox::drop-down {
-    subcontrol-origin: padding;
-    subcontrol-position: top right;
-    width: 15px;
-
-    border-left-width: 1px;
-    border-left-color: darkgray;
-    border-left-style: solid; /* just a single line */
-    border-top-right-radius: 3px; /* same radius as the QComboBox */
-    border-bottom-right-radius: 3px;
-}
-
-QComboBox::down-arrow {	
-image: url(:/resim/arrow-down.png);}
-
-QComboBox::down-arrow:on { /* shift the arrow when popup is open */
-    top: 1px;
-    left: 1px;
-}
-
-QComboBox {
-    border: 1px solid #162D6D;
-    selection-background-color: lightgray;
-}</string>
+   <string notr="true"/>
   </property>
   <layout class="QGridLayout" name="gridLayout_5">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <property name="spacing">
+    <number>0</number>
+   </property>
    <item row="0" column="0" rowspan="3">
-    <widget class="QFrame" name="frame">
+    <widget class="QFrame" name="top_frame">
      <property name="styleSheet">
-      <string notr="true">QFrame#frame{
-background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(148, 191, 213, 255));}
-QLabel{
-color: #000000;
-background-color: none;
-}
-/* Modern gradient butonlar */
-QPushButton {
- background-color: qlineargradient(spread:pad, x1:0.903, y1:0.880682, x2:0.203209, y2:0.21, stop:0.465241 rgba(41, 8, 106, 255), stop:0.59893 rgba(15, 42, 117, 255), stop:0.935829 rgba(0, 1, 37, 255));
-    border: 1px solid #ffffff;
-    border-radius: 6px;
-    color: white;
-    font-weight: bold;
-    /*padding: 12px 24px;*/
-    font-size: 12px;
-    margin: 2px;
-}
-
-QPushButton:hover {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 #764ba2, stop:1 #667eea);
-}
-
-QPushButton:pressed {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 #5a67d8, stop:1 #6b46c1);
-	border: 2px solid #ffffff;
-	padding-top: 2px;
-}
-
-QPushButton:disabled {
-    background: #cccccc;
-    color: #666666;
-}</string>
+      <string notr="true"/>
      </property>
      <property name="frameShape">
       <enum>QFrame::Shape::StyledPanel</enum>
@@ -121,27 +43,54 @@ QPushButton:disabled {
      <property name="frameShadow">
       <enum>QFrame::Shadow::Raised</enum>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
-      <item>
-       <layout class="QFormLayout" name="formLayout">
-        <item row="0" column="0">
-         <widget class="QLabel" name="lbl_personel_kodu">
-          <property name="text">
-           <string>Pers. Kodu</string>
+     <layout class="QGridLayout" name="gridLayout_7" columnstretch="0">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>30</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <item row="0" column="0">
+       <layout class="QFormLayout" name="formLayout"/>
+      </item>
+      <item row="1" column="0">
+       <layout class="QGridLayout" name="gridLayout_6">
+        <property name="verticalSpacing">
+         <number>2</number>
+        </property>
+        <item row="7" column="1">
+         <widget class="QDateEdit" name="date_ehliyet_tarihi">
+          <property name="minimumSize">
+           <size>
+            <width>150</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>150</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="displayFormat">
+           <string>dd.MM.yyyy</string>
           </property>
          </widget>
         </item>
-        <item row="0" column="1">
-         <widget class="QLineEdit" name="txt_personel_kodu">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
+        <item row="0" column="0">
+         <widget class="QLabel" name="lbl_personel_kodu">
           <property name="minimumSize">
            <size>
-            <width>135</width>
+            <width>80</width>
             <height>30</height>
            </size>
           </property>
@@ -151,75 +100,89 @@ QPushButton:disabled {
             <height>30</height>
            </size>
           </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="lbl_personel_turu">
           <property name="text">
-           <string>Pers. Türü</string>
+           <string>Pers. Kodu</string>
           </property>
          </widget>
         </item>
-        <item row="1" column="1">
-         <widget class="QLineEdit" name="txt_personel_turu">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
+        <item row="6" column="0">
+         <widget class="QLabel" name="label_4">
           <property name="minimumSize">
            <size>
-            <width>135</width>
+            <width>80</width>
             <height>30</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
-            <width>100</width>
+            <width>80</width>
             <height>30</height>
            </size>
           </property>
-         </widget>
-        </item>
-        <item row="2" column="0">
-         <widget class="QLabel" name="label_3">
           <property name="text">
-           <string>Adı Soyadı</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="1">
-         <widget class="QLineEdit" name="txt_ad_soyad">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>135</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>140</width>
-            <height>30</height>
-           </size>
+           <string>Ehliyet Sınıfı</string>
           </property>
          </widget>
         </item>
         <item row="3" column="0">
          <widget class="QLabel" name="label_6">
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
           <property name="text">
            <string>TCKN</string>
           </property>
          </widget>
         </item>
-        <item row="3" column="1">
-         <widget class="QLineEdit" name="txt_tckn">
+        <item row="5" column="0">
+         <widget class="QLabel" name="label_9">
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Kan Grubu</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="lbl_personel_turu">
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Pers. Türü</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="1">
+         <widget class="QLineEdit" name="txt_kan_grubu">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -228,20 +191,35 @@ QPushButton:disabled {
           </property>
           <property name="minimumSize">
            <size>
-            <width>135</width>
+            <width>150</width>
             <height>30</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
-            <width>100</width>
+            <width>150</width>
             <height>30</height>
            </size>
+          </property>
+          <property name="focusPolicy">
+           <enum>Qt::FocusPolicy::NoFocus</enum>
           </property>
          </widget>
         </item>
         <item row="4" column="0">
          <widget class="QLabel" name="label_7">
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
           <property name="text">
            <string>GSM</string>
           </property>
@@ -257,27 +235,23 @@ QPushButton:disabled {
           </property>
           <property name="minimumSize">
            <size>
-            <width>135</width>
+            <width>150</width>
             <height>30</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
-            <width>100</width>
+            <width>150</width>
             <height>30</height>
            </size>
           </property>
-         </widget>
-        </item>
-        <item row="5" column="0">
-         <widget class="QLabel" name="label_9">
-          <property name="text">
-           <string>Kan Grubu</string>
+          <property name="focusPolicy">
+           <enum>Qt::FocusPolicy::NoFocus</enum>
           </property>
          </widget>
         </item>
-        <item row="5" column="1">
-         <widget class="QLineEdit" name="txt_kan_grubu">
+        <item row="2" column="1">
+         <widget class="QLineEdit" name="txt_ad_soyad">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -286,22 +260,37 @@ QPushButton:disabled {
           </property>
           <property name="minimumSize">
            <size>
-            <width>135</width>
+            <width>150</width>
             <height>30</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
-            <width>70</width>
+            <width>150</width>
             <height>30</height>
            </size>
           </property>
+          <property name="focusPolicy">
+           <enum>Qt::FocusPolicy::NoFocus</enum>
+          </property>
          </widget>
         </item>
-        <item row="6" column="0">
-         <widget class="QLabel" name="label_4">
+        <item row="7" column="0">
+         <widget class="QLabel" name="label_5">
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
           <property name="text">
-           <string>Ehliyet Sınıfı</string>
+           <string>Ehliyet Tarihi</string>
           </property>
          </widget>
         </item>
@@ -315,7 +304,23 @@ QPushButton:disabled {
           </property>
           <property name="minimumSize">
            <size>
-            <width>135</width>
+            <width>150</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>150</width>
+            <height>30</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="label_3">
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
             <height>30</height>
            </size>
           </property>
@@ -325,38 +330,115 @@ QPushButton:disabled {
             <height>30</height>
            </size>
           </property>
-         </widget>
-        </item>
-        <item row="7" column="0">
-         <widget class="QLabel" name="label_5">
           <property name="text">
-           <string>Ehliyet Tarihi</string>
+           <string>Adı Soyadı</string>
           </property>
          </widget>
         </item>
-        <item row="7" column="1">
-         <widget class="QDateEdit" name="date_ehliyet_tarihi">
+        <item row="0" column="1">
+         <widget class="QLineEdit" name="txt_personel_kodu">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="minimumSize">
            <size>
-            <width>135</width>
+            <width>150</width>
             <height>30</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
-            <width>100</width>
+            <width>150</width>
             <height>30</height>
            </size>
           </property>
-          <property name="displayFormat">
-           <string>dd.MM.yyyy</string>
+          <property name="focusPolicy">
+           <enum>Qt::FocusPolicy::NoFocus</enum>
           </property>
          </widget>
         </item>
+        <item row="1" column="1">
+         <widget class="QLineEdit" name="txt_personel_turu">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>150</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>150</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="focusPolicy">
+           <enum>Qt::FocusPolicy::NoFocus</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QLineEdit" name="txt_tckn">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>150</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>150</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="focusPolicy">
+           <enum>Qt::FocusPolicy::NoFocus</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="0">
+         <spacer name="verticalSpacer_4">
+          <property name="orientation">
+           <enum>Qt::Orientation::Vertical</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Policy::Fixed</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
        </layout>
       </item>
-      <item>
+      <item row="2" column="0">
        <layout class="QVBoxLayout" name="verticalLayout">
+        <property name="spacing">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>5</number>
+        </property>
+        <property name="bottomMargin">
+         <number>5</number>
+        </property>
         <item alignment="Qt::AlignmentFlag::AlignHCenter">
          <widget class="QLineEdit" name="txt_ara">
           <property name="sizePolicy">
@@ -367,7 +449,7 @@ QPushButton:disabled {
           </property>
           <property name="minimumSize">
            <size>
-            <width>135</width>
+            <width>0</width>
             <height>30</height>
            </size>
           </property>
@@ -383,6 +465,22 @@ QPushButton:disabled {
          </widget>
         </item>
         <item>
+         <spacer name="verticalSpacer_5">
+          <property name="orientation">
+           <enum>Qt::Orientation::Vertical</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Policy::Fixed</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>10</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
          <widget class="QListWidget" name="list_suruculer">
           <property name="minimumSize">
            <size>
@@ -396,11 +494,14 @@ QPushButton:disabled {
             <height>16777215</height>
            </size>
           </property>
+          <property name="focusPolicy">
+           <enum>Qt::FocusPolicy::NoFocus</enum>
+          </property>
           <property name="frameShape">
-           <enum>QFrame::Shape::Panel</enum>
+           <enum>QFrame::Shape::NoFrame</enum>
           </property>
           <property name="frameShadow">
-           <enum>QFrame::Shadow::Sunken</enum>
+           <enum>QFrame::Shadow::Raised</enum>
           </property>
           <property name="viewMode">
            <enum>QListView::ViewMode::ListMode</enum>
@@ -413,7 +514,7 @@ QPushButton:disabled {
     </widget>
    </item>
    <item row="2" column="1">
-    <widget class="QFrame" name="frame_4">
+    <widget class="QFrame" name="bottom_frame">
      <property name="frameShape">
       <enum>QFrame::Shape::StyledPanel</enum>
      </property>
@@ -422,48 +523,52 @@ QPushButton:disabled {
      </property>
      <layout class="QGridLayout" name="gridLayout_4">
       <item row="0" column="0">
-       <widget class="QTableWidget" name="tableWidget"/>
+       <widget class="QTableWidget" name="tableWidget">
+        <property name="focusPolicy">
+         <enum>Qt::FocusPolicy::NoFocus</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Shadow::Raised</enum>
+        </property>
+        <column>
+         <property name="text">
+          <string>ADI SOYADI</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>TCKN</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>GSM</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>KAN GR.</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>HANGİ ARAÇTA</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>HANGİ İŞTE</string>
+         </property>
+        </column>
+       </widget>
       </item>
      </layout>
     </widget>
    </item>
    <item row="0" column="1" alignment="Qt::AlignmentFlag::AlignTop">
-    <widget class="QFrame" name="frame_2">
+    <widget class="QFrame" name="middle_n_frame">
      <property name="styleSheet">
-      <string notr="true">QFrame#frame_2{
-background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(148, 191, 213, 255));}
-QLabel{
-color: #000000;
-background-color: none;
-}
-/* Modern gradient butonlar */
-QPushButton {
- background-color: qlineargradient(spread:pad, x1:0.903, y1:0.880682, x2:0.203209, y2:0.21, stop:0.465241 rgba(41, 8, 106, 255), stop:0.59893 rgba(15, 42, 117, 255), stop:0.935829 rgba(0, 1, 37, 255));
-    border: 1px solid #ffffff;
-    border-radius: 6px;
-    color: white;
-    font-weight: bold;
-    /*padding: 12px 24px;*/
-    font-size: 12px;
-    margin: 2px;
-}
-
-QPushButton:hover {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 #764ba2, stop:1 #667eea);
-}
-
-QPushButton:pressed {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 #5a67d8, stop:1 #6b46c1);
-	border: 2px solid #ffffff;
-	padding-top: 2px;
-}
-
-QPushButton:disabled {
-    background: #cccccc;
-    color: #666666;
-}</string>
+      <string notr="true"/>
      </property>
      <property name="frameShape">
       <enum>QFrame::Shape::StyledPanel</enum>
@@ -519,7 +624,7 @@ QPushButton:disabled {
           <widget class="QComboBox" name="cmb_src">
            <property name="minimumSize">
             <size>
-             <width>135</width>
+             <width>0</width>
              <height>30</height>
             </size>
            </property>
@@ -528,6 +633,9 @@ QPushButton:disabled {
              <width>16777215</width>
              <height>30</height>
             </size>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::FocusPolicy::NoFocus</enum>
            </property>
           </widget>
          </item>
@@ -584,6 +692,9 @@ QPushButton:disabled {
              <bold>false</bold>
             </font>
            </property>
+           <property name="focusPolicy">
+            <enum>Qt::FocusPolicy::NoFocus</enum>
+           </property>
            <property name="styleSheet">
             <string notr="true">/* Kutunun kendisi (Seçili Değilken) */
 QCheckBox::indicator {
@@ -625,6 +736,9 @@ QCheckBox::indicator:checked {
              <height>30</height>
             </size>
            </property>
+           <property name="focusPolicy">
+            <enum>Qt::FocusPolicy::NoFocus</enum>
+           </property>
            <property name="text">
             <string>SRC Yok</string>
            </property>
@@ -653,7 +767,7 @@ QCheckBox::indicator:checked {
           <widget class="QDateEdit" name="date_src_tarihi">
            <property name="minimumSize">
             <size>
-             <width>135</width>
+             <width>0</width>
              <height>30</height>
             </size>
            </property>
@@ -662,6 +776,9 @@ QCheckBox::indicator:checked {
              <width>16777215</width>
              <height>30</height>
             </size>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::FocusPolicy::NoFocus</enum>
            </property>
            <property name="displayFormat">
             <string>dd.MM.yyyy</string>
@@ -747,6 +864,9 @@ QCheckBox::indicator:checked {
              <height>30</height>
             </size>
            </property>
+           <property name="focusPolicy">
+            <enum>Qt::FocusPolicy::NoFocus</enum>
+           </property>
            <property name="text">
             <string>Psikoteknik Yok</string>
            </property>
@@ -765,6 +885,9 @@ QCheckBox::indicator:checked {
              <width>16777215</width>
              <height>30</height>
             </size>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::FocusPolicy::NoFocus</enum>
            </property>
            <property name="text">
             <string>Psikoteknik Var</string>
@@ -794,7 +917,7 @@ QCheckBox::indicator:checked {
           <widget class="QDateEdit" name="date_psikoteknik_tarihi">
            <property name="minimumSize">
             <size>
-             <width>135</width>
+             <width>0</width>
              <height>30</height>
             </size>
            </property>
@@ -803,6 +926,9 @@ QCheckBox::indicator:checked {
              <width>16777215</width>
              <height>30</height>
             </size>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::FocusPolicy::NoFocus</enum>
            </property>
            <property name="displayFormat">
             <string>dd.MM.yyyy</string>
@@ -913,6 +1039,9 @@ QCheckBox::indicator:checked {
              <height>30</height>
             </size>
            </property>
+           <property name="focusPolicy">
+            <enum>Qt::FocusPolicy::NoFocus</enum>
+           </property>
            <property name="text">
             <string>Sertifikası Var</string>
            </property>
@@ -945,6 +1074,9 @@ QCheckBox::indicator:checked {
              <height>30</height>
             </size>
            </property>
+           <property name="focusPolicy">
+            <enum>Qt::FocusPolicy::NoFocus</enum>
+           </property>
            <property name="text">
             <string>Sertifikası Yok</string>
            </property>
@@ -967,7 +1099,11 @@ QCheckBox::indicator:checked {
           </spacer>
          </item>
          <item row="1" column="1">
-          <widget class="QPlainTextEdit" name="txt_sertifikalar"/>
+          <widget class="QPlainTextEdit" name="txt_sertifikalar">
+           <property name="focusPolicy">
+            <enum>Qt::FocusPolicy::NoFocus</enum>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>
@@ -976,41 +1112,9 @@ QCheckBox::indicator:checked {
     </widget>
    </item>
    <item row="1" column="1">
-    <widget class="QFrame" name="frame_3">
+    <widget class="QFrame" name="middle_s_frame">
      <property name="styleSheet">
-      <string notr="true">QFrame{background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(148, 191, 213, 255));}
-QPushButton {
- background-color: #3f6cd6;
-    border: 1px solid #ffffff;
-    border-radius: 8px;
-    color: white;
-    font-weight: bold;
-    /*padding: 12px 24px;*/
-    font-size: 12px;
-    margin: 0px;
-	min-height:35px;
-min-width:140px;
-}
-
-QPushButton:hover {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 #8b8f90, stop:1 #d1d1d3);
-border:2px solid #ffffff;
-
-}
-
-QPushButton:pressed {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                stop:0 #5a67d8, stop:1 #6b46c1);
-	border: 2px solid #ffffff;
-	padding-top: 5px;
-   margin: 3px;
-}
-
-QPushButton:disabled {
-    background: #cccccc;
-    color: #666666;
-}</string>
+      <string notr="true"/>
      </property>
      <property name="frameShape">
       <enum>QFrame::Shape::StyledPanel</enum>
@@ -1042,13 +1146,13 @@ QPushButton:disabled {
         </property>
         <property name="minimumSize">
          <size>
-          <width>142</width>
-          <height>37</height>
+          <width>140</width>
+          <height>40</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>110</width>
+          <width>140</width>
           <height>40</height>
          </size>
         </property>
@@ -1067,13 +1171,13 @@ QPushButton:disabled {
         </property>
         <property name="minimumSize">
          <size>
-          <width>142</width>
-          <height>37</height>
+          <width>140</width>
+          <height>40</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>110</width>
+          <width>140</width>
           <height>40</height>
          </size>
         </property>
@@ -1092,13 +1196,13 @@ QPushButton:disabled {
         </property>
         <property name="minimumSize">
          <size>
-          <width>142</width>
-          <height>37</height>
+          <width>140</width>
+          <height>40</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>110</width>
+          <width>140</width>
           <height>40</height>
          </size>
         </property>
@@ -1112,6 +1216,15 @@ QPushButton:disabled {
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>cmb_ehliyet_sinifi</tabstop>
+  <tabstop>date_ehliyet_tarihi</tabstop>
+  <tabstop>txt_ara</tabstop>
+  <tabstop>btn_kaydet</tabstop>
+  <tabstop>btn_yeni</tabstop>
+  <tabstop>btn_sil</tabstop>
+  <tabstop>list_suruculer</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

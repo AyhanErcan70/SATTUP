@@ -26,3 +26,9 @@ database/*.db
 build/
 dist/
 *.egg-info/
+
+# Inno Setup / installer outputs
+installer/output/
+*.exe
+*.msi
+*.zip

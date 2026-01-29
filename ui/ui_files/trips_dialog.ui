@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>715</width>
+    <width>800</width>
     <height>470</height>
    </rect>
   </property>
@@ -18,13 +18,13 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>0</width>
+    <width>800</width>
     <height>470</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>16777215</width>
+    <width>800</width>
     <height>470</height>
    </size>
   </property>
@@ -97,6 +97,9 @@ QCheckBox::indicator:checked {
              </item>
              <item row="1" column="0">
               <layout class="QGridLayout" name="gridLayout">
+               <property name="spacing">
+                <number>0</number>
+               </property>
                <item row="0" column="0">
                 <widget class="QLabel" name="lbl_giris1">
                  <property name="sizePolicy">
@@ -315,6 +318,9 @@ QCheckBox::indicator:checked {
              </item>
              <item row="3" column="0">
               <layout class="QGridLayout" name="gridLayout_2">
+               <property name="spacing">
+                <number>0</number>
+               </property>
                <item row="0" column="0">
                 <widget class="QLabel" name="lbl_giris2">
                  <property name="sizePolicy">
@@ -533,6 +539,9 @@ QCheckBox::indicator:checked {
              </item>
              <item row="5" column="0">
               <layout class="QGridLayout" name="gridLayout_3">
+               <property name="spacing">
+                <number>0</number>
+               </property>
                <item row="0" column="0">
                 <widget class="QLabel" name="lbl_giris3">
                  <property name="sizePolicy">
@@ -723,7 +732,7 @@ QCheckBox::indicator:checked {
               </property>
               <property name="minimumSize">
                <size>
-                <width>160</width>
+                <width>180</width>
                 <height>90</height>
                </size>
               </property>
@@ -783,6 +792,9 @@ QCheckBox::indicator:checked {
                </item>
                <item row="1" column="0">
                 <layout class="QGridLayout" name="gridLayout_5">
+                 <property name="spacing">
+                  <number>0</number>
+                 </property>
                  <item row="0" column="0">
                   <widget class="QLabel" name="lbl_giris4">
                    <property name="sizePolicy">
@@ -1001,6 +1013,9 @@ QCheckBox::indicator:checked {
                </item>
                <item row="3" column="0">
                 <layout class="QGridLayout" name="gridLayout_6">
+                 <property name="spacing">
+                  <number>0</number>
+                 </property>
                  <item row="0" column="0">
                   <widget class="QLabel" name="lbl_giris5">
                    <property name="sizePolicy">
@@ -1189,7 +1204,7 @@ QCheckBox::indicator:checked {
               </property>
               <property name="minimumSize">
                <size>
-                <width>160</width>
+                <width>180</width>
                 <height>90</height>
                </size>
               </property>
@@ -1249,6 +1264,9 @@ QCheckBox::indicator:checked {
                </item>
                <item row="1" column="0">
                 <layout class="QGridLayout" name="gridLayout_8">
+                 <property name="spacing">
+                  <number>0</number>
+                 </property>
                  <item row="0" column="0">
                   <widget class="QLabel" name="lbl_giris6">
                    <property name="sizePolicy">
@@ -1465,19 +1483,19 @@ QCheckBox::indicator:checked {
                <property name="minimumSize">
                 <size>
                  <width>0</width>
-                 <height>30</height>
+                 <height>60</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
                  <width>16777215</width>
-                 <height>30</height>
+                 <height>60</height>
                 </size>
                </property>
                <property name="font">
                 <font>
                  <family>Microsoft Sans Serif</family>
-                 <pointsize>9</pointsize>
+                 <pointsize>8</pointsize>
                  <italic>true</italic>
                  <bold>true</bold>
                 </font>
@@ -1495,10 +1513,13 @@ QCheckBox::indicator:checked {
                <property name="orientation">
                 <enum>Qt::Orientation::Vertical</enum>
                </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Policy::Fixed</enum>
+               </property>
                <property name="sizeHint" stdset="0">
                 <size>
                  <width>20</width>
-                 <height>40</height>
+                 <height>10</height>
                 </size>
                </property>
               </spacer>
@@ -1610,10 +1631,13 @@ QCheckBox::indicator:checked {
                  <property name="orientation">
                   <enum>Qt::Orientation::Vertical</enum>
                  </property>
+                 <property name="sizeType">
+                  <enum>QSizePolicy::Policy::Fixed</enum>
+                 </property>
                  <property name="sizeHint" stdset="0">
                   <size>
                    <width>20</width>
-                   <height>40</height>
+                   <height>10</height>
                   </size>
                  </property>
                 </spacer>
@@ -1622,7 +1646,7 @@ QCheckBox::indicator:checked {
              </item>
              <item>
               <layout class="QVBoxLayout" name="verticalLayout_2">
-               <item>
+               <item alignment="Qt::AlignmentFlag::AlignHCenter">
                 <widget class="QPushButton" name="btn_atama">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -1666,7 +1690,7 @@ ATAMASI YAP.</string>
                  <property name="sizeHint" stdset="0">
                   <size>
                    <width>20</width>
-                   <height>40</height>
+                   <height>20</height>
                   </size>
                  </property>
                 </spacer>

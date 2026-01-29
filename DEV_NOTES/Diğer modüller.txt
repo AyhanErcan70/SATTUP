@@ -1,0 +1,71 @@
+QFrame#top_frame, QFrame#bottom_frame{
+background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(148, 191, 213, 255));}
+
+QFrame#middle_n_frame, QFrame#middle_s_frame{
+background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(151, 230, 255, 255));}
+
+QLineEdit#txt_personel_kodu{
+border: none;
+background-color:transparent;
+font-family: "Nesatho";
+font-weight: bold;
+font-size: 12pt;
+text-align: center;
+color:#df141e;
+}
+QLineEdit, QDateEdit{
+background-color:#fff;
+border: 1px solid #162D6D;
+border-radius: 5px;
+min-height:30px;
+max-height: 30px;
+padding-left: 5px;
+}
+QComboBox {border: 1px solid #162d6d;
+min-height:28px;
+max-height: 28px;
+padding-left: 5px;
+border-radius: 5px; }
+QLineEdit:focus, QComboBox:focus, QDateEdit:focus{
+background-color:#ffffce;
+}
+QLabel{background-color:none;
+font-weight: bold;}
+
+QTableWidget {
+    background-color: #ffffff;
+    alternate-background-color: #cfd0d1;
+    gridline-color: #96999c;            
+    border: 1px solid #4e4e50;
+    border-radius: 4px;
+    font-family: "DaltonaPro";      
+    outline: 0;                        
+}
+
+QHeaderView::section {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #2246AA, stop: 0.5 #1A3580,
+                                      stop: 0.6 #162d6d, stop:1 #20409c);
+    color: white;
+    padding-left: 4px;
+    border: 1px solid #6c6c6c;
+}
+
+
+QTableWidget::item {
+    padding: 5px;
+    border-bottom: 1px solid #757779;
+}
+
+
+QTableWidget::item:selected {
+    background-color: #e1f5fe;
+    color: #162D6D;
+    border-left: 3px solid #01c4ff;  
+}
+
+
+QTableWidget QTableCornerButton::section {
+    background-color: #162D6D;
+    border: none;
+}

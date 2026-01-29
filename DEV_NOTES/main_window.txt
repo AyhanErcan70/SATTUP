@@ -1,0 +1,103 @@
+#centralwidget {
+	border-image: url(:/resimler/a22.jpg) 0,0,0,0 stretch, stretch;
+    background-position: center;
+	 background-repeat: no-repeat;
+}
+#mainStack{image: url(:/resimler/logo_faded480.png) 0,0,0,0 stretch, stretch;}
+
+QPushButton {
+	background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #828282, stop: 0.5 #797979,
+                                      stop: 0.6 #737373, stop:1 #3D3D3D);
+    color: #fff;
+    font-family: 'Nesatho', sans-serif;    
+    font-size: 12px;
+    border-radius: 8px;
+	border-top: 1px solid #C0C0C0;
+    border-left: 1px solid #C0C0C0;
+    border-right: 2px solid #000; 
+    border-bottom: 3px solid #000; 
+    margin-right: 4px; 
+    margin-bottom: 5px;    
+}
+QPushButton:hover {
+    color: #ffff00;
+    border-right: 4px solid #A9A9A9;
+    border-bottom: 5px solid #808080;
+}
+
+QPushButton:pressed {
+    color: #ffaa00;
+    border-top: 2px solid #696969;
+    border-left: 2px solid #696969;
+    border-right: 1px solid #808080;   
+    border-bottom: 1px solid #808080;     
+    margin-top: 4px;  
+    margin-left: 2px; 
+    margin-bottom: 1px;
+    margin-right: 2px;    
+    padding-top: 10px;  
+}
+
+QLabel#lbl_footer, QLabel#lbl_user{color: #fff;}
+
+QLabel#lbl_title {
+color: #ffe101; 
+font-family: "Grenada"; 
+font-size: 20pt;}
+
+QComboBox {
+    border: 1px solid #162d6d;
+    border-radius: 3px;
+    padding: 1px 18px 1px 3px;
+    min-width: 6em;
+	min-height:28px;
+	max-height: 28px;
+}
+
+QComboBox:editable {
+    background: #ffffce;
+}
+
+QComboBox:!editable, QComboBox::drop-down:editable {
+     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                 stop: 0 #ffffff, stop: 0.4 #f7f7f7,
+                                 stop: 0.5 #f9f9f9, stop: 1.0 #fefefe);
+}
+
+QComboBox:!editable:on, QComboBox::drop-down:editable:on {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #fefefe, stop: 0.4 #f9f9f9,
+                                stop: 0.5 #f7f7f7, stop: 1.0 #ffffff);
+}
+
+QComboBox:on { 
+    padding-top: 3px;
+    padding-left: 4px;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 15px;
+    border-left-width: 1px;
+    border-left-color: darkgray;
+    border-left-style: solid; 
+    border-top-right-radius: 3px; 
+    border-bottom-right-radius: 3px;
+}
+
+QComboBox::down-arrow {
+ 	image: url(:/simgeler/arrow-down.png);
+}
+
+QComboBox::down-arrow:on { 
+    top: 1px;
+    left: 1px;
+}
+
+QStackedWidget, QStackedWidget > QWidget {
+    background: transparent;
+    background-color: transparent;
+    border: none;
+}

@@ -52,6 +52,18 @@ class RoutesApp(QWidget):
         self._setup_connections()
         self._load_customers()
 
+    def _split_legacy_route_name(self, route_name: str, movement_type: str) -> tuple[str, str]:
+        rn = str(route_name or "").strip()
+        mt = str(movement_type or "").strip()
+        try:
+            if (not mt) and " - " in rn:
+                p1, p2 = rn.split(" - ", 1)
+                rn = p1.strip()
+                mt = p2.strip()
+        except Exception:
+            pass
+        return rn, mt
+
     def _ensure_routes_table(self):
         conn = None
         try:
@@ -322,26 +334,39 @@ class RoutesApp(QWidget):
     def _fetch_route_params_stops(self, contract_id: int, route_name: str, movement_type: str):
         rid = None
         stops = ""
+
+        rn_in, mt_in = self._split_legacy_route_name(route_name, movement_type)
+        legacy_name = ""
+        try:
+            if (mt_in or "").strip():
+                legacy_name = f"{rn_in} - {mt_in}".strip()
+        except Exception:
+            legacy_name = ""
         try:
             conn = self.db.connect()
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT id, COALESCE(stops,''), COALESCE(movement_type,'')
+                SELECT id, COALESCE(stops,''), COALESCE(movement_type,''), COALESCE(route_name,'')
                 FROM route_params
-                WHERE contract_id = ? AND COALESCE(route_name,'') = ?
+                WHERE contract_id = ? AND (COALESCE(route_name,'') = ? OR COALESCE(route_name,'') = ?)
                 ORDER BY id DESC
                 """,
-                (int(contract_id), str(route_name or "").strip()),
+                (int(contract_id), str(rn_in or "").strip(), str(legacy_name or "").strip()),
             )
             rows = cursor.fetchall() or []
             conn.close()
         except Exception:
             rows = []
 
-        mt_in = str(movement_type or "").strip()
-        for r_id, r_stops, r_mt in rows:
-            mt_db = str(r_mt or "").strip()
+        for r_id, r_stops, r_mt, r_rn in rows:
+            mt_db_raw = str(r_mt or "").strip()
+            rn_db_raw = str(r_rn or "").strip()
+            rn_db, mt_db = self._split_legacy_route_name(rn_db_raw, mt_db_raw)
+
+            # route_name uyuşması şart (normalize edilmiş)
+            if str(rn_db or "").strip() != str(rn_in or "").strip():
+                continue
             if mt_in and mt_db != mt_in:
                 continue
             rid = int(r_id)
@@ -736,8 +761,9 @@ class RoutesApp(QWidget):
             it0.setData(Qt.ItemDataRole.UserRole + 101, int(rid))
             it0.setData(Qt.ItemDataRole.UserRole + 102, raw_st)
 
-            rn = str(rname or "").strip()
-            mv = str(mtype or "").strip()
+            rn0 = str(rname or "").strip()
+            mv0 = str(mtype or "").strip()
+            rn, mv = self._split_legacy_route_name(rn0, mv0)
             disp = f"{rn} - {mv}" if mv else rn
             it1 = QTableWidgetItem(disp)
             it1.setFlags(it1.flags() & ~Qt.ItemFlag.ItemIsEditable)

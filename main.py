@@ -12,6 +12,7 @@ from PyQt6.QtCore import QDate
 from PyQt6.QtWidgets import QApplication, QComboBox, QDialog, QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout
 from app.core.db_manager import DatabaseManager
 from app.modules.main_menu import MainMenuApp
+from app.utils.style_utils import ensure_global_polisher
 
 
 class PeriodSelectDialog(QDialog):
@@ -114,16 +115,14 @@ def main():
 
     app = QApplication(sys.argv)
 
+    ensure_global_polisher(app, row_height=20)
+
+    # Global QSS: enabled by default. Set SATTUP_ENABLE_GLOBAL_QSS=0 to disable.
     try:
-        enable_global_qss = str(os.environ.get("SATTUP_ENABLE_GLOBAL_QSS", "")).strip() in (
-            "1",
-            "true",
-            "True",
-            "yes",
-            "YES",
-        )
+        env_val = str(os.environ.get("SATTUP_ENABLE_GLOBAL_QSS", "")).strip()
+        enable_global_qss = env_val not in ("0", "false", "False", "no", "NO")
     except Exception:
-        enable_global_qss = False
+        enable_global_qss = True
 
     if enable_global_qss:
         style_path = os.path.join(BASE_DIR, "ui", "styles", "main_style.qss")

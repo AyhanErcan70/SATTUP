@@ -156,7 +156,38 @@ class AttendanceApp(QWidget):
             self.btn_geri_don.clicked.connect(self._return_to_main)
 
         self._reload_summary()
-        self._refresh_lock_ui()
+
+    def _apply_compact_table_combo(self, cmb: QComboBox, bg_color: str | None = None):
+        try:
+            if cmb is None:
+                return
+            try:
+                cmb.setFixedHeight(22)
+            except Exception:
+                pass
+
+            try:
+                f = cmb.font()
+                f.setPointSize(7)
+                cmb.setFont(f)
+                try:
+                    v = cmb.view()
+                    if v is not None:
+                        v.setFont(f)
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
+            bg = f"background-color: {bg_color};" if bg_color else ""
+            cmb.setStyleSheet(
+                "QComboBox {"
+                + bg
+                + " padding: 1px 4px; min-height: 18px; border-radius: 4px; font-size: 7pt; }"
+                + "QComboBox::drop-down { width: 14px; border: none; }"
+            )
+        except Exception:
+            return
 
     def _render_toplu_puantaj_tab(self):
         if not hasattr(self, "tbl_toplu_puantaj"):
@@ -990,6 +1021,38 @@ class AttendanceApp(QWidget):
 
 
 class BulkAttendanceDialog(QDialog):
+    def _apply_compact_table_combo(self, cmb: QComboBox, bg_color: str | None = None):
+        try:
+            if cmb is None:
+                return
+            try:
+                cmb.setFixedHeight(22)
+            except Exception:
+                pass
+
+            try:
+                f = cmb.font()
+                f.setPointSize(7)
+                cmb.setFont(f)
+                try:
+                    v = cmb.view()
+                    if v is not None:
+                        v.setFont(f)
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
+            bg = f"background-color: {bg_color};" if bg_color else ""
+            cmb.setStyleSheet(
+                "QComboBox {"
+                + bg
+                + " padding: 1px 4px; min-height: 18px; border-radius: 4px; font-size: 7pt; }"
+                + "QComboBox::drop-down { width: 14px; border: none; }"
+            )
+        except Exception:
+            return
+
     def _parse_tr_float(self, txt: str) -> float:
         s = str(txt or "").strip()
         if not s:
@@ -1177,6 +1240,7 @@ class BulkAttendanceDialog(QDialog):
                         for i in range(w.count()):
                             nw.addItem(w.itemText(i), w.itemData(i))
                         nw.setCurrentIndex(w.currentIndex())
+                        self._apply_compact_table_combo(nw)
                         self.table.setCellWidget(insert_at, c, nw)
                     continue
 
@@ -1465,7 +1529,7 @@ class BulkAttendanceDialog(QDialog):
         try:
             self.table.setColumnWidth(0, 40)
             self.table.setColumnWidth(1, 120)
-            self.table.setColumnWidth(2, 260)
+            self.table.setColumnWidth(2, 256)
             self.table.setColumnWidth(3, 110)
             self.table.setColumnWidth(4, 120)
             self.table.setColumnWidth(5, 120)
@@ -1790,12 +1854,14 @@ class BulkAttendanceDialog(QDialog):
                     plate, cap = str(rec), 0
                 label_v = f"{plate} ({int(cap)})" if int(cap or 0) > 0 else str(plate)
                 cmb_v.addItem(label_v, vcode)
+            self._apply_compact_table_combo(cmb_v)
             self.table.setCellWidget(row, self._col_vehicle, cmb_v)
 
             cmb_d = QComboBox()
             cmb_d.addItem("Seçiniz...", None)
             for did, name in self._driver_map.items():
                 cmb_d.addItem(name, did)
+            self._apply_compact_table_combo(cmb_d)
             self.table.setCellWidget(row, self._col_driver, cmb_d)
 
             t_item = QTableWidgetItem(_time_text_for_time_block(label))
@@ -1830,7 +1896,10 @@ class BulkAttendanceDialog(QDialog):
                     w = self.table.cellWidget(row, cc)
                     if w is not None:
                         try:
-                            w.setStyleSheet("background-color: #fff3cd;")
+                            if isinstance(w, QComboBox):
+                                self._apply_compact_table_combo(w, bg_color="#fff3cd")
+                            else:
+                                w.setStyleSheet("background-color: #fff3cd;")
                         except Exception:
                             pass
 

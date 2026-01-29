@@ -14,90 +14,7 @@
    <string>Form</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">QFrame#top_frame, QFrame#middle_s_frame, QFrame#bottom_frame{
-background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(148, 191, 213, 255));}
-
-QFrame#middle_n_frame, QFrame#middle_s_frame{
-background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(151, 230, 255, 255));}
-
-QLineEdit#txt_musteri_kodu{
-border: none;
-background-color:transparent;
-font-family: &quot;Nesatho&quot;;
-font-weight: bold;
-font-size: 12pt;
-text-align: center;
-color:#df141e;
-}
-QLineEdit, QDateEdit{
-background-color:#fff;
-border: 1px solid #162D6D;
-font-family: &quot;Century Gothic&quot;;
-font-size: 10pt;
-border-radius: 5px;
-min-height:30px;
-max-height: 30px;
-padding-left: 5px;
-}
-QComboBox {border: 1px solid #162d6d;
-min-height:28px;
-max-height: 28px;
-padding-left: 5px;
-border-radius: 5px; 
-font-familiy: &quot;Century Gothic&quot;;
-font-size: 10pt;
-}
-
-QLineEdit:focus, QComboBox:focus, QDateEdit:focus{
-background-color:#ffffce;
-}
-QLabel{background-color:none;
-font-weight: bold;}
-
-QPushBotton#btn_kaydet, QPushBotton#btn_yeni, QPushBotton#btn_sil, QPushBotton#btn_excele_aktar, QPushBotton#btn_pdfye_aktar, QPushBotton#btn_excel_yukle, QPushBotton#btn_yeni{
-background-color: #288EB2;
-color: #162D6D;
-font-size: 14px;
-}
-/* Tablonun Genel Çerçevesi */
-QTableWidget {
-    background-color: #ffffff;
-    alternate-background-color: #cfd0d1; /* Zebra satır rengi */
-    gridline-color: #96999c;             /* Hücre çizgisi rengi */
-    border: 1px solid #4e4e50;
-    border-radius: 4px;
-    font-family: &quot;DaltonaPro&quot;;       /* Veya yeni yüklediğin font adı */
-    outline: 0;                          /* Seçimdeki kesikli çizgiyi kaldırır */
-}
-
-QHeaderView::section {
-    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                      stop:0 #2246AA, stop: 0.5 #1A3580,
-                                      stop: 0.6 #162d6d, stop:1 #20409c);
-    color: white;
-    padding-left: 4px;
-    border: 1px solid #6c6c6c;
-}
-
-
-/* Hücreler */
-QTableWidget::item {
-    padding: 5px;
-    border-bottom: 1px solid #757779;
-}
-
-/* Satır Seçildiğinde */
-QTableWidget::item:selected {
-    background-color: #e1f5fe;
-    color: #162D6D;
-    border-left: 3px solid #01c4ff;      /* Seçili satıra sol vurgu */
-}
-
-/* Köşe Bölgesi (Sol üst boşluk) */
-QTableWidget QTableCornerButton::section {
-    background-color: #162D6D;
-    border: none;
-}</string>
+   <string notr="true"/>
   </property>
   <layout class="QGridLayout" name="gridLayout_8">
    <property name="leftMargin">
@@ -170,13 +87,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="font">
@@ -242,13 +159,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="font">
@@ -271,13 +188,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>220</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>220</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="font">
@@ -341,13 +258,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="font">
@@ -407,13 +324,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>220</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>200</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="font">
@@ -506,13 +423,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>220</width>
-            <height>30</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>220</width>
-            <height>30</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="font">
@@ -538,13 +455,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="font">
@@ -568,13 +485,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="font">
@@ -775,13 +692,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="font">
@@ -944,13 +861,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="font">
@@ -974,13 +891,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>220</width>
-            <height>30</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>220</width>
-            <height>30</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="font">
@@ -1006,13 +923,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>30</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>30</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="font">
@@ -1044,13 +961,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>30</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>30</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="font">
@@ -1147,13 +1064,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>30</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>30</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="font">
@@ -1179,13 +1096,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="font">
@@ -1209,13 +1126,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>220</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>200</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="font">
@@ -1238,13 +1155,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>220</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>200</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="font">
@@ -1303,13 +1220,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>30</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>180</width>
-            <height>30</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="font">
@@ -1724,13 +1641,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>140</width>
-            <height>30</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>140</width>
-            <height>30</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="sizeIncrement">
@@ -1772,13 +1689,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>160</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>160</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="font">
@@ -1801,13 +1718,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>80</width>
-            <height>30</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>80</width>
-            <height>30</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="sizeIncrement">
@@ -1849,13 +1766,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>120</width>
-            <height>32</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>120</width>
-            <height>32</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="font">
@@ -1913,13 +1830,13 @@ QTableWidget QTableCornerButton::section {
           <property name="minimumSize">
            <size>
             <width>110</width>
-            <height>30</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>110</width>
-            <height>30</height>
+            <height>16777215</height>
            </size>
           </property>
           <property name="sizeIncrement">

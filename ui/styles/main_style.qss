@@ -1,66 +1,319 @@
-QWidget {
-    background-color: #f5f5f5;
-    color: #111111;
-    font-family: "Segoe UI";
-    font-size: 10pt;
+QMainWindow#MainWindow #centralwidget {
+	border-image: url(:/resimler/a22.jpg) 0,0,0,0 stretch, stretch;
+    background-position: center;
+	 background-repeat: no-repeat;
 }
 
-QLabel {
-    color: #111111;
+QMainWindow#MainWindow #mainStack{image: url(:/resimler/logo_faded480.png) 0,0,0,0 stretch, stretch;}
+
+QMainWindow#MainWindow QPushButton {
+	background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #828282, stop: 0.5 #797979,
+                                      stop: 0.6 #737373, stop:1 #3D3D3D);
+    color: #fff;
+    font-family: 'Nesatho', sans-serif;    
+    font-size: 12px;
+    border-radius: 8px;
+	border-top: 1px solid #C0C0C0;
+    border-left: 1px solid #C0C0C0;
+    border-right: 2px solid #000; 
+    border-bottom: 3px solid #000; 
+    margin-right: 4px; 
+    margin-bottom: 5px;    
+}
+QMainWindow#MainWindow QPushButton:hover {
+    color: #ffff00;
+    border-right: 4px solid #A9A9A9;
+    border-bottom: 5px solid #808080;
 }
 
-QLineEdit, QComboBox, QDateEdit, QTimeEdit {
+QMainWindow#MainWindow QPushButton:pressed {
+    color: #ffaa00;
+    border-top: 2px solid #696969;
+    border-left: 2px solid #696969;
+    border-right: 1px solid #808080;   
+    border-bottom: 1px solid #808080;     
+    margin-top: 4px;  
+    margin-left: 2px; 
+    margin-bottom: 1px;
+    margin-right: 2px;    
+    padding-top: 10px;  
+}
+
+QMainWindow#MainWindow QLabel#lbl_footer, QMainWindow#MainWindow QLabel#lbl_user{color: #fff;}
+
+QMainWindow#MainWindow QLabel#lbl_title {
+color: #ffe101; 
+font-family: "Grenada"; 
+font-size: 20pt;}
+
+QMainWindow#MainWindow QComboBox {
+    border: 1px solid #162d6d;
+    border-radius: 3px;
+    padding: 1px 18px 1px 3px;
+    min-width: 6em;
+	min-height:28px;
+	max-height: 28px;
+}
+
+QMainWindow#MainWindow QComboBox:editable {
+    background: #ffffce;
+}
+
+QMainWindow#MainWindow QComboBox:!editable, QMainWindow#MainWindow QComboBox::drop-down:editable {
+     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                 stop: 0 #ffffff, stop: 0.4 #f7f7f7,
+                                 stop: 0.5 #f9f9f9, stop: 1.0 #fefefe);
+}
+
+QMainWindow#MainWindow QComboBox:!editable:on, QMainWindow#MainWindow QComboBox::drop-down:editable:on {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #fefefe, stop: 0.4 #f9f9f9,
+                                stop: 0.5 #f7f7f7, stop: 1.0 #ffffff);
+}
+
+QMainWindow#MainWindow QComboBox:on { 
+    padding-top: 3px;
+    padding-left: 4px;
+}
+
+QMainWindow#MainWindow QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 15px;
+    border-left-width: 1px;
+    border-left-color: darkgray;
+    border-left-style: solid; 
+    border-top-right-radius: 3px; 
+    border-bottom-right-radius: 3px;
+}
+
+QMainWindow#MainWindow QComboBox::down-arrow {
+ 	image: url(:/simgeler/arrow-down.png);
+}
+
+QMainWindow#MainWindow QComboBox::down-arrow:on { 
+    top: 1px;
+    left: 1px;
+}
+
+QMainWindow#MainWindow QStackedWidget, QMainWindow#MainWindow QStackedWidget > QWidget {
+    background: transparent;
+    background-color: transparent;
+    border: none;
+}
+
+QFrame#top_frame, QFrame#bottom_frame{
+background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(148, 191, 213, 255));}
+
+QMainWindow#MainWindow QFrame#top_frame[mw_header="true"],
+QMainWindow#MainWindow QFrame#bottom_frame[mw_header="true"] {
+    background: transparent;
+    background-color: transparent;
+    border: none;
+}
+
+QFrame#middle_n_frame, QFrame#middle_s_frame{
+background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:1, y2:0, stop:0.287234 rgba(151, 230, 255, 255), stop:0.595745 rgba(151, 230, 255, 255));}
+
+QFrame#top_frame QLineEdit#txt_personel_kodu, QFrame#top_frame QLineEdit#txt_musteri_kodu, QFrame#top_frame QLineEdit#txt_arac_kodu, QFrame#top_frame QLineEdit#txt_sozlesme_kodu{
+border: none;
+background:none;
+background-color:transparent;
+font-family: "Nesatho";
+font-weight: bold;
+font-size: 12pt;
+text-align: center;
+color:#df141e;
+}
+
+QFrame#top_frame QLineEdit, QFrame#bottom_frame QLineEdit, QFrame#middle_n_frame QLineEdit, QFrame#middle_s_frame QLineEdit,
+QFrame#top_frame QDateEdit, QFrame#bottom_frame QDateEdit, QFrame#middle_n_frame QDateEdit, QFrame#middle_s_frame QDateEdit{
+background-color:#fff;
+border: 1px solid #162D6D;
+border-radius: 5px;
+min-height:30px;
+max-height: 30px;
+padding-left: 5px;
+}
+
+QFrame#top_frame QComboBox, QFrame#top_frame QDateEdit, QFrame#bottom_frame QComboBox, QFrame#bottom_frame QDateEdit, QFrame#middle_n_frame QComboBox, QFrame#middle_n_frame QDateEdit, QFrame#middle_s_frame QComboBox, QFrame#middle_s_frame QDateEdit{border: 1px solid #162d6d;
+min-height:28px;
+max-height: 28px;
+padding-left: 5px;
+border-radius: 5px; }
+
+QFrame#top_frame QDateEdit::up-button, QFrame#bottom_frame QDateEdit::up-button, QFrame#middle_n_frame QDateEdit::up-button, QFrame#middle_s_frame QDateEdit::up-button,
+QFrame#top_frame QDateEdit::down-button, QFrame#bottom_frame QDateEdit::down-button, QFrame#middle_n_frame QDateEdit::down-button, QFrame#middle_s_frame QDateEdit::down-button{
+    subcontrol-origin: border;
+    width: 14px;
+    border-left: 1px solid #162d6d;
+    background: transparent;
+}
+
+QFrame#top_frame QDateEdit::up-arrow, QFrame#bottom_frame QDateEdit::up-arrow, QFrame#middle_n_frame QDateEdit::up-arrow, QFrame#middle_s_frame QDateEdit::up-arrow,
+QFrame#top_frame QDateEdit::down-arrow, QFrame#bottom_frame QDateEdit::down-arrow, QFrame#middle_n_frame QDateEdit::down-arrow, QFrame#middle_s_frame QDateEdit::down-arrow{
+    width: 10px;
+    height: 10px;
+}
+
+QFrame#top_frame QDateEdit::drop-down, QFrame#bottom_frame QDateEdit::drop-down, QFrame#middle_n_frame QDateEdit::drop-down, QFrame#middle_s_frame QDateEdit::drop-down{
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 18px;
+    border-left: 1px solid #162d6d;
+    background: transparent;
+}
+
+QFrame#top_frame QDateEdit::down-arrow, QFrame#bottom_frame QDateEdit::down-arrow, QFrame#middle_n_frame QDateEdit::down-arrow, QFrame#middle_s_frame QDateEdit::down-arrow{
+    image: url(:/simgeler/arrow-down.png);
+}
+
+QFrame#top_frame QCalendarWidget QWidget, QFrame#bottom_frame QCalendarWidget QWidget, QFrame#middle_n_frame QCalendarWidget QWidget, QFrame#middle_s_frame QCalendarWidget QWidget{
     background-color: #ffffff;
-    color: #111111;
-    border: 1px solid #bfc5cc;
-    border-radius: 4px;
-    padding: 4px 6px;
+    color: #162D6D;
 }
 
-QLineEdit:focus, QComboBox:focus, QDateEdit:focus, QTimeEdit:focus {
-    border: 2px solid #288EB2;
-}
-
-QPushButton {
-    background-color: #288EB2;
+QFrame#top_frame QCalendarWidget QToolButton, QFrame#bottom_frame QCalendarWidget QToolButton, QFrame#middle_n_frame QCalendarWidget QToolButton, QFrame#middle_s_frame QCalendarWidget QToolButton{
+    background-color: #162D6D;
     color: #ffffff;
     border: none;
     border-radius: 4px;
-    padding: 6px 10px;
-    min-height: 22px;
-}
-
-QPushButton:hover {
-    background-color: #1f7a99;
-}
-
-QPushButton:pressed {
-    background-color: #165e76;
-}
-
-QTableWidget, QTableView {
-    background-color: #ffffff;
-    alternate-background-color: #f2f2f2;
-    gridline-color: #d6d6d6;
-    border: 1px solid #bfc5cc;
-}
-
-QHeaderView::section {
-    background-color: #2b2b2b;
-    color: #ffffff;
     padding: 4px;
-    border: 1px solid #1f1f1f;
 }
 
-QTableWidget::item:selected, QTableView::item:selected {
-    background-color: #d6eaf8;
-    color: #111111;
+QFrame#top_frame QCalendarWidget QAbstractItemView, QFrame#bottom_frame QCalendarWidget QAbstractItemView, QFrame#middle_n_frame QCalendarWidget QAbstractItemView, QFrame#middle_s_frame QCalendarWidget QAbstractItemView{
+    selection-background-color: #e1f5fe;
+    selection-color: #162D6D;
+    outline: 0;
 }
 
-QMessageBox {
+QFrame#top_frame QLineEdit:focus, QFrame#bottom_frame QLineEdit:focus, QFrame#middle_n_frame QLineEdit:focus, QFrame#middle_s_frame QLineEdit:focus,
+QFrame#top_frame QComboBox:focus, QFrame#bottom_frame QComboBox:focus, QFrame#middle_n_frame QComboBox:focus, QFrame#middle_s_frame QComboBox:focus,
+QFrame#top_frame QDateEdit:focus, QFrame#bottom_frame QDateEdit:focus, QFrame#middle_n_frame QDateEdit:focus, QFrame#middle_s_frame QDateEdit:focus{
+background-color:#ffffce;
+}
+
+QFrame#top_frame QLabel, QFrame#bottom_frame QLabel, QFrame#middle_n_frame QLabel, QFrame#middle_s_frame QLabel{background-color:none;
+font-weight: bold;}
+
+QFrame#top_frame QTableWidget, QFrame#bottom_frame QTableWidget, QFrame#middle_n_frame QTableWidget, QFrame#middle_s_frame QTableWidget {
+    background-color: #ffffff;
+    alternate-background-color: #cfd0d1;
+    gridline-color: #96999c;            
+    border: 1px solid #4e4e50;
+    border-radius: 4px;
+    font-family: "DaltonaPro";      
+    outline: 0;                        
+}
+
+QFrame#top_frame QHeaderView::section, QFrame#bottom_frame QHeaderView::section, QFrame#middle_n_frame QHeaderView::section, QFrame#middle_s_frame QHeaderView::section {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #2246AA, stop: 0.5 #1A3580,
+                                      stop: 0.6 #162d6d, stop:1 #20409c);
+    color: white;
+    padding-left: 4px;
+    border: 1px solid #6c6c6c;
+}
+
+QFrame#top_frame QTableWidget::item, QFrame#bottom_frame QTableWidget::item, QFrame#middle_n_frame QTableWidget::item, QFrame#middle_s_frame QTableWidget::item {
+    padding: 2px 6px;
+    border-bottom: 1px solid #757779;
+}
+
+QFrame#top_frame QTableWidget::item:selected, QFrame#bottom_frame QTableWidget::item:selected, QFrame#middle_n_frame QTableWidget::item:selected, QFrame#middle_s_frame QTableWidget::item:selected {
+    background-color: #e1f5fe;
+    color: #162D6D;
+    border-left: 3px solid #01c4ff;  
+}
+
+QFrame#top_frame QTableWidget QTableCornerButton::section, QFrame#bottom_frame QTableWidget QTableCornerButton::section, QFrame#middle_n_frame QTableWidget QTableCornerButton::section, QFrame#middle_s_frame QTableWidget QTableCornerButton::section {
+    background-color: #162D6D;
+    border: none;
+}
+
+QFrame#top_frame QListView, QFrame#bottom_frame QListView, QFrame#middle_n_frame QListView, QFrame#middle_s_frame QListView{
+    background-color: #ffffff;
+    border: 1px solid #4e4e50;
+    border-radius: 4px;
+    outline: 0;
+}
+
+QFrame#top_frame QListView::item, QFrame#bottom_frame QListView::item, QFrame#middle_n_frame QListView::item, QFrame#middle_s_frame QListView::item{
+    padding: 4px 6px;
+}
+
+QFrame#top_frame QListView::item:selected, QFrame#bottom_frame QListView::item:selected, QFrame#middle_n_frame QListView::item:selected, QFrame#middle_s_frame QListView::item:selected{
+    background-color: #e1f5fe;
+    color: #162D6D;
+}
+
+QFrame#top_frame QGroupBox, QFrame#bottom_frame QGroupBox, QFrame#middle_n_frame QGroupBox, QFrame#middle_s_frame QGroupBox{
+    border: 1px solid #4e4e50;
+    border-radius: 6px;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+QFrame#top_frame QGroupBox::title, QFrame#bottom_frame QGroupBox::title, QFrame#middle_n_frame QGroupBox::title, QFrame#middle_s_frame QGroupBox::title{
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 4px;
+}
+
+QFrame#top_frame QCheckBox, QFrame#bottom_frame QCheckBox, QFrame#middle_n_frame QCheckBox, QFrame#middle_s_frame QCheckBox,
+QFrame#top_frame QRadioButton, QFrame#bottom_frame QRadioButton, QFrame#middle_n_frame QRadioButton, QFrame#middle_s_frame QRadioButton{
+    color: #162D6D;
+    spacing: 6px;
+}
+
+QFrame#top_frame QCheckBox::indicator, QFrame#bottom_frame QCheckBox::indicator, QFrame#middle_n_frame QCheckBox::indicator, QFrame#middle_s_frame QCheckBox::indicator,
+QFrame#top_frame QRadioButton::indicator, QFrame#bottom_frame QRadioButton::indicator, QFrame#middle_n_frame QRadioButton::indicator, QFrame#middle_s_frame QRadioButton::indicator{
+    width: 14px;
+    height: 14px;
+}
+
+QDialog{
+    background-color: #eaf3ff;
+}
+
+QDialog#Dialog QComboBox{
+    border: 1px solid #162d6d;
+    min-height: 28px;
+    max-height: 28px;
+    padding-left: 5px;
+    border-radius: 5px;
     background-color: #ffffff;
 }
 
-QMessageBox QLabel {
-    color: #111111;
+QDialog#Dialog QComboBox:editable{
+    background-color: #ffffff;
+}
+
+QDialog#Dialog QComboBox::drop-down{
+    width: 15px;
+    border-left: 1px solid darkgray;
+}
+
+QDialog#Dialog QComboBox::down-arrow{
+    image: url(:/simgeler/arrow-down.png);
+}
+
+QDialog#Dialog QCheckBox[toggle_button="true"]{
+    border: 1px solid #162d6d;
+    border-radius: 6px;
+    padding: 6px 10px;
+    background-color: #ffffff;
+    color: #162D6D;
+    font-weight: bold;
+}
+
+QDialog#Dialog QCheckBox[toggle_button="true"]:checked{
+    background-color: #162D6D;
+    color: #ffffff;
+}
+
+QDialog#Dialog QCheckBox[toggle_button="true"]::indicator{
+    width: 0px;
+    height: 0px;
 }

@@ -539,6 +539,7 @@ class TripsGridApp(QWidget):
     def _open_trips_dialog(self, route_id: str):
         if not self._selected_contract_id or not self._service_type():
             return
+
         contract_id = int(self._selected_contract_id)
         service_type = str(self._service_type())
         month = self._month_key()
@@ -574,11 +575,19 @@ class TripsGridApp(QWidget):
         cmb_v = getattr(dlg, "cmb_arac_sec", None)
         cmb_d = getattr(dlg, "cmb_surucu_sec", None)
         if cmb_v is not None:
+            try:
+                cmb_v.setFixedWidth(200)
+            except Exception:
+                pass
             cmb_v.clear()
             cmb_v.addItem("Seçiniz...", None)
             for vid, plate in self._vehicle_map.items():
                 cmb_v.addItem(str(plate), str(vid))
         if cmb_d is not None:
+            try:
+                cmb_d.setFixedWidth(200)
+            except Exception:
+                pass
             cmb_d.clear()
             cmb_d.addItem("Seçiniz...", None)
             for did, name in self._driver_map.items():
@@ -604,6 +613,24 @@ class TripsGridApp(QWidget):
             if chk is None:
                 continue
             if cg is not None:
+                try:
+                    cg.setFixedWidth(70)
+                except Exception:
+                    pass
+            if cc is not None:
+                try:
+                    cc.setFixedWidth(70)
+                except Exception:
+                    pass
+            try:
+                chk.setStyleSheet("")
+            except Exception:
+                pass
+            try:
+                chk.setProperty("toggle_button", True)
+            except Exception:
+                pass
+            if cg is not None:
                 cg.setEnabled(bool(chk.isChecked()))
             if cc is not None:
                 cc.setEnabled(bool(chk.isChecked()))
@@ -626,7 +653,6 @@ class TripsGridApp(QWidget):
         existing_pairs = []
         existing_vid = None
         existing_did = None
-
         try:
             if hasattr(self, "tbl_grid"):
                 for r in range(self.tbl_grid.rowCount()):
@@ -738,12 +764,8 @@ class TripsGridApp(QWidget):
             return
 
         def _save():
-            vid = None
-            did = None
-            if cmb_v is not None:
-                vid = cmb_v.currentData()
-            if cmb_d is not None:
-                did = cmb_d.currentData()
+            vid = cmb_v.currentData() if cmb_v is not None else None
+            did = cmb_d.currentData() if cmb_d is not None else None
 
             def _cmb_text_or_selected(cmb):
                 if cmb is None:
@@ -806,12 +828,10 @@ class TripsGridApp(QWidget):
                 it_d = QTableWidgetItem(str(dname or ""))
                 for it in (it_route, it_tb, it_g, it_c, it_v, it_d):
                     it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
-
                 it_tb.setData(Qt.ItemDataRole.UserRole + 1, str(route_id))
                 it_tb.setData(Qt.ItemDataRole.UserRole + 2, f"{gt}-{ct}")
                 it_tb.setData(Qt.ItemDataRole.UserRole + 3, (None if vid in (None, "") else str(vid)))
                 it_tb.setData(Qt.ItemDataRole.UserRole + 4, (None if did in (None, "") else str(did)))
-
                 self.tbl_grid.setItem(rr, 0, it_route)
                 self.tbl_grid.setItem(rr, 1, it_tb)
                 self.tbl_grid.setItem(rr, 2, it_g)
@@ -824,7 +844,6 @@ class TripsGridApp(QWidget):
                 "Bilgi",
                 "Değişiklikler tabloya aktarıldı. Kalıcı olması için Seferler ekranında KAYDET'e basınız.",
             )
-
             try:
                 dlg.accept()
             except Exception:
