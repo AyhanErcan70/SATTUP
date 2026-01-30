@@ -2823,7 +2823,48 @@ class MainMenuApp(QMainWindow):
         QTimer.singleShot(0, self._force_maximized)
         QTimer.singleShot(50, self._force_maximized)
 
-    def open_payments(self): print("Hakedişler modülü açılıyor...")
+    def open_payments(self):
+        for i in reversed(range(self.mainStack.count())):
+            widget = self.mainStack.widget(i)
+            if widget and widget.objectName() != "page_main":
+                self.mainStack.removeWidget(widget)
+                widget.setParent(None)
+                widget.deleteLater()
+
+        from app.core.db_manager import DatabaseManager
+        from app.modules.hakedis import HakedisApp
+
+        db_mng = DatabaseManager()
+        self.hakedis_module = HakedisApp(user_data=self.user_data, parent=self, db=db_mng)
+        self.hakedis_module.setWindowFlags(Qt.WindowType.Widget)
+        self.hakedis_module.setMinimumSize(0, 0)
+        self.hakedis_module.setMinimumWidth(0)
+        self.hakedis_module.setMinimumHeight(0)
+        self.hakedis_module.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
+
+        self.hakedis_scroll = QScrollArea()
+        self.hakedis_scroll.setWidgetResizable(True)
+        self.hakedis_scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        self.hakedis_scroll.setWidget(self.hakedis_module)
+        self.hakedis_scroll.setMinimumSize(0, 0)
+        self.hakedis_scroll.setMinimumWidth(0)
+        self.hakedis_scroll.setMinimumHeight(0)
+        self.hakedis_scroll.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+
+        self.mainStack.addWidget(self.hakedis_scroll)
+        self.mainStack.setCurrentWidget(self.hakedis_scroll)
+
+        self.layout().activate()
+        self.setMinimumSize(0, 0)
+        if self.centralWidget() is not None:
+            self.centralWidget().setMinimumSize(0, 0)
+        if hasattr(self, "mainStack") and self.mainStack is not None:
+            self.mainStack.setMinimumSize(0, 0)
+            self.mainStack.setMinimumWidth(0)
+            self.mainStack.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+
+        QTimer.singleShot(0, self._force_maximized)
+        QTimer.singleShot(50, self._force_maximized)
     def open_finance(self): print("Mali Yönetim modülü açılıyor...")
     def open_constants(self):
         for i in reversed(range(self.mainStack.count())):

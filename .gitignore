@@ -17,6 +17,7 @@ Thumbs.db
 
 # Logs
 *.log
+*.bak*
 
 # Database files (keep out of git; use backups)
 database/*.db

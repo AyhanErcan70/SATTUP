@@ -1,0 +1,503 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>hakedis_window</class>
+ <widget class="QMainWindow" name="hakedis_window">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>927</width>
+    <height>671</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Hakedişler</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="1" column="0">
+     <widget class="QGroupBox" name="grp_list">
+      <property name="title">
+       <string>Hakediş Listesi</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_4">
+       <item row="0" column="0">
+        <layout class="QVBoxLayout" name="lyt_list">
+         <item>
+          <widget class="QTableWidget" name="tbl_hakedis">
+           <property name="alternatingRowColors">
+            <bool>true</bool>
+           </property>
+           <property name="selectionMode">
+            <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>
+           </property>
+           <property name="selectionBehavior">
+            <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+           </property>
+           <property name="columnCount">
+            <number>20</number>
+           </property>
+           <column>
+            <property name="text">
+             <string>ID</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>DÖNEM</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>SÖZLEŞME</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>HİZMET</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>İŞ KALEMİ</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>TOPLAM TUTAR</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>KESİNTİ</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>NET</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>DURUM</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>GÜNCELLEME</string>
+            </property>
+           </column>
+           <column/>
+           <column/>
+           <column/>
+           <column/>
+           <column/>
+           <column/>
+           <column/>
+           <column/>
+           <column/>
+           <column/>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="0" column="0">
+     <layout class="QVBoxLayout" name="lyt_root">
+      <item>
+       <widget class="QGroupBox" name="grp_filters">
+        <property name="title">
+         <string>Filtreler</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_3">
+         <item row="0" column="0">
+          <layout class="QGridLayout" name="gridLayout_2">
+           <item row="0" column="3">
+            <widget class="QLabel" name="lbl_service_type">
+             <property name="text">
+              <string>Hizmet Türü</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="4">
+            <widget class="QComboBox" name="cmb_service_type"/>
+           </item>
+           <item row="3" column="1">
+            <widget class="QLabel" name="lbl_summary">
+             <property name="text">
+              <string>Özet:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLabel" name="lbl_route">
+             <property name="text">
+              <string>İş Kalemi / Hat</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="3">
+            <widget class="QLabel" name="lbl_period">
+             <property name="text">
+              <string>Dönem</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLabel" name="lbl_status">
+             <property name="text">
+              <string>Durum</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QComboBox" name="cmb_contract">
+             <property name="minimumSize">
+              <size>
+               <width>260</width>
+               <height>0</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLabel" name="lbl_contract">
+             <property name="text">
+              <string>Sözleşme</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="4">
+            <widget class="QComboBox" name="cmb_period"/>
+           </item>
+           <item row="1" column="2">
+            <widget class="QComboBox" name="cmb_route">
+             <property name="minimumSize">
+              <size>
+               <width>260</width>
+               <height>0</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="2">
+            <widget class="QComboBox" name="cmb_status">
+             <item>
+              <property name="text">
+               <string>TÜMÜ</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>TASLAK</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>ONAY BEKLİYOR</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>ONAYLANDI</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>FATURALANDI</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="2" column="3" colspan="2">
+            <widget class="QCheckBox" name="chk_only_missing_docs">
+             <property name="text">
+              <string>Eksiği olanları göster</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="2" colspan="3">
+            <widget class="QLineEdit" name="txt_summary">
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+             <property name="placeholderText">
+              <string>Seçili filtreye göre özet burada…</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item row="1" column="0">
+          <layout class="QHBoxLayout" name="lyt_actions">
+           <item>
+            <widget class="QPushButton" name="btn_refresh">
+             <property name="text">
+              <string>Listele</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btn_new">
+             <property name="text">
+              <string>Yeni Hakediş</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btn_calc">
+             <property name="text">
+              <string>Hesapla</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btn_approve">
+             <property name="text">
+              <string>Onayla</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btn_invoice">
+             <property name="text">
+              <string>Faturalandı</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btn_export_excel">
+             <property name="text">
+              <string>Excel</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btn_export_pdf">
+             <property name="text">
+              <string>Pdf</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btn_print">
+             <property name="text">
+              <string>Yazdır</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btn_delete">
+             <property name="text">
+              <string>Sil</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="2" column="0">
+     <widget class="QTabWidget" name="tab_details">
+      <property name="currentIndex">
+       <number>3</number>
+      </property>
+      <widget class="QWidget" name="tab_items">
+       <attribute name="title">
+        <string>Kalemler</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_5">
+        <item row="0" column="0">
+         <layout class="QVBoxLayout" name="lyt_items">
+          <item>
+           <widget class="QTableWidget" name="tbl_items">
+            <column>
+             <property name="text">
+              <string>TARİH</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>GÜZERGAH/İŞ</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>ARAÇ</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>SÜRÜCÜ</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>SEFER/VARDİYA</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>MİKTAR</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>BİRİM FİYAT</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>TUTAR</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>AÇIKLAMA</string>
+             </property>
+            </column>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab_deductions">
+       <attribute name="title">
+        <string>Kesintiler</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_6">
+        <item row="0" column="0">
+         <layout class="QHBoxLayout" name="lyt_deductions_actions">
+          <item>
+           <widget class="QPushButton" name="btn_add_deduction">
+            <property name="text">
+             <string>Kesinti Ekle</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btn_remove_deduction">
+            <property name="text">
+             <string>Kesinti Sil</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="1" column="0">
+         <layout class="QVBoxLayout" name="lyt_deductions">
+          <item>
+           <widget class="QTableWidget" name="tbl_deductions">
+            <column>
+             <property name="text">
+              <string>TÜR</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>TUTAR</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>AÇIKLAMA</string>
+             </property>
+            </column>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab_docs">
+       <attribute name="title">
+        <string>Belgeler</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_7">
+        <item row="0" column="0">
+         <layout class="QHBoxLayout" name="lyt_doc_actions">
+          <item>
+           <widget class="QPushButton" name="btn_add_doc">
+            <property name="text">
+             <string>Belge Ekle</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btn_open_doc">
+            <property name="text">
+             <string>Aç</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btn_remove_doc">
+            <property name="text">
+             <string>Kaldır</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="1" column="0">
+         <widget class="QTableWidget" name="tbl_docs">
+          <column>
+           <property name="text">
+            <string>BELGE TÜRÜ</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>DOSYA ADI</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>YÜKLENDİ</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>NOT</string>
+           </property>
+          </column>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab_notes">
+       <attribute name="title">
+        <string>Notlar/Log</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_8">
+        <item row="0" column="0">
+         <widget class="QPlainTextEdit" name="txt_notes">
+          <property name="placeholderText">
+           <string>Hakediş notları...</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QPushButton" name="btn_save_notes">
+          <property name="text">
+           <string>Notları Kaydet</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

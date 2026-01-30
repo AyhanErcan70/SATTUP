@@ -12,6 +12,7 @@ class DatabaseManager:
         self.migrate_trip_period_lock_table()
         self.create_trip_entries_tables()
         self._ensure_trip_prices_table()
+        self.create_hakedis_tables()
         self.create_customers_table()
         self.create_vehicles_table()
         self.create_repairs_table()
@@ -213,6 +214,802 @@ class DatabaseManager:
             conn2.commit()
         finally:
             conn2.close()
+
+    def upsert_hakedis_header(
+        self,
+        contract_id: int,
+        period: str,
+        service_type: str | None = None,
+        route_params_id: int | None = None,
+        status: str = "TASLAK",
+    ) -> int | None:
+        self.create_hakedis_tables()
+        conn = self.connect()
+        if not conn:
+            return None
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        rp_id = int(route_params_id) if route_params_id is not None else 0
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                INSERT INTO hakedis (
+                    contract_id, period, service_type, route_params_id,
+                    status, total_amount, deduction_amount, net_amount,
+                    created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, 0, 0, 0, ?, ?)
+                ON CONFLICT(contract_id, period, service_type, route_params_id)
+                DO UPDATE SET
+                    status=excluded.status,
+                    updated_at=excluded.updated_at
+                """,
+                (
+                    int(contract_id),
+                    str(period),
+                    (service_type or "").strip() or None,
+                    rp_id,
+                    (status or "TASLAK").strip(),
+                    now,
+                    now,
+                ),
+            )
+
+            cur.execute(
+                """
+                SELECT id
+                FROM hakedis
+                WHERE contract_id=? AND period=?
+                  AND COALESCE(service_type,'') = ?
+                  AND COALESCE(route_params_id, 0) = ?
+                LIMIT 1
+                """,
+                (
+                    int(contract_id),
+                    str(period),
+                    (service_type or "").strip(),
+                    rp_id,
+                ),
+            )
+            row = cur.fetchone()
+            conn.commit()
+            return int(row[0]) if row and row[0] is not None else None
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            print(f"upsert_hakedis_header error: {e}")
+            return None
+        finally:
+            conn.close()
+
+    def replace_hakedis_items(self, hakedis_id: int, items: list[dict]) -> bool:
+        self.create_hakedis_tables()
+        conn = self.connect()
+        if not conn:
+            return False
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM hakedis_items WHERE hakedis_id = ?", (int(hakedis_id),))
+
+            for it in items or []:
+                cur.execute(
+                    """
+                    INSERT INTO hakedis_items (
+                        hakedis_id, item_date, route_params_id, vehicle_id, driver_id,
+                        work_type, quantity, unit_price, amount, description, source_trip_id,
+                        created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        int(hakedis_id),
+                        (it.get("item_date") or ""),
+                        it.get("route_params_id"),
+                        it.get("vehicle_id"),
+                        it.get("driver_id"),
+                        (it.get("work_type") or ""),
+                        float(it.get("quantity") or 0),
+                        float(it.get("unit_price") or 0),
+                        float(it.get("amount") or 0),
+                        (it.get("description") or ""),
+                        it.get("source_trip_id"),
+                        now,
+                        now,
+                    ),
+                )
+
+            conn.commit()
+            return True
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            print(f"replace_hakedis_items error: {e}")
+            return False
+        finally:
+            conn.close()
+
+    def update_hakedis_totals(self, hakedis_id: int) -> bool:
+        self.create_hakedis_tables()
+        conn = self.connect()
+        if not conn:
+            return False
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT COALESCE(SUM(amount), 0)
+                FROM hakedis_items
+                WHERE hakedis_id = ?
+                """,
+                (int(hakedis_id),),
+            )
+            total = float((cur.fetchone() or [0])[0] or 0)
+
+            cur.execute(
+                """
+                SELECT COALESCE(SUM(amount), 0)
+                FROM hakedis_deductions
+                WHERE hakedis_id = ?
+                """,
+                (int(hakedis_id),),
+            )
+            deduction = float((cur.fetchone() or [0])[0] or 0)
+            net = float(total - deduction)
+
+            cur.execute(
+                """
+                UPDATE hakedis
+                SET total_amount=?, deduction_amount=?, net_amount=?, updated_at=?
+                WHERE id = ?
+                """,
+                (float(total), float(deduction), float(net), now, int(hakedis_id)),
+            )
+            conn.commit()
+            return True
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            print(f"update_hakedis_totals error: {e}")
+            return False
+        finally:
+            conn.close()
+
+    def create_hakedis_tables(self):
+        conn = self.connect()
+        if not conn:
+            return
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS hakedis (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    contract_id INTEGER NOT NULL,
+                    period TEXT NOT NULL,
+                    service_type TEXT,
+                    route_params_id INTEGER,
+                    status TEXT DEFAULT 'TASLAK',
+                    total_amount REAL DEFAULT 0,
+                    deduction_amount REAL DEFAULT 0,
+                    net_amount REAL DEFAULT 0,
+                    notes TEXT,
+                    created_at TEXT,
+                    updated_at TEXT,
+                    approved_at TEXT,
+                    invoiced_at TEXT,
+                    UNIQUE (contract_id, period, service_type, route_params_id)
+                )
+                """
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_hakedis_key ON hakedis(contract_id, period, service_type, route_params_id)"
+            )
+
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS hakedis_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    hakedis_id INTEGER NOT NULL,
+                    item_date TEXT,
+                    route_params_id INTEGER,
+                    vehicle_id INTEGER,
+                    driver_id INTEGER,
+                    work_type TEXT,
+                    quantity REAL DEFAULT 0,
+                    unit_price REAL DEFAULT 0,
+                    amount REAL DEFAULT 0,
+                    description TEXT,
+                    source_trip_id INTEGER,
+                    created_at TEXT,
+                    updated_at TEXT
+                )
+                """
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_hakedis_items_parent ON hakedis_items(hakedis_id)"
+            )
+
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS hakedis_deductions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    hakedis_id INTEGER NOT NULL,
+                    deduction_type TEXT,
+                    amount REAL DEFAULT 0,
+                    description TEXT,
+                    created_at TEXT,
+                    updated_at TEXT
+                )
+                """
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_hakedis_deductions_parent ON hakedis_deductions(hakedis_id)"
+            )
+
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS hakedis_docs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    hakedis_id INTEGER NOT NULL,
+                    doc_type TEXT,
+                    file_name TEXT,
+                    file_path TEXT,
+                    uploaded_at TEXT,
+                    description TEXT,
+                    created_at TEXT,
+                    updated_at TEXT
+                )
+                """
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_hakedis_docs_hakedis ON hakedis_docs(hakedis_id)"
+            )
+
+            # Migration: eski db'lerde hakedis_docs kolonları eksik olabilir
+            try:
+                cursor.execute("PRAGMA table_info(hakedis_docs)")
+                cols = [row[1] for row in (cursor.fetchall() or [])]
+                if "description" not in cols:
+                    cursor.execute("ALTER TABLE hakedis_docs ADD COLUMN description TEXT")
+                if "created_at" not in cols:
+                    cursor.execute("ALTER TABLE hakedis_docs ADD COLUMN created_at TEXT")
+                if "updated_at" not in cols:
+                    cursor.execute("ALTER TABLE hakedis_docs ADD COLUMN updated_at TEXT")
+            except Exception:
+                pass
+
+            conn.commit()
+
+            # NULL route_params_id alanında UNIQUE çalışmadığı için aynı anahtar tekrarı oluşabiliyor.
+            # Genel hakediş için route_params_id'yi 0 normalize ediyoruz.
+            self._migrate_hakedis_route_params_default(conn)
+        finally:
+            conn.close()
+
+    def _migrate_hakedis_route_params_default(self, conn) -> None:
+        try:
+            cur = conn.cursor()
+
+            # Duplicate kayıtları birleştir (NULL ve 0 aynı kabul).
+            cur.execute(
+                """
+                SELECT contract_id,
+                       period,
+                       COALESCE(service_type,'') AS st,
+                       COALESCE(route_params_id,0) AS rp,
+                       COUNT(*) AS cnt
+                FROM hakedis
+                GROUP BY contract_id, period, st, rp
+                HAVING cnt > 1
+                """
+            )
+            dups = cur.fetchall() or []
+
+            for contract_id, period, st, rp, _cnt in dups:
+                cur.execute(
+                    """
+                    SELECT id
+                    FROM hakedis
+                    WHERE contract_id=? AND period=?
+                      AND COALESCE(service_type,'')=?
+                      AND COALESCE(route_params_id,0)=?
+                    ORDER BY COALESCE(updated_at, created_at) DESC, id DESC
+                    LIMIT 1
+                    """,
+                    (int(contract_id), str(period), str(st), int(rp)),
+                )
+                keep_row = cur.fetchone()
+                if not keep_row or keep_row[0] is None:
+                    continue
+                keep_id = int(keep_row[0])
+
+                cur.execute(
+                    """
+                    SELECT id
+                    FROM hakedis
+                    WHERE contract_id=? AND period=?
+                      AND COALESCE(service_type,'')=?
+                      AND COALESCE(route_params_id,0)=?
+                      AND id <> ?
+                    """,
+                    (int(contract_id), str(period), str(st), int(rp), int(keep_id)),
+                )
+                other_ids = [int(x[0]) for x in (cur.fetchall() or []) if x and x[0] is not None]
+
+                for old_id in other_ids:
+                    cur.execute(
+                        "UPDATE hakedis_items SET hakedis_id=? WHERE hakedis_id=?",
+                        (int(keep_id), int(old_id)),
+                    )
+                    cur.execute(
+                        "UPDATE hakedis_deductions SET hakedis_id=? WHERE hakedis_id=?",
+                        (int(keep_id), int(old_id)),
+                    )
+                    cur.execute(
+                        "UPDATE hakedis_docs SET hakedis_id=? WHERE hakedis_id=?",
+                        (int(keep_id), int(old_id)),
+                    )
+                    cur.execute("DELETE FROM hakedis WHERE id=?", (int(old_id),))
+
+            # NULL olanları 0'a çek.
+            cur.execute("UPDATE hakedis SET route_params_id=0 WHERE route_params_id IS NULL")
+            conn.commit()
+        except Exception as e:
+            print(f"_migrate_hakedis_route_params_default error: {e}")
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+
+    def list_hakedis(
+        self,
+        contract_id: int | None = None,
+        period: str | None = None,
+        service_type: str | None = None,
+        route_params_id: int | None = None,
+        status: str | None = None,
+        only_missing_docs: bool = False,
+    ):
+        self.create_hakedis_tables()
+        conn = self.connect()
+        if not conn:
+            return []
+        try:
+            where = []
+            params = []
+
+            if contract_id is not None:
+                where.append("h.contract_id = ?")
+                params.append(int(contract_id))
+            if period:
+                where.append("h.period = ?")
+                params.append(str(period))
+            if service_type:
+                where.append("COALESCE(h.service_type,'') = ?")
+                params.append(str(service_type))
+            if route_params_id is not None:
+                where.append("COALESCE(h.route_params_id, 0) = ?")
+                params.append(int(route_params_id))
+            if status and str(status).strip() and str(status).strip().upper() != "TÜMÜ" and str(status).strip().upper() != "TUMU":
+                where.append("COALESCE(h.status,'') = ?")
+                params.append(str(status))
+            if only_missing_docs:
+                where.append(
+                    "NOT EXISTS (SELECT 1 FROM hakedis_docs d WHERE d.hakedis_id = h.id LIMIT 1)"
+                )
+
+            where_sql = ("WHERE " + " AND ".join(where)) if where else ""
+
+            cur = conn.cursor()
+            cur.execute(
+                f"""
+                SELECT
+                    h.id,
+                    COALESCE(h.period,''),
+                    COALESCE(c.contract_number,''),
+                    COALESCE(h.service_type,''),
+                    COALESCE(rp.route_name,''),
+                    COALESCE(h.total_amount,0),
+                    COALESCE(h.deduction_amount,0),
+                    COALESCE(h.net_amount,0),
+                    COALESCE(h.status,''),
+                    COALESCE(h.updated_at, COALESCE(h.created_at,''))
+                FROM hakedis h
+                LEFT JOIN contracts c ON c.id = h.contract_id
+                LEFT JOIN route_params rp ON rp.id = h.route_params_id
+                {where_sql}
+                ORDER BY h.period DESC, h.id DESC
+                """,
+                tuple(params),
+            )
+            return cur.fetchall() or []
+        finally:
+            conn.close()
+
+    def get_hakedis_items_rows(self, hakedis_id: int):
+        self.create_hakedis_tables()
+        conn = self.connect()
+        if not conn:
+            return []
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT
+                    COALESCE(i.item_date,''),
+                    COALESCE(rp.route_name,''),
+                    COALESCE(v.plate_number,''),
+                    COALESCE(e.ad_soyad,''),
+                    COALESCE(i.work_type,''),
+                    COALESCE(i.quantity,0),
+                    COALESCE(i.unit_price,0),
+                    COALESCE(i.amount,0),
+                    COALESCE(i.description,'')
+                FROM hakedis_items i
+                LEFT JOIN route_params rp ON rp.id = i.route_params_id
+                LEFT JOIN vehicles v ON v.vehicle_code = i.vehicle_id
+                LEFT JOIN employees e ON e.personel_kodu = i.driver_id
+                WHERE i.hakedis_id = ?
+                ORDER BY COALESCE(i.item_date,''), COALESCE(rp.route_name,''), COALESCE(i.work_type,'')
+                """,
+                (int(hakedis_id),),
+            )
+            return cur.fetchall() or []
+        finally:
+            conn.close()
+
+    def get_hakedis_deductions_rows(self, hakedis_id: int):
+        self.create_hakedis_tables()
+        conn = self.connect()
+        if not conn:
+            return []
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT
+                    COALESCE(d.deduction_type,''),
+                    COALESCE(d.amount,0),
+                    COALESCE(d.description,'')
+                FROM hakedis_deductions d
+                WHERE d.hakedis_id = ?
+                ORDER BY d.id
+                """,
+                (int(hakedis_id),),
+            )
+            return cur.fetchall() or []
+        finally:
+            conn.close()
+
+    def get_hakedis_deductions_ui_rows(self, hakedis_id: int):
+        self.create_hakedis_tables()
+        conn = self.connect()
+        if not conn:
+            return []
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT
+                    d.id,
+                    COALESCE(d.deduction_type,''),
+                    COALESCE(d.amount,0),
+                    COALESCE(d.description,'')
+                FROM hakedis_deductions d
+                WHERE d.hakedis_id = ?
+                ORDER BY d.id
+                """,
+                (int(hakedis_id),),
+            )
+            return cur.fetchall() or []
+        finally:
+            conn.close()
+
+    def add_hakedis_deduction(
+        self,
+        hakedis_id: int,
+        deduction_type: str,
+        amount: float,
+        description: str = "",
+    ) -> int | None:
+        self.create_hakedis_tables()
+        conn = self.connect()
+        if not conn:
+            return None
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                INSERT INTO hakedis_deductions (
+                    hakedis_id, deduction_type, amount, description, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    int(hakedis_id),
+                    str(deduction_type or "").strip(),
+                    float(amount or 0),
+                    str(description or "").strip(),
+                    now,
+                    now,
+                ),
+            )
+            conn.commit()
+            return int(cur.lastrowid) if cur.lastrowid is not None else None
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            print(f"add_hakedis_deduction error: {e}")
+            return None
+        finally:
+            conn.close()
+
+    def delete_hakedis_deduction(self, deduction_id: int) -> bool:
+        self.create_hakedis_tables()
+        conn = self.connect()
+        if not conn:
+            return False
+        try:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM hakedis_deductions WHERE id = ?", (int(deduction_id),))
+            conn.commit()
+            return cur.rowcount > 0
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            print(f"delete_hakedis_deduction error: {e}")
+            return False
+        finally:
+            conn.close()
+
+    def get_hakedis_docs_rows(self, hakedis_id: int):
+        self.create_hakedis_tables()
+        conn = self.connect()
+        if not conn:
+            return []
+        try:
+            cur = conn.cursor()
+            try:
+                cur.execute(
+                    """
+                    SELECT
+                        COALESCE(doc_type,''),
+                        COALESCE(file_name,''),
+                        COALESCE(file_path,''),
+                        COALESCE(uploaded_at,''),
+                        COALESCE(description,'')
+                    FROM hakedis_docs
+                    WHERE hakedis_id = ?
+                    ORDER BY id
+                    """,
+                    (int(hakedis_id),),
+                )
+            except sqlite3.OperationalError as e:
+                # Eski DB'lerde hakedis_docs kolonları eksik olabiliyor; otomatik migrate edip tekrar dene.
+                msg = str(e or "")
+                if "no such column" in msg and "description" in msg:
+                    try:
+                        cur.execute("ALTER TABLE hakedis_docs ADD COLUMN description TEXT DEFAULT ''")
+                    except Exception:
+                        pass
+                    try:
+                        cur.execute("ALTER TABLE hakedis_docs ADD COLUMN created_at TEXT")
+                    except Exception:
+                        pass
+                    try:
+                        cur.execute("ALTER TABLE hakedis_docs ADD COLUMN updated_at TEXT")
+                    except Exception:
+                        pass
+                    try:
+                        conn.commit()
+                    except Exception:
+                        pass
+                    cur.execute(
+                        """
+                        SELECT
+                            COALESCE(doc_type,''),
+                            COALESCE(file_name,''),
+                            COALESCE(file_path,''),
+                            COALESCE(uploaded_at,''),
+                            COALESCE(description,'')
+                        FROM hakedis_docs
+                        WHERE hakedis_id = ?
+                        ORDER BY id
+                        """,
+                        (int(hakedis_id),),
+                    )
+                else:
+                    raise
+            return cur.fetchall() or []
+        finally:
+            conn.close()
+
+    def get_hakedis_docs_ui_rows(self, hakedis_id: int):
+        self.create_hakedis_tables()
+        conn = self.connect()
+        if not conn:
+            return []
+        try:
+            cur = conn.cursor()
+            try:
+                cur.execute(
+                    """
+                    SELECT
+                        id,
+                        COALESCE(doc_type,''),
+                        COALESCE(file_name,''),
+                        COALESCE(file_path,''),
+                        COALESCE(uploaded_at,''),
+                        COALESCE(description,'')
+                    FROM hakedis_docs
+                    WHERE hakedis_id = ?
+                    ORDER BY id
+                    """,
+                    (int(hakedis_id),),
+                )
+            except sqlite3.OperationalError as e:
+                msg = str(e or "")
+                if "no such column" in msg and "description" in msg:
+                    try:
+                        cur.execute("ALTER TABLE hakedis_docs ADD COLUMN description TEXT DEFAULT ''")
+                    except Exception:
+                        pass
+                    try:
+                        cur.execute("ALTER TABLE hakedis_docs ADD COLUMN created_at TEXT")
+                    except Exception:
+                        pass
+                    try:
+                        cur.execute("ALTER TABLE hakedis_docs ADD COLUMN updated_at TEXT")
+                    except Exception:
+                        pass
+                    try:
+                        conn.commit()
+                    except Exception:
+                        pass
+                    cur.execute(
+                        """
+                        SELECT
+                            id,
+                            COALESCE(doc_type,''),
+                            COALESCE(file_name,''),
+                            COALESCE(file_path,''),
+                            COALESCE(uploaded_at,''),
+                            COALESCE(description,'')
+                        FROM hakedis_docs
+                        WHERE hakedis_id = ?
+                        ORDER BY id
+                        """,
+                        (int(hakedis_id),),
+                    )
+                else:
+                    raise
+            return cur.fetchall() or []
+        finally:
+            conn.close()
+
+    def add_hakedis_doc(
+        self,
+        hakedis_id: int,
+        doc_type: str,
+        file_name: str,
+        file_path: str,
+        uploaded_at: str,
+        description: str = "",
+    ) -> int | None:
+        self.create_hakedis_tables()
+        conn = self.connect()
+        if not conn:
+            return None
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                INSERT INTO hakedis_docs (
+                    hakedis_id, doc_type, file_name, file_path, uploaded_at, description, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    int(hakedis_id),
+                    str(doc_type or "").strip(),
+                    str(file_name or "").strip(),
+                    str(file_path or "").strip(),
+                    str(uploaded_at or "").strip(),
+                    str(description or "").strip(),
+                    now,
+                    now,
+                ),
+            )
+            conn.commit()
+            return int(cur.lastrowid) if cur.lastrowid is not None else None
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            print(f"add_hakedis_doc error: {e}")
+            return None
+        finally:
+            conn.close()
+
+    def delete_hakedis_doc(self, doc_id: int) -> bool:
+        self.create_hakedis_tables()
+        conn = self.connect()
+        if not conn:
+            return False
+        try:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM hakedis_docs WHERE id = ?", (int(doc_id),))
+            conn.commit()
+            return cur.rowcount > 0
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            print(f"delete_hakedis_doc error: {e}")
+            return False
+        finally:
+            conn.close()
+
+    def set_hakedis_status(self, hakedis_id: int, status: str) -> bool:
+        self.create_hakedis_tables()
+        conn = self.connect()
+        if not conn:
+            return False
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        st = str(status or "").strip().upper()
+        try:
+            cur = conn.cursor()
+            if st == "ONAYLANDI":
+                cur.execute(
+                    """
+                    UPDATE hakedis
+                    SET status=?, approved_at=COALESCE(approved_at, ?), updated_at=?
+                    WHERE id=?
+                    """,
+                    ("ONAYLANDI", now, now, int(hakedis_id)),
+                )
+            elif st == "FATURALANDI":
+                cur.execute(
+                    """
+                    UPDATE hakedis
+                    SET status=?, invoiced_at=COALESCE(invoiced_at, ?), updated_at=?
+                    WHERE id=?
+                    """,
+                    ("FATURALANDI", now, now, int(hakedis_id)),
+                )
+            else:
+                cur.execute(
+                    """
+                    UPDATE hakedis
+                    SET status=?, updated_at=?
+                    WHERE id=?
+                    """,
+                    (str(status or "").strip(), now, int(hakedis_id)),
+                )
+
+            conn.commit()
+            return cur.rowcount > 0
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            print(f"set_hakedis_status error: {e}")
+            return False
+        finally:
+            conn.close()
 
     def month_has_operational_template(self, month: str) -> bool:
         """Seçilen ay için şablon veri var mı? (trip_plan / trip_prices / trip_time_blocks)"""
