@@ -34,7 +34,6 @@ QFrame#top_frame QLineEdit#txt_personel_kodu, QFrame#top_frame QLineEdit#txt_mus
 }
 QFrame QLineEdit, QFrame QComboBox, QFrame QateEdit {
 	background-color: #fff;
-	border: 1px solid #0310ff;
 	border-radius: 6px;
 } 
 QFrame QLineEdit:focus, QFrame QComboBox:focus, QFrame QateEdit:focus {
