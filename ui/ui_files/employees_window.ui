@@ -22,7 +22,7 @@
   <property name="styleSheet">
    <string notr="true">QWidget#main_form{border-image: url(:/resimler/a22.png);}
 
-QFrame#top_frame QLineEdit#txt_personel_kodu, QFrame#top_frame QLineEdit#txt_musteri_kodu, QFrame#top_frame 			QLineEdit#txt_arac_kodu, QFrame#top_frame QLineEdit#txt_sozlesme_kodu{
+QFrame#top_frame QLineEdit#txt_personel_kodu, QFrame#top_frame QLineEdit#txt_musteri_kodu, QFrame#top_frame QLineEdit#txt_arac_kodu, QFrame#top_frame QLineEdit#txt_sozlesme_kodu{
 	border: none;
 	background:none;
 	background-color:transparent;
@@ -32,11 +32,17 @@ QFrame#top_frame QLineEdit#txt_personel_kodu, QFrame#top_frame QLineEdit#txt_mus
 	text-align: center;
 	color:#00ff7f;
 }
-QFrame#top_frame QLineEdit, QFrame#top_frame QComboBox, QFrame#top_frame QateEdit {
+QFrame QLineEdit, QFrame QComboBox, QFrame QateEdit {
 	background-color: #fff;
-	border: 1px solid #ffff00;
+	border: 1px solid #0310ff;
 	border-radius: 6px;
 } 
+QFrame QLineEdit:focus, QFrame QComboBox:focus, QFrame QateEdit:focus {
+	background-color: #ffff10;
+	border: 1px solid #da0000;
+	border-radius: 6px;
+} 
+
 QFrame#top_frame QLabel{color: rgb(202, 255, 255);font_family: &quot;Calibri&quot;;font-size: 14px;}
 QFrame#top_frame QLabel#lbl_photo{font-size: 10px;}
 
@@ -162,16 +168,19 @@ QWidget#main_form QComboBox::down-arrow:on {
        <number>0</number>
       </property>
       <property name="topMargin">
-       <number>5</number>
+       <number>0</number>
       </property>
       <property name="rightMargin">
        <number>0</number>
       </property>
       <property name="bottomMargin">
-       <number>10</number>
+       <number>5</number>
       </property>
-      <property name="spacing">
+      <property name="horizontalSpacing">
        <number>0</number>
+      </property>
+      <property name="verticalSpacing">
+       <number>5</number>
       </property>
       <item row="0" column="0">
        <layout class="QGridLayout" name="gridLayout" columnminimumwidth="80,0,0,0,0,0,0,0,0,0,0,0">
@@ -2600,6 +2609,40 @@ image: url(:/resim/Photo.png);</string>
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>cmb_personel_turu</tabstop>
+  <tabstop>txt_ad_soyad</tabstop>
+  <tabstop>txt_tckn</tabstop>
+  <tabstop>txt_anne_adi</tabstop>
+  <tabstop>txt_baba_adi</tabstop>
+  <tabstop>txt_dogum_yeri</tabstop>
+  <tabstop>date_dogum_tarihi</tabstop>
+  <tabstop>txt_gsm</tabstop>
+  <tabstop>txt_email</tabstop>
+  <tabstop>cmb_gorevi</tabstop>
+  <tabstop>cmb_kan_grubu</tabstop>
+  <tabstop>cmb_il</tabstop>
+  <tabstop>cmb_ilce</tabstop>
+  <tabstop>txt_adres2</tabstop>
+  <tabstop>txt_adres1</tabstop>
+  <tabstop>cmb_banka_adi</tabstop>
+  <tabstop>txt_iban</tabstop>
+  <tabstop>txt_notlar1</tabstop>
+  <tabstop>txt_notlar2</tabstop>
+  <tabstop>btn_kaydet</tabstop>
+  <tabstop>btn_yeni</tabstop>
+  <tabstop>btn_pdfye_aktar</tabstop>
+  <tabstop>btn_excel_yukle</tabstop>
+  <tabstop>btn_excele_aktar</tabstop>
+  <tabstop>btn_aktifpasif</tabstop>
+  <tabstop>btn_sil</tabstop>
+  <tabstop>cmb_personel_turu_f</tabstop>
+  <tabstop>cmb_durum_f</tabstop>
+  <tabstop>cmb_gorevi_f</tabstop>
+  <tabstop>txt_ad_soyad_f</tabstop>
+  <tabstop>txt_tckn_f</tabstop>
+  <tabstop>btn_temizle_f</tabstop>
+ </tabstops>
  <resources>
   <include location="../icons/context.qrc"/>
  </resources>
