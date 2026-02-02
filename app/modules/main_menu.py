@@ -10,7 +10,6 @@ from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 
 from PyQt6 import uic
 from config import ASSETS_DIR, ICONS_PATH, get_ui_path
-from app.utils.style_utils import clear_all_styles
 from app.modules.users import UsersApp
 from app.modules.employees import EmployeesApp
 from app.modules.customers import CustomersApp
@@ -21,58 +20,6 @@ from app.modules.constants import ConstantsApp
 from app.modules.routes import RoutesApp
 from app.modules.trips import TripsGridApp
 from app.modules.attendance import AttendanceApp
-from assets.images import kaynaklar_rc
-
-
-_MENU_FRAME_QSS = """
-QPushButton {
-	background-color: #E8E8E8;
-    color: #000;
-    font-family: 'DaytonaPro', sans-serif;
-    font-weight: bold;
-    font-size: 11pt;
-    border-radius: 10px;
-	border-top: 1px solid #C0C0C0;
-    border-left: 1px solid #C0C0C0;
-    border-right: 4px solid #808080;
-    border-bottom: 5px solid #696969;
-    text-align: left;
-    margin-right: 4px;
-    margin-bottom: 5px;
-    padding: 3px;
-}
-
-QPushButton[selected="true"] {
-    background-color: #FFF3E0;
-    color: #984C00;
-    border-right: 4px solid #984C00;
-    border-bottom: 5px solid #6B3A00;
-}
-
-QPushButton[flash="true"] {
-    background-color: #FFE0B2;
-}
-
-QPushButton:hover {
-    color: #984C00;
-    border-right: 4px solid #A9A9A9;
-    border-bottom: 5px solid #808080;
-}
-
-QPushButton:pressed {
-    border-top: 2px solid #696969;
-    border-left: 2px solid #696969;
-    border-right: 1px solid #808080;
-    border-bottom: 1px solid #808080;
-    
-    margin-top: 4px;
-    margin-left: 2px;
-    margin-bottom: 1px;
-    margin-right: 2px;
-    
-    padding-top: 10px;
-}
-"""
 
 class DownComboBox(QComboBox):
     def showPopup(self):
@@ -94,14 +41,7 @@ class MainMenuApp(QMainWindow):
     def __init__(self, user_data=None, start_passive: bool = False, offline_timeout_ms: int = 120000):
         super().__init__()
         uic.loadUi(get_ui_path("main_window.ui"), self)
-        # clear_all_styles(self)
         self.user_data = user_data
-
-        try:
-            if hasattr(self, "menu_frame") and self.menu_frame is not None:
-                self.menu_frame.setStyleSheet(_MENU_FRAME_QSS)
-        except Exception:
-            pass
 
         try:
             if hasattr(self, "top_frame") and self.top_frame is not None:
@@ -569,27 +509,26 @@ class MainMenuApp(QMainWindow):
     def _ensure_offline_warning_dialog(self):
         if self._offline_warning_dialog is not None:
             return
-        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QPushButton
+        from PyQt6.QtWidgets import QMessageBox, QPushButton, QLabel, QHBoxLayout, QVBoxLayout
 
-        dlg = QDialog(self)
-        dlg.setWindowTitle("Oturum Uyarısı")
-        dlg.setModal(False)
-        dlg.setWindowFlags(dlg.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+        dlg = QMessageBox(self)
+        dlg.setIcon(QMessageBox.Icon.Warning)
+        dlg.setWindowTitle("Uyarı")
+        dlg.setText("Sessiz moddasınız")
+        dlg.setInformativeText(
+            "Uzun süredir işlem yapılmadı. Oturum kapanmak üzere. Devam etmek için ek süre verin ya da offline olun."
+        )
 
         label = QLabel(dlg)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         label.setWordWrap(True)
-        label.setStyleSheet("font-size: 14px;")
 
         btn_extend = QPushButton("Ek Süre")
         btn_offline = QPushButton("Offline Ol")
-        btn_extend.clicked.connect(self._on_offline_extend)
-        btn_offline.clicked.connect(self._on_offline_go_offline)
+        dlg.addButton(btn_extend, QMessageBox.ButtonRole.AcceptRole)
+        dlg.addButton(btn_offline, QMessageBox.ButtonRole.DestructiveRole)
 
         row = QHBoxLayout()
-        row.addStretch(1)
-        row.addWidget(btn_extend)
-        row.addWidget(btn_offline)
         row.addStretch(1)
 
         lay = QVBoxLayout(dlg)
@@ -799,9 +738,6 @@ class MainMenuApp(QMainWindow):
 
         self._welcome_overlay = QFrame(page_main)
         self._welcome_overlay.setObjectName("welcome_overlay")
-        self._welcome_overlay.setStyleSheet(
-            "background-color: rgba(15, 15, 15, 160); border-radius: 14px;"
-        )
 
         try:
             eff = QGraphicsOpacityEffect(self._welcome_overlay)
@@ -830,12 +766,10 @@ class MainMenuApp(QMainWindow):
         self._welcome_hint_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._welcome_hint_label.setWordWrap(True)
         self._welcome_hint_label.setText("Lütfen ilk olarak Ay seçimi yapıp Devam tuşuna basınız")
-        self._welcome_hint_label.setStyleSheet("color: rgba(255,255,255,210); font-size: 18px; font-weight: 600; background: transparent;")
 
         self._welcome_year_label = QLabel(self._welcome_overlay)
         self._welcome_year_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._welcome_year_label.setText(year_text)
-        self._welcome_year_label.setStyleSheet("color: white; font-size: 34px; font-weight: 800; background: transparent;")
 
         row = QHBoxLayout()
         row.setContentsMargins(0, 0, 0, 0)
@@ -843,15 +777,10 @@ class MainMenuApp(QMainWindow):
 
         lbl_month = QLabel(self._welcome_overlay)
         lbl_month.setText("AY")
-        lbl_month.setStyleSheet("color: rgba(255,255,255,210); font-size: 18px; background: transparent;")
 
         self._welcome_month_combo = DownComboBox(self._welcome_overlay)
         self._welcome_month_combo.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self._welcome_month_combo.setMinimumHeight(44)
-        self._welcome_month_combo.setStyleSheet(
-            "QComboBox { padding: 6px 10px; border-radius: 8px; color: white; font-size: 34px; }"
-            "QComboBox QAbstractItemView { color: white; background-color: rgba(20,20,20,240); selection-background-color: rgba(152,76,0,180); }"
-        )
         months = [
             ("OCAK", 1),
             ("ŞUBAT", 2),
@@ -887,11 +816,6 @@ class MainMenuApp(QMainWindow):
 
         self._welcome_btn = QPushButton("DEVAM", self._welcome_overlay)
         self._welcome_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._welcome_btn.setStyleSheet(
-            "QPushButton { background-color: #984C00; color: white; border: none; padding: 10px 18px; border-radius: 10px; font-weight: 700; }"
-            "QPushButton:hover { background-color: #B35E00; }"
-            "QPushButton:pressed { background-color: #7A3D00; }"
-        )
         self._welcome_btn.clicked.connect(self._on_welcome_continue)
 
         lay = QVBoxLayout(self._welcome_overlay)
@@ -1451,7 +1375,6 @@ class MainMenuApp(QMainWindow):
         self._title_anim_layer = QFrame(parent)
         self._title_anim_layer.setObjectName("title_anim_layer")
         self._title_anim_layer.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-        self._title_anim_layer.setStyleSheet("background: transparent;")
         self._title_anim_layer.setVisible(True)
         self._position_title_anim_layer()
         try:
@@ -1543,7 +1466,6 @@ class MainMenuApp(QMainWindow):
             lbl = QLabel(self._title_anim_layer)
             lbl.setText(ch)
             lbl.setFont(self.lbl_title.font())
-            lbl.setStyleSheet("color: #FFE101; background: transparent;")
             lbl.resize(w + 2, h)
             target_pos = QPoint(x, base_y)
             start_pos = QPoint(start_x, base_y)
@@ -1667,7 +1589,6 @@ class MainMenuApp(QMainWindow):
 
         self._title_underline = QFrame(parent)
         self._title_underline.setObjectName("title_underline")
-        self._title_underline.setStyleSheet("background-color: #FFE101; border-radius: 2px;")
         self._title_underline.setFixedHeight(4)
         self._title_underline.setVisible(True)
         self._position_title_underline()
@@ -1810,16 +1731,6 @@ class MainMenuApp(QMainWindow):
             return
 
         try:
-            # Temporary background highlight (more visible than subtle colorize-only)
-            try:
-                self.lbl_title.setStyleSheet(
-                    (self._title_base_stylesheet or "")
-                    + "background-color: rgba(255, 243, 224, 200); border-radius: 8px; padding: 6px;"
-                )
-                QTimer.singleShot(900, lambda: self.lbl_title.setStyleSheet(self._title_base_stylesheet or ""))
-            except Exception:
-                pass
-
             eff = self.lbl_title.graphicsEffect()
             if not isinstance(eff, QGraphicsColorizeEffect):
                 eff = QGraphicsColorizeEffect(self.lbl_title)
@@ -1870,9 +1781,6 @@ class MainMenuApp(QMainWindow):
         self._toast.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self._toast.setText("")
         self._toast.setVisible(False)
-        self._toast.setStyleSheet(
-            "background-color: rgba(30, 30, 30, 200); color: white; padding: 8px 12px; border-radius: 10px;"
-        )
         eff = QGraphicsOpacityEffect(self._toast)
         eff.setOpacity(0.0)
         self._toast.setGraphicsEffect(eff)
@@ -2000,7 +1908,6 @@ class MainMenuApp(QMainWindow):
         # Sol tarafta aktif modülü gösteren ince bar
         self._active_indicator = QFrame(self.menu_frame)
         self._active_indicator.setObjectName("active_indicator")
-        self._active_indicator.setStyleSheet("background-color: #984C00; border-radius: 3px;")
         self._active_indicator.setFixedWidth(6)
         self._active_indicator.setVisible(False)
 
@@ -2277,22 +2184,33 @@ class MainMenuApp(QMainWindow):
         if not animate:
             self.menu_frame.setMinimumWidth(target_width)
 
-        if animate:
-            self._sidebar_apply_text_stagger(collapsed=collapsed)
-        else:
-            # Text / tooltip yönetimi
-            for btn in getattr(self, "_menu_buttons", []):
-                full_text = self._menu_button_texts.get(btn, "")
-                if collapsed:
-                    btn.setToolTip(full_text)
-                    btn.setText("")
-                    btn.setStyleSheet("text-align:center; padding-left:0px; padding-right:0px;")
-                    btn.setIconSize(QSize(24, 24))
-                else:
-                    btn.setText(full_text)
-                    btn.setToolTip("")
-                    btn.setStyleSheet("")
-                    btn.setIconSize(QSize(22, 22))
+        # Text / tooltip yönetimi: animasyon sırasında bile anında uygula.
+        # (Fade/stagger animasyonu bazı makinelerde renk alpha=0'da takılı kalıp yazıları görünmez bırakabiliyor.)
+        try:
+            for b in list(getattr(self, "_menu_buttons", []) or []):
+                try:
+                    a = self._sidebar_text_anims.get(b)
+                    if a is not None:
+                        a.stop()
+                except Exception:
+                    pass
+                try:
+                    self._sidebar_text_anims.pop(b, None)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        for btn in getattr(self, "_menu_buttons", []):
+            full_text = self._menu_button_texts.get(btn, "")
+            if collapsed:
+                btn.setToolTip(full_text)
+                btn.setText("")
+                btn.setIconSize(QSize(24, 24))
+            else:
+                btn.setText(full_text)
+                btn.setToolTip("")
+                btn.setIconSize(QSize(22, 22))
 
     def _sidebar_apply_text_stagger(self, collapsed: bool):
         try:
@@ -2320,12 +2238,10 @@ class MainMenuApp(QMainWindow):
 
                 if collapsed:
                     btn.setToolTip(full_text)
-                    btn.setStyleSheet("text-align:center; padding-left:0px; padding-right:0px;")
                     btn.setIconSize(QSize(24, 24))
                 else:
                     btn.setText(full_text)
                     btn.setToolTip("")
-                    btn.setStyleSheet("")
                     btn.setIconSize(QSize(22, 22))
 
                 base_style = btn.styleSheet() or ""
@@ -2349,7 +2265,6 @@ class MainMenuApp(QMainWindow):
                 # İlk frame'i zorla: böylece fade-in gerçekten 0'dan başlar.
                 try:
                     st = self._sidebar_text_base_styles.get(btn, "")
-                    btn.setStyleSheet(st + f"color: rgba({r},{g},{bb},{start_a});")
                 except Exception:
                     pass
 
@@ -2360,7 +2275,6 @@ class MainMenuApp(QMainWindow):
                         a = 255
                     try:
                         st = self._sidebar_text_base_styles.get(b, "")
-                        b.setStyleSheet(st + f"color: rgba({rr},{gg},{bbb},{a});")
                     except Exception:
                         pass
 
@@ -2369,7 +2283,6 @@ class MainMenuApp(QMainWindow):
                 def _finish(b=btn, is_collapsed=collapsed):
                     try:
                         st = self._sidebar_text_base_styles.get(b, "")
-                        b.setStyleSheet(st)
                     except Exception:
                         pass
                     if is_collapsed:

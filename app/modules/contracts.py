@@ -5,14 +5,13 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QDialog, QWidget, QMessageBox, QTableWidgetItem, QHeaderView
 from app.core.db_manager import DatabaseManager
 from config import get_ui_path
-from app.utils.style_utils import clear_all_styles
 import json
 
 class ContractsApp(QWidget):
     def __init__(self, user_data=None, parent=None):
         super().__init__(parent)
         uic.loadUi(get_ui_path("contracts_window.ui"), self)
-        clear_all_styles(self)
+        self.setObjectName("main_form")
         self.db = DatabaseManager()
         self.user_data = user_data or {}
         self.current_number = None

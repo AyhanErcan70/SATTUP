@@ -1,21 +1,21 @@
 import os
-from PyQt6.QtWidgets import QWidget, QMessageBox, QTableWidgetItem, QHeaderView, QAbstractItemView,QSizePolicy
+from PyQt6.QtWidgets import QWidget, QMessageBox, QTableWidgetItem, QHeaderView, QAbstractItemView, QSizePolicy
 from PyQt6.QtCore import Qt 
 
 from PyQt6 import uic
 from app.core.db_manager import DatabaseManager
 from config import get_ui_path
-from app.utils.style_utils import clear_all_styles
 
 class UsersApp(QWidget):
     def __init__(self, dbManager=None, main_app_instance=None):
         super().__init__()
         # 1. Arayüzü Yükle
         uic.loadUi(get_ui_path("users_window.ui"), self)
-        clear_all_styles(self)
+        self.setObjectName("main_form")
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.db = dbManager if dbManager else DatabaseManager()
         self.main_app = main_app_instance
+
         self.selected_user_id = None # Güncelleme için seçili ID
 
         # 2. Hazırlıkları Yap

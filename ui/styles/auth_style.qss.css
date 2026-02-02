@@ -1,6 +1,9 @@
 QDialog{
 background-color: #162D6D;
 }
+QWidget#logo_wid{
+image: url(:/resimler/logo-w.png);
+}
 QMessageBox{
 background-color: none;
 color: #ffffff;
@@ -41,7 +44,7 @@ font-weight: bold;
 padding-top: 10px;
 }
 QPushButton#btn_login:pressed{
-QDialog#Dialog, background-color: transparent;
+background-color: transparent;
 background-color: #5a0000;
 border-radius: 8px;
 border: 5px solid #ffffff;
@@ -49,7 +52,7 @@ font: 500 15pt "Nesatho";
 color: #ffffff;
 font-weight: bold;
 padding-top: 4px;
-letter-spacing: 5px
+letter-spacing: 5px;
 }
 QPushButton#btn_cancel:pressed{
 background-color: #024f02;
@@ -60,3 +63,4 @@ color: #ffffff;
 font-weight: bold;
 padding-top: 4px;
 letter-spacing: 5px;
+}

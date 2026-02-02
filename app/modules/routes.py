@@ -5,18 +5,17 @@ import re
 from PyQt6 import uic
 from PyQt6.QtCore import Qt, QDate
 from PyQt6.QtGui import QColor, QStandardItem, QStandardItemModel
-from PyQt6.QtWidgets import QDialog, QHeaderView, QMessageBox, QTableWidgetItem, QWidget
+from PyQt6.QtWidgets import QDialog, QMessageBox, QTableWidgetItem, QWidget, QHeaderView
 
 from app.core.db_manager import DatabaseManager
 from config import get_ui_path
-from app.utils.style_utils import clear_all_styles
 
 
 class RoutesApp(QWidget):
     def __init__(self, user_data=None, parent=None):
         super().__init__(parent)
         uic.loadUi(get_ui_path("routes_window.ui"), self)
-        clear_all_styles(self)
+        self.setObjectName("main_form")
 
         # Yeni UI'da tablo ismi table_rotalar. Eski kod table_rota bekliyor olabilir.
         if hasattr(self, "table_rotalar") and not hasattr(self, "table_rota"):

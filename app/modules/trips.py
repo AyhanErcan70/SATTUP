@@ -19,13 +19,12 @@ from PyQt6.QtWidgets import (
 
 from app.core.db_manager import DatabaseManager
 from config import get_ui_path
-from app.utils.style_utils import clear_all_styles
 
 class TripsGridApp(QWidget):
     def __init__(self, user_data=None, db_manager=None, parent=None):
         super().__init__(parent)
         uic.loadUi(get_ui_path("trips_grid_window.ui"), self)
-        clear_all_styles(self)
+        self.setObjectName("main_form")
 
         if hasattr(self, "table_sefer") and not hasattr(self, "tbl_grid"):
             self.tbl_grid = self.table_sefer
@@ -52,6 +51,8 @@ class TripsGridApp(QWidget):
             except Exception:
                 pass
 
+        self._tbl_grid_cols = {}
+
         self._setup_tables()
         self._setup_connections()
         self._load_static_filters()
@@ -61,12 +62,6 @@ class TripsGridApp(QWidget):
             QTimer.singleShot(0, self._reload_grid)
         except Exception:
             pass
-
-        if hasattr(self, "cmb_service_type"):
-            try:
-                self.cmb_service_type.setEnabled(True)
-            except Exception:
-                pass
 
     def _service_type_values(self, service_type: str):
         raw = (service_type or "").strip()
@@ -109,12 +104,18 @@ class TripsGridApp(QWidget):
 
     def _load_vehicle_driver_maps(self):
         self._vehicle_map = {}
+        self._vehicle_capacity_map = {}
         self._driver_map = {}
         try:
-            for vcode, plate in self.db.get_araclar_list(only_active=True) or []:
+            for vcode, plate, cap in self.db.get_araclar_list_with_capacity(only_active=True) or []:
                 self._vehicle_map[str(vcode)] = str(plate)
+                try:
+                    self._vehicle_capacity_map[str(vcode)] = int(cap or 0)
+                except Exception:
+                    self._vehicle_capacity_map[str(vcode)] = 0
         except Exception:
             self._vehicle_map = {}
+            self._vehicle_capacity_map = {}
         try:
             for kod, ad in self.db.get_sofor_listesi() or []:
                 self._driver_map[str(kod)] = str(ad)
@@ -242,23 +243,69 @@ class TripsGridApp(QWidget):
 
     def _setup_tables(self):
         if hasattr(self, "tbl_grid"):
+            try:
+                self.tbl_grid.setProperty("no_zebra", True)
+            except Exception:
+                pass
             self.tbl_grid.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
             self.tbl_grid.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
             self.tbl_grid.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-            self.tbl_grid.setAlternatingRowColors(True)
+            self.tbl_grid.setAlternatingRowColors(False)
             self.tbl_grid.verticalHeader().setVisible(False)
             self.tbl_grid.horizontalHeader().setHighlightSections(False)
-            headers = ["Güzergah", "Duraklar", "Giriş", "Çıkış", "Araç", "Şoför"]
-            self.tbl_grid.setColumnCount(len(headers))
-            self.tbl_grid.setHorizontalHeaderLabels(headers)
+
+            # Respect Designer columns; only set headers if none.
+            if self.tbl_grid.columnCount() == 0:
+                headers = ["ROTA", "GİRİŞ SAATİ", "ÇIKIŞ SAATİ", "ARAÇ PLAKASI", "ŞOFÖR"]
+                self.tbl_grid.setColumnCount(len(headers))
+                self.tbl_grid.setHorizontalHeaderLabels(headers)
+
+            self._tbl_grid_cols = self._resolve_tbl_grid_columns()
             h = self.tbl_grid.horizontalHeader()
             h.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-            h.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-            h.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-            h.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-            h.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-            h.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
-            h.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+            if self._tbl_grid_cols.get("rota") is not None:
+                h.setSectionResizeMode(int(self._tbl_grid_cols["rota"]), QHeaderView.ResizeMode.Stretch)
+            for k in ("giris", "cikis", "plaka", "kpst", "sofor"):
+                if self._tbl_grid_cols.get(k) is not None:
+                    h.setSectionResizeMode(int(self._tbl_grid_cols[k]), QHeaderView.ResizeMode.ResizeToContents)
+
+    def _resolve_tbl_grid_columns(self):
+        if not hasattr(self, "tbl_grid"):
+            return {}
+        tbl = self.tbl_grid
+        cols = {}
+        try:
+            for c in range(tbl.columnCount()):
+                it = tbl.horizontalHeaderItem(c)
+                txt = (it.text() if it is not None else "")
+                key = (txt or "").strip().upper()
+                if key == "ROTA":
+                    cols["rota"] = c
+                elif key in ("GİRİŞ SAATİ", "GIRIS SAATI", "GİRİŞ", "GIRIS"):
+                    cols["giris"] = c
+                elif key in ("ÇIKIŞ SAATİ", "CIKIS SAATI", "ÇIKIŞ", "CIKIS"):
+                    cols["cikis"] = c
+                elif key in ("ARAÇ PLAKASI", "ARAC PLAKASI", "ARAÇ", "ARAC"):
+                    cols["plaka"] = c
+                elif key in ("KPST.", "KPST", "KAPASITE"):
+                    cols["kpst"] = c
+                elif key in ("ŞOFÖR", "SOFOR", "SÜRÜCÜ", "SURUCU"):
+                    cols["sofor"] = c
+        except Exception:
+            return cols
+
+        # Backward compatible defaults
+        if "rota" not in cols:
+            cols["rota"] = 0
+        if "giris" not in cols:
+            cols["giris"] = 1
+        if "cikis" not in cols:
+            cols["cikis"] = 2
+        if "plaka" not in cols:
+            cols["plaka"] = 3
+        if "sofor" not in cols:
+            cols["sofor"] = 4
+        return cols
 
     def _setup_connections(self):
         if hasattr(self, "cmb_musteri"):
@@ -461,7 +508,7 @@ class TripsGridApp(QWidget):
             conn = self.db.connect()
             cursor = conn.cursor()
             q = (
-                "SELECT id, COALESCE(route_name,''), COALESCE(stops,''), distance_km "
+                "SELECT id, COALESCE(route_name,''), COALESCE(stops,''), COALESCE(movement_type,''), distance_km "
                 "FROM route_params "
                 f"WHERE contract_id = ? AND service_type IN ({placeholders}) AND COALESCE(route_name,'') <> '' "
                 "ORDER BY id ASC"
@@ -483,14 +530,16 @@ class TripsGridApp(QWidget):
                     f"Hata: {str(e)}",
                 )
 
-        for rid, rname, stops_txt, km in rows:
+        for rid, rname, stops_txt, movement_type, km in rows:
             rid_s = str(rid)
             self._selected_route_map[rid_s] = {
                 "route_name": (rname or ""),
                 "stops": (stops_txt or ""),
+                "movement_type": (movement_type or ""),
                 "distance_km": km,
             }
-            disp = str(rname or "")
+            parts = [p for p in [str(rname or ""), str(stops_txt or ""), str(movement_type or "")] if str(p).strip()]
+            disp = " | ".join(parts)
             it = QStandardItem(disp)
             it.setEditable(False)
             it.setData(rid_s, Qt.ItemDataRole.UserRole)
@@ -507,7 +556,7 @@ class TripsGridApp(QWidget):
 
         for r in range(self._kalem_model.rowCount()):
             it = self._kalem_model.item(r)
-            txt = (it.text() or "") if it is not None else ""
+            txt = (it.text() if it is not None else "") or ""
             hide = bool(q) and (q not in txt.lower())
             try:
                 self.list_kalemler.setRowHidden(r, hide)
@@ -544,7 +593,12 @@ class TripsGridApp(QWidget):
         service_type = str(self._service_type())
         month = self._month_key()
 
-        route_name_txt = self._selected_route_map.get(str(route_id), {}).get("route_name", "")
+        route_rec = self._selected_route_map.get(str(route_id), {})
+        route_name_txt = str(route_rec.get("route_name") or "")
+        stops_txt = str(route_rec.get("stops") or "")
+        movement_type_txt = str(route_rec.get("movement_type") or "")
+        rota_disp_parts = [p for p in [route_name_txt, stops_txt, movement_type_txt] if str(p).strip()]
+        rota_disp = " | ".join(rota_disp_parts)
 
         self._load_vehicle_driver_maps()
 
@@ -581,8 +635,8 @@ class TripsGridApp(QWidget):
                 pass
             cmb_v.clear()
             cmb_v.addItem("Seçiniz...", None)
-            for vid, plate in self._vehicle_map.items():
-                cmb_v.addItem(str(plate), str(vid))
+            for vcode, plate in self._vehicle_map.items():
+                cmb_v.addItem(str(plate), str(vcode))
         if cmb_d is not None:
             try:
                 cmb_d.setFixedWidth(200)
@@ -622,18 +676,6 @@ class TripsGridApp(QWidget):
                     cc.setFixedWidth(70)
                 except Exception:
                     pass
-            try:
-                chk.setStyleSheet("")
-            except Exception:
-                pass
-            try:
-                chk.setProperty("toggle_button", True)
-            except Exception:
-                pass
-            if cg is not None:
-                cg.setEnabled(bool(chk.isChecked()))
-            if cc is not None:
-                cc.setEnabled(bool(chk.isChecked()))
 
             def _mk_toggle(_cg, _cc):
                 def _toggle(state):
@@ -655,27 +697,35 @@ class TripsGridApp(QWidget):
         existing_did = None
         try:
             if hasattr(self, "tbl_grid"):
+                cols = self._resolve_tbl_grid_columns()
+                self._tbl_grid_cols = cols
+                c_rota = int(cols.get("rota", 0))
+                c_g = int(cols.get("giris", 1))
+                c_c = int(cols.get("cikis", 2))
                 for r in range(self.tbl_grid.rowCount()):
-                    it_tb = self.tbl_grid.item(r, 1)
-                    if it_tb is None:
+                    it_rota = self.tbl_grid.item(r, c_rota)
+                    if it_rota is None:
                         continue
-                    rid2 = it_tb.data(Qt.ItemDataRole.UserRole + 1)
+
+                    rid2 = it_rota.data(Qt.ItemDataRole.UserRole + 1)
                     if str(rid2 or "") != str(route_id):
                         continue
-                    tb2 = it_tb.data(Qt.ItemDataRole.UserRole + 2)
-                    g2 = (self.tbl_grid.item(r, 2).text().strip() if self.tbl_grid.item(r, 2) else "")
-                    c2 = (self.tbl_grid.item(r, 3).text().strip() if self.tbl_grid.item(r, 3) else "")
+                    tb2 = it_rota.data(Qt.ItemDataRole.UserRole + 2)
+                    g2 = (self.tbl_grid.item(r, c_g).text().strip() if self.tbl_grid.item(r, c_g) else "")
+                    c2 = (self.tbl_grid.item(r, c_c).text().strip() if self.tbl_grid.item(r, c_c) else "")
                     if not tb2 and (g2 or c2):
                         tb2 = f"{g2}-{c2}" if (g2 or c2) else ""
+                    if not tb2:
+                        continue
                     g_s, c_s = self._split_time_block(str(tb2 or ""))
                     if g_s or c_s:
                         existing_pairs.append((g_s, c_s))
                     if existing_vid is None:
-                        vv = it_tb.data(Qt.ItemDataRole.UserRole + 3)
+                        vv = it_rota.data(Qt.ItemDataRole.UserRole + 3)
                         if vv not in (None, ""):
                             existing_vid = str(vv)
                     if existing_did is None:
-                        dd = it_tb.data(Qt.ItemDataRole.UserRole + 4)
+                        dd = it_rota.data(Qt.ItemDataRole.UserRole + 4)
                         if dd not in (None, ""):
                             existing_did = str(dd)
         except Exception:
@@ -803,10 +853,13 @@ class TripsGridApp(QWidget):
 
             try:
                 if hasattr(self, "tbl_grid"):
+                    cols = self._resolve_tbl_grid_columns()
+                    self._tbl_grid_cols = cols
+                    c_rota = int(cols.get("rota", 0))
                     del_rows = []
                     for r in range(self.tbl_grid.rowCount()):
-                        it_tb = self.tbl_grid.item(r, 1)
-                        rid2 = it_tb.data(Qt.ItemDataRole.UserRole + 1) if it_tb else None
+                        it_rota = self.tbl_grid.item(r, c_rota)
+                        rid2 = it_rota.data(Qt.ItemDataRole.UserRole + 1) if it_rota else None
                         if str(rid2 or "") == str(route_id):
                             del_rows.append(r)
                     for r in sorted(del_rows, reverse=True):
@@ -815,29 +868,53 @@ class TripsGridApp(QWidget):
                 pass
 
             plate = self._vehicle_map.get(str(vid or ""), "")
+            cap = self._vehicle_capacity_map.get(str(vid or ""), 0)
             dname = self._driver_map.get(str(did or ""), "")
-            stops_txt = self._selected_route_map.get(str(route_id), {}).get("stops", "")
+            cols = self._resolve_tbl_grid_columns()
+            self._tbl_grid_cols = cols
+            c_rota = int(cols.get("rota", 0))
+            c_g = int(cols.get("giris", 1))
+            c_c = int(cols.get("cikis", 2))
+            c_p = int(cols.get("plaka", 3))
+            c_s = int(cols.get("sofor", 4))
+            c_k = cols.get("kpst")
             for gt, ct in chosen_pairs:
                 rr = self.tbl_grid.rowCount()
                 self.tbl_grid.insertRow(rr)
-                it_route = QTableWidgetItem(route_name_txt)
-                it_tb = QTableWidgetItem(str(stops_txt or ""))
+
                 it_g = QTableWidgetItem(str(gt or ""))
                 it_c = QTableWidgetItem(str(ct or ""))
                 it_v = QTableWidgetItem(str(plate or ""))
+                it_k = QTableWidgetItem(str(cap if cap is not None else ""))
                 it_d = QTableWidgetItem(str(dname or ""))
-                for it in (it_route, it_tb, it_g, it_c, it_v, it_d):
+                it_rota = QTableWidgetItem(str(rota_disp or route_name_txt or ""))
+                items = [it_rota, it_g, it_c, it_v, it_d]
+                if c_k is not None:
+                    items = [it_rota, it_g, it_c, it_v, it_k, it_d]
+                for it in items:
                     it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                it_tb.setData(Qt.ItemDataRole.UserRole + 1, str(route_id))
-                it_tb.setData(Qt.ItemDataRole.UserRole + 2, f"{gt}-{ct}")
-                it_tb.setData(Qt.ItemDataRole.UserRole + 3, (None if vid in (None, "") else str(vid)))
-                it_tb.setData(Qt.ItemDataRole.UserRole + 4, (None if did in (None, "") else str(did)))
-                self.tbl_grid.setItem(rr, 0, it_route)
-                self.tbl_grid.setItem(rr, 1, it_tb)
-                self.tbl_grid.setItem(rr, 2, it_g)
-                self.tbl_grid.setItem(rr, 3, it_c)
-                self.tbl_grid.setItem(rr, 4, it_v)
-                self.tbl_grid.setItem(rr, 5, it_d)
+
+                # Data-roles: route_id / time_block / vehicle_id / driver_id
+                rid_s = str(route_id)
+                tb_val = f"{gt}-{ct}"
+                for it in items:
+                    it.setData(Qt.ItemDataRole.UserRole + 1, rid_s)
+                    it.setData(Qt.ItemDataRole.UserRole + 2, str(tb_val or ""))
+                    it.setData(Qt.ItemDataRole.UserRole + 3, (None if vid in (None, "") else str(vid)))
+                    it.setData(Qt.ItemDataRole.UserRole + 4, (None if did in (None, "") else str(did)))
+
+                self.tbl_grid.setItem(rr, c_rota, it_rota)
+                self.tbl_grid.setItem(rr, c_g, it_g)
+                self.tbl_grid.setItem(rr, c_c, it_c)
+                self.tbl_grid.setItem(rr, c_p, it_v)
+                if c_k is not None:
+                    self.tbl_grid.setItem(rr, int(c_k), it_k)
+                self.tbl_grid.setItem(rr, c_s, it_d)
+
+            try:
+                self._group_tbl_grid_by_rota()
+            except Exception:
+                pass
 
             QMessageBox.information(
                 self,
@@ -956,22 +1033,25 @@ class TripsGridApp(QWidget):
             )
 
             for r in range(self.tbl_grid.rowCount()):
-                it_tb = self.tbl_grid.item(r, 1)
-                if it_tb is None:
+                cols = self._resolve_tbl_grid_columns()
+                self._tbl_grid_cols = cols
+                c_rota = int(cols.get("rota", 0))
+                it_rota = self.tbl_grid.item(r, c_rota)
+                if it_rota is None:
                     continue
 
-                rid = it_tb.data(Qt.ItemDataRole.UserRole + 1)
-                tb = it_tb.data(Qt.ItemDataRole.UserRole + 2)
-                vid = it_tb.data(Qt.ItemDataRole.UserRole + 3)
-                did = it_tb.data(Qt.ItemDataRole.UserRole + 4)
+                rid = it_rota.data(Qt.ItemDataRole.UserRole + 1)
+                tb = it_rota.data(Qt.ItemDataRole.UserRole + 2)
+                vid = it_rota.data(Qt.ItemDataRole.UserRole + 3)
+                did = it_rota.data(Qt.ItemDataRole.UserRole + 4)
 
                 if not rid:
                     continue
 
                 # Excel akışı: DB'de time_block 'HH:MM-HH:MM' formatında tutulur.
                 tb_s = (str(tb or "").strip() if tb is not None else "")
-                g_txt = (self.tbl_grid.item(r, 2).text().strip() if self.tbl_grid.item(r, 2) else "")
-                c_txt = (self.tbl_grid.item(r, 3).text().strip() if self.tbl_grid.item(r, 3) else "")
+                g_txt = (self.tbl_grid.item(r, int(cols.get("giris", 1))).text().strip() if self.tbl_grid.item(r, int(cols.get("giris", 1))) else "")
+                c_txt = (self.tbl_grid.item(r, int(cols.get("cikis", 2))).text().strip() if self.tbl_grid.item(r, int(cols.get("cikis", 2))) else "")
                 if (not tb_s) and (g_txt or c_txt):
                     tb_s = f"{g_txt}-{c_txt}" if (g_txt or c_txt) else ""
                 if not tb_s:
@@ -1036,7 +1116,6 @@ class TripsGridApp(QWidget):
                 print("[Trips] _reload_grid called")
             except Exception:
                 pass
-            self._reload_debug_printed = True
 
         if hasattr(self, "list_kalemler"):
             try:
@@ -1046,9 +1125,11 @@ class TripsGridApp(QWidget):
 
         # Header'ı koru
         if self.tbl_grid.columnCount() == 0:
-            headers = ["Güzergah", "Duraklar", "Giriş", "Çıkış", "Araç", "Şoför"]
+            headers = ["ROTA", "GİRİŞ SAATİ", "ÇIKIŞ SAATİ", "ARAÇ PLAKASI", "ŞOFÖR"]
             self.tbl_grid.setColumnCount(len(headers))
             self.tbl_grid.setHorizontalHeaderLabels(headers)
+
+        self._tbl_grid_cols = self._resolve_tbl_grid_columns()
 
         self._load_vehicle_driver_maps()
 
@@ -1086,10 +1167,23 @@ class TripsGridApp(QWidget):
             planned_rids = {str(rid) for (rid, _tb) in (plan_map or {}).keys()}
         except Exception:
             planned_rids = set()
+
+        # Kalem text + renk
         for r in range(self._kalem_model.rowCount()):
             it = self._kalem_model.item(r)
             rid = None if it is None else it.data(Qt.ItemDataRole.UserRole)
             rid_s = str(rid) if rid is not None else ""
+            route_rec = self._selected_route_map.get(rid_s, {}) if rid_s else {}
+            rname = str(route_rec.get("route_name") or "")
+            stops_txt = str(route_rec.get("stops") or "")
+            mtype = str(route_rec.get("movement_type") or "")
+            rota_parts = [p for p in [rname, stops_txt, mtype] if str(p).strip()]
+            rota_disp = " | ".join(rota_parts)
+            try:
+                if it is not None and rota_disp:
+                    it.setText(rota_disp)
+            except Exception:
+                pass
             try:
                 if rid_s and rid_s in planned_rids:
                     it.setForeground(QColor(0, 128, 0))
@@ -1097,49 +1191,130 @@ class TripsGridApp(QWidget):
                     it.setForeground(QColor(200, 0, 0))
             except Exception:
                 pass
+
         if not plan_map:
+            self._group_tbl_grid_by_rota()
             return
 
         for (rid, tb), rec in plan_map.items():
-            route_name = self._selected_route_map.get(str(rid), {}).get("route_name", "")
+            route_rec = self._selected_route_map.get(str(rid), {})
+            rname = str(route_rec.get("route_name") or "")
+            stops_txt = str(route_rec.get("stops") or "")
+            mtype = str(route_rec.get("movement_type") or "")
+            rota_parts = [p for p in [rname, stops_txt, mtype] if str(p).strip()]
+            rota_disp = " | ".join(rota_parts)
+
+            tb_s = str(tb or "")
+            g_txt, c_txt = self._split_time_block(str(tb_s))
+
             vid = rec.get("vehicle_id")
             did = rec.get("driver_id")
             plate = self._vehicle_map.get(str(vid or ""), "")
+            cap = self._vehicle_capacity_map.get(str(vid or ""), 0)
             dname = self._driver_map.get(str(did or ""), "")
 
-            rr = self.tbl_grid.rowCount()
-            self.tbl_grid.insertRow(rr)
+            rows_to_add = []
+            rows_to_add.append(
+                {
+                    "rid": str(rid),
+                    "tb_s": tb_s,
+                    "g_txt": g_txt,
+                    "c_txt": c_txt,
+                    "vid": vid,
+                    "did": did,
+                    "plate": plate,
+                    "cap": cap,
+                    "dname": dname,
+                    "rota_disp": str(rota_disp or rname or ""),
+                }
+            )
 
-            it_route = QTableWidgetItem(route_name)
-            stops_txt = self._selected_route_map.get(str(rid), {}).get("stops", "")
-            it_tb = QTableWidgetItem(str(stops_txt or ""))
+            rows_to_add.sort(key=lambda x: (str(x.get("rota_disp") or ""), str(x.get("tb_s") or "")))
 
-            tb_s = str(tb or "")
-            g_txt, c_txt = self._split_time_block(tb_s)
+            for rec in rows_to_add:
+                rr = self.tbl_grid.rowCount()
+                self.tbl_grid.insertRow(rr)
 
-            it_g = QTableWidgetItem(g_txt)
-            it_c = QTableWidgetItem(c_txt)
-            it_v = QTableWidgetItem(plate)
-            it_d = QTableWidgetItem(dname)
-            for it in (it_route, it_tb, it_g, it_c, it_v, it_d):
-                it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                it_g = QTableWidgetItem(str(rec.get("g_txt") or ""))
+                it_c = QTableWidgetItem(str(rec.get("c_txt") or ""))
+                it_v = QTableWidgetItem(str(rec.get("plate") or ""))
+                it_k = QTableWidgetItem(str(rec.get("cap") if rec.get("cap") is not None else ""))
+                it_d = QTableWidgetItem(str(rec.get("dname") or ""))
+                it_rota = QTableWidgetItem(str(rec.get("rota_disp") or ""))
+                items = [it_rota, it_g, it_c, it_v, it_d]
+                if self._tbl_grid_cols.get("kpst") is not None:
+                    items = [it_rota, it_g, it_c, it_v, it_k, it_d]
+                for it in items:
+                    it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
 
-            # Data-roles: route_id / time_block / vehicle_id / driver_id
-            it_tb.setData(Qt.ItemDataRole.UserRole + 1, str(rid))
-            it_tb.setData(Qt.ItemDataRole.UserRole + 2, str(tb_s or ""))
-            it_tb.setData(Qt.ItemDataRole.UserRole + 3, (None if vid is None else str(vid)))
-            it_tb.setData(Qt.ItemDataRole.UserRole + 4, (None if did is None else str(did)))
-            try:
-                it_tb.setToolTip(str(tb_s))
-            except Exception:
-                pass
+                # Data-roles: route_id / time_block / vehicle_id / driver_id
+                rid_s = str(rec.get("rid") or "")
+                tb_s = str(rec.get("tb_s") or "")
+                vid = rec.get("vid")
+                did = rec.get("did")
+                for it in items:
+                    it.setData(Qt.ItemDataRole.UserRole + 1, rid_s)
+                    it.setData(Qt.ItemDataRole.UserRole + 2, tb_s)
+                    it.setData(Qt.ItemDataRole.UserRole + 3, (None if vid is None else str(vid)))
+                    it.setData(Qt.ItemDataRole.UserRole + 4, (None if did is None else str(did)))
 
-            self.tbl_grid.setItem(rr, 0, it_route)
-            self.tbl_grid.setItem(rr, 1, it_tb)
-            self.tbl_grid.setItem(rr, 2, it_g)
-            self.tbl_grid.setItem(rr, 3, it_c)
-            self.tbl_grid.setItem(rr, 4, it_v)
-            self.tbl_grid.setItem(rr, 5, it_d)
+                self.tbl_grid.setItem(rr, int(self._tbl_grid_cols.get("rota", 0)), it_rota)
+                self.tbl_grid.setItem(rr, int(self._tbl_grid_cols.get("giris", 1)), it_g)
+                self.tbl_grid.setItem(rr, int(self._tbl_grid_cols.get("cikis", 2)), it_c)
+                self.tbl_grid.setItem(rr, int(self._tbl_grid_cols.get("plaka", 3)), it_v)
+                if self._tbl_grid_cols.get("kpst") is not None:
+                    self.tbl_grid.setItem(rr, int(self._tbl_grid_cols.get("kpst")), it_k)
+                self.tbl_grid.setItem(rr, int(self._tbl_grid_cols.get("sofor", 4)), it_d)
+
+        self._group_tbl_grid_by_rota()
+
+    def _group_tbl_grid_by_rota(self):
+        if not hasattr(self, "tbl_grid"):
+            return
+        tbl = self.tbl_grid
+
+        # Clear previous spans
+        try:
+            tbl.clearSpans()
+        except Exception:
+            pass
+
+        start = 0
+        last_txt = None
+        for r in range(tbl.rowCount() + 1):
+            txt = ""
+            if r < tbl.rowCount():
+                it = tbl.item(r, int(self._resolve_tbl_grid_columns().get("rota", 0)))
+                txt = str((it.text() if it is not None else "") or "")
+
+            if r == 0:
+                last_txt = txt
+
+            if r == tbl.rowCount() or txt != last_txt:
+                span_len = r - start
+                if span_len > 1 and str(last_txt or ""):
+                    try:
+                        tbl.setSpan(start, int(self._resolve_tbl_grid_columns().get("rota", 0)), span_len, 1)
+                    except Exception:
+                        pass
+
+                    for rr in range(start + 1, r):
+                        try:
+                            it2 = tbl.item(rr, int(self._resolve_tbl_grid_columns().get("rota", 0)))
+                            if it2 is not None:
+                                it2.setText("")
+                        except Exception:
+                            pass
+
+                    try:
+                        it0 = tbl.item(start, int(self._resolve_tbl_grid_columns().get("rota", 0)))
+                        if it0 is not None:
+                            it0.setTextAlignment(int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft))
+                    except Exception:
+                        pass
+
+                start = r
+                last_txt = txt
 
     # ------------------------- header menu (custom times) -------------------------
     def _open_grid_header_menu(self, pos):
@@ -1180,12 +1355,14 @@ class TripsGridApp(QWidget):
         cells = []
         for it in self.tbl_grid.selectedItems():
             r, c = it.row(), it.column()
-            if c < 3:
+            c_plaka = int(self._resolve_tbl_grid_columns().get("plaka", 3))
+            if c < c_plaka:
                 continue
             route_id = it.data(Qt.ItemDataRole.UserRole + 1)
             time_block = it.data(Qt.ItemDataRole.UserRole + 2)
             if route_id is None:
                 continue
+
             tb = str(time_block or "")
             if not tb:
                 continue

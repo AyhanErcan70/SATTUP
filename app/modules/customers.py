@@ -1,4 +1,3 @@
-
 from PyQt6.QtWidgets import QWidget, QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView, QSizePolicy
 from PyQt6.QtCore import Qt, QRegularExpression
 from PyQt6.QtGui import QRegularExpressionValidator
@@ -6,7 +5,6 @@ from PyQt6 import uic
 
 from app.core.db_manager import DatabaseManager
 from config import get_ui_path
-from app.utils.style_utils import clear_all_styles
 
 
 def tr_upper(text):
@@ -18,7 +16,16 @@ class CustomersApp(QWidget):
     def __init__(self, user_data=None, parent=None):
         super().__init__(parent)
         uic.loadUi(get_ui_path("customers_window.ui"), self)
-        clear_all_styles(self)
+        self.setObjectName("main_form")
+        try:
+            self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        except Exception:
+            pass
+        try:
+            if hasattr(self, "top_frame") and self.top_frame is not None:
+                self.top_frame.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        except Exception:
+            pass
         self.db = DatabaseManager()
         self.user_data = user_data
 

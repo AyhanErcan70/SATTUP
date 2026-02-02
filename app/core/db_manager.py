@@ -15,6 +15,7 @@ class DatabaseManager:
         self.create_hakedis_tables()
         self.create_customers_table()
         self.create_vehicles_table()
+        self.create_contract_links_table()
         self.create_repairs_table()
         self.create_employees_table()
         self.create_driver_documents_table()
@@ -158,12 +159,13 @@ class DatabaseManager:
                     trip_date TEXT NOT NULL,
                     service_type TEXT NOT NULL,
                     time_block TEXT NOT NULL,
+                    line_no INTEGER NOT NULL DEFAULT 0,
                     qty INTEGER NOT NULL DEFAULT 0,
                     time_text TEXT,
                     note TEXT,
                     created_at TEXT,
                     updated_at TEXT,
-                    UNIQUE (contract_id, route_params_id, trip_date, service_type, time_block)
+                    UNIQUE (contract_id, route_params_id, trip_date, service_type, time_block, line_no)
                 )
                 """
             )
@@ -177,6 +179,7 @@ class DatabaseManager:
                     trip_date TEXT NOT NULL,
                     service_type TEXT NOT NULL,
                     time_block TEXT NOT NULL,
+                    line_no INTEGER NOT NULL DEFAULT 0,
                     driver_id INTEGER,
                     vehicle_id INTEGER,
                     qty REAL NOT NULL DEFAULT 0,
@@ -184,7 +187,7 @@ class DatabaseManager:
                     note TEXT,
                     created_at TEXT,
                     updated_at TEXT,
-                    UNIQUE (contract_id, route_params_id, trip_date, service_type, time_block)
+                    UNIQUE (contract_id, route_params_id, trip_date, service_type, time_block, line_no)
                 )
                 """
             )
@@ -199,6 +202,9 @@ class DatabaseManager:
         finally:
             conn.close()
 
+        # trip_entries/trip_allocations eski DB'lerde line_no kolonuna sahip olmayabilir.
+        self.migrate_trip_entries_allocations_line_no()
+
         # trip_allocations eski DB'lerde time_block kolonuna sahip olmayabilir.
         # Migration'ı index oluşturmadan önce çalıştır.
         self.migrate_trip_allocations_table()
@@ -211,9 +217,151 @@ class DatabaseManager:
             cursor2.execute(
                 "CREATE INDEX IF NOT EXISTS idx_trip_allocations_key ON trip_allocations(contract_id, trip_date, service_type, time_block)"
             )
+            cursor2.execute(
+                "CREATE INDEX IF NOT EXISTS idx_trip_allocations_key2 ON trip_allocations(contract_id, route_params_id, trip_date, service_type, time_block, line_no)"
+            )
             conn2.commit()
         finally:
             conn2.close()
+
+    def create_contract_links_table(self):
+        conn = self.connect()
+        if not conn:
+            return
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS contract_links (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    main_contract_id INTEGER NOT NULL,
+                    subcontract_contract_id INTEGER NOT NULL,
+                    is_active INTEGER DEFAULT 1,
+                    created_at TEXT,
+                    updated_at TEXT,
+                    UNIQUE (main_contract_id, subcontract_contract_id),
+                    FOREIGN KEY (main_contract_id) REFERENCES contracts (id),
+                    FOREIGN KEY (subcontract_contract_id) REFERENCES contracts (id)
+                )
+                """
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_contract_links_main ON contract_links(main_contract_id)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_contract_links_sub ON contract_links(subcontract_contract_id)"
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def migrate_trip_entries_allocations_line_no(self):
+        conn = self.connect()
+        if not conn:
+            return
+        try:
+            cur = conn.cursor()
+
+            # trip_entries
+            try:
+                cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='trip_entries'")
+                if cur.fetchone() is not None:
+                    cur.execute("PRAGMA table_info(trip_entries)")
+                    cols = {row[1] for row in (cur.fetchall() or [])}
+                    if "line_no" not in cols:
+                        cur.execute(
+                            """
+                            CREATE TABLE IF NOT EXISTS trip_entries_new (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                contract_id INTEGER NOT NULL,
+                                route_params_id INTEGER NOT NULL,
+                                trip_date TEXT NOT NULL,
+                                service_type TEXT NOT NULL,
+                                time_block TEXT NOT NULL,
+                                line_no INTEGER NOT NULL DEFAULT 0,
+                                qty INTEGER NOT NULL DEFAULT 0,
+                                time_text TEXT,
+                                note TEXT,
+                                created_at TEXT,
+                                updated_at TEXT,
+                                UNIQUE (contract_id, route_params_id, trip_date, service_type, time_block, line_no)
+                            )
+                            """
+                        )
+                        cur.execute(
+                            """
+                            INSERT INTO trip_entries_new (
+                                id, contract_id, route_params_id, trip_date, service_type, time_block,
+                                line_no, qty, time_text, note, created_at, updated_at
+                            )
+                            SELECT
+                                id, contract_id, route_params_id, trip_date, service_type, time_block,
+                                0, qty, time_text, note, created_at, updated_at
+                            FROM trip_entries
+                            """
+                        )
+                        cur.execute("DROP TABLE trip_entries")
+                        cur.execute("ALTER TABLE trip_entries_new RENAME TO trip_entries")
+                        cur.execute(
+                            "CREATE INDEX IF NOT EXISTS idx_trip_entries_contract_date ON trip_entries(contract_id, trip_date)"
+                        )
+            except Exception:
+                pass
+
+            # trip_allocations
+            try:
+                cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='trip_allocations'")
+                if cur.fetchone() is not None:
+                    cur.execute("PRAGMA table_info(trip_allocations)")
+                    cols2 = {row[1] for row in (cur.fetchall() or [])}
+                    if "line_no" not in cols2:
+                        cur.execute(
+                            """
+                            CREATE TABLE IF NOT EXISTS trip_allocations_new2 (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                contract_id INTEGER NOT NULL,
+                                route_params_id INTEGER NOT NULL,
+                                trip_date TEXT NOT NULL,
+                                service_type TEXT NOT NULL,
+                                time_block TEXT NOT NULL,
+                                line_no INTEGER NOT NULL DEFAULT 0,
+                                driver_id INTEGER,
+                                vehicle_id INTEGER,
+                                qty REAL NOT NULL DEFAULT 0,
+                                time_text TEXT,
+                                note TEXT,
+                                created_at TEXT,
+                                updated_at TEXT,
+                                UNIQUE (contract_id, route_params_id, trip_date, service_type, time_block, line_no)
+                            )
+                            """
+                        )
+                        cur.execute(
+                            """
+                            INSERT INTO trip_allocations_new2 (
+                                id, contract_id, route_params_id, trip_date, service_type, time_block,
+                                line_no, driver_id, vehicle_id, qty, time_text, note, created_at, updated_at
+                            )
+                            SELECT
+                                id, contract_id, route_params_id, trip_date, service_type, time_block,
+                                0, driver_id, vehicle_id, qty, time_text, note, created_at, updated_at
+                            FROM trip_allocations
+                            """
+                        )
+                        cur.execute("DROP TABLE trip_allocations")
+                        cur.execute("ALTER TABLE trip_allocations_new2 RENAME TO trip_allocations")
+                        cur.execute(
+                            "CREATE INDEX IF NOT EXISTS idx_trip_allocations_contract_date ON trip_allocations(contract_id, trip_date)"
+                        )
+                        cur.execute(
+                            "CREATE INDEX IF NOT EXISTS idx_trip_allocations_key ON trip_allocations(contract_id, trip_date, service_type, time_block)"
+                        )
+            except Exception:
+                pass
+
+            conn.commit()
+        finally:
+            conn.close()
 
     def upsert_hakedis_header(
         self,
@@ -1173,6 +1321,7 @@ class DatabaseManager:
                     trip_date TEXT NOT NULL,
                     service_type TEXT NOT NULL,
                     time_block TEXT NOT NULL,
+                    line_no INTEGER NOT NULL DEFAULT 0,
                     driver_id INTEGER,
                     vehicle_id INTEGER,
                     qty REAL NOT NULL DEFAULT 0,
@@ -1180,7 +1329,7 @@ class DatabaseManager:
                     note TEXT,
                     created_at TEXT,
                     updated_at TEXT,
-                    UNIQUE (contract_id, route_params_id, trip_date, service_type, time_block)
+                    UNIQUE (contract_id, route_params_id, trip_date, service_type, time_block, line_no)
                 )
                 """
             )
@@ -1189,11 +1338,11 @@ class DatabaseManager:
                 """
                 INSERT INTO trip_allocations_new (
                     id, contract_id, route_params_id, trip_date, service_type, time_block,
-                    driver_id, vehicle_id, qty, time_text, note, created_at, updated_at
+                    line_no, driver_id, vehicle_id, qty, time_text, note, created_at, updated_at
                 )
                 SELECT
                     id, contract_id, route_params_id, trip_date, service_type, 'GUN',
-                    driver_id, vehicle_id, qty, time_text, note, created_at, updated_at
+                    0, driver_id, vehicle_id, qty, time_text, note, created_at, updated_at
                 FROM trip_allocations
                 """
             )
@@ -1229,6 +1378,7 @@ class DatabaseManager:
         qty: float,
         time_text: str = "",
         note: str = "",
+        line_no: int = 0,
     ) -> bool:
         conn = self.connect()
         if not conn:
@@ -1239,10 +1389,10 @@ class DatabaseManager:
             cursor.execute(
                 """
                 INSERT INTO trip_allocations (
-                    contract_id, route_params_id, trip_date, service_type, time_block,
+                    contract_id, route_params_id, trip_date, service_type, time_block, line_no,
                     vehicle_id, driver_id, qty, time_text, note, created_at, updated_at
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-                ON CONFLICT(contract_id, route_params_id, trip_date, service_type, time_block)
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(contract_id, route_params_id, trip_date, service_type, time_block, line_no)
                 DO UPDATE SET
                     vehicle_id=excluded.vehicle_id,
                     driver_id=excluded.driver_id,
@@ -1258,6 +1408,7 @@ class DatabaseManager:
                     str(trip_date),
                     str(service_type),
                     str(time_block),
+                    int(line_no or 0),
                     vehicle_id,
                     driver_id,
                     float(qty or 0),
@@ -1286,11 +1437,12 @@ class DatabaseManager:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT route_params_id, trip_date, time_block, vehicle_id, driver_id, qty, COALESCE(time_text,''), COALESCE(note,'')
+                SELECT route_params_id, trip_date, time_block, line_no, vehicle_id, driver_id, qty, COALESCE(time_text,''), COALESCE(note,'')
                 FROM trip_allocations
                 WHERE contract_id = ?
                   AND service_type = ?
                   AND trip_date BETWEEN ? AND ?
+                ORDER BY route_params_id, time_block, trip_date, line_no
                 """,
                 (int(contract_id), str(service_type), str(start_date), str(end_date)),
             )
@@ -1390,6 +1542,126 @@ class DatabaseManager:
             return cursor.fetchall()
         finally:
             conn.close()
+
+    def get_vehicle_subcontract_meta(self, vehicle_id: int):
+        """Return (arac_turu, supplier_customer_id) for given vehicles.id."""
+        conn = self.connect()
+        if not conn:
+            return ("", None)
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT COALESCE(arac_turu,''), supplier_customer_id
+                FROM vehicles
+                WHERE id = ?
+                LIMIT 1
+                """,
+                (int(vehicle_id),),
+            )
+            row = cur.fetchone()
+            if not row:
+                return ("", None)
+            arac_turu = str(row[0] or "")
+            sid = row[1]
+            try:
+                sid_i = int(sid) if sid is not None and str(sid).strip() != "" else None
+            except Exception:
+                sid_i = None
+            return (arac_turu, sid_i)
+        finally:
+            conn.close()
+
+    def get_contract_price_matrix_json(self, contract_id: int) -> str:
+        conn = self.connect()
+        if not conn:
+            return ""
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT COALESCE(price_matrix_json,'') FROM contracts WHERE id=? LIMIT 1",
+                (int(contract_id),),
+            )
+            row = cur.fetchone()
+            return (row[0] if row else "") or ""
+        finally:
+            conn.close()
+
+    def resolve_subcontract_contract_id(
+        self,
+        main_contract_id: int,
+        supplier_customer_id: int,
+        trip_date: str,
+    ) -> int | None:
+        """Resolve subcontract contract (contracts.id) for a subcontractor customer on a date.
+
+        Strategy:
+        - Candidates: active contracts of supplier_customer_id.
+        - Filter by date range if start/end are provided.
+        - If multiple remain, prefer those linked via contract_links(main_contract_id -> subcontract_contract_id).
+        """
+        candidates = self.get_active_contracts_by_customer(int(supplier_customer_id))
+        if not candidates:
+            return None
+
+        def _in_range(d: str, s: str, e: str) -> bool:
+            ds = str(d or "").strip()
+            ss = str(s or "").strip()
+            es = str(e or "").strip()
+            if not ds:
+                return False
+            if ss and ds < ss:
+                return False
+            if es and ds > es:
+                return False
+            return True
+
+        filtered: list[tuple[int, str, str, str]] = []
+        for cid, _cno, s, e in candidates:
+            try:
+                cid_i = int(cid)
+            except Exception:
+                continue
+            if _in_range(str(trip_date or ""), str(s or ""), str(e or "")):
+                filtered.append((cid_i, str(_cno or ""), str(s or ""), str(e or "")))
+
+        if not filtered:
+            # If no date match, fall back to latest active contract.
+            try:
+                return int(candidates[0][0])
+            except Exception:
+                return None
+
+        if len(filtered) == 1:
+            return int(filtered[0][0])
+
+        # Disambiguate using contract_links if available.
+        conn = self.connect()
+        if not conn:
+            return int(filtered[0][0])
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT subcontract_contract_id
+                FROM contract_links
+                WHERE main_contract_id = ?
+                  AND COALESCE(is_active,1)=1
+                """,
+                (int(main_contract_id),),
+            )
+            linked = {int(r[0]) for r in (cur.fetchall() or []) if r and r[0] is not None}
+        except Exception:
+            linked = set()
+        finally:
+            conn.close()
+
+        if linked:
+            for cid_i, _cno, _s, _e in filtered:
+                if int(cid_i) in linked:
+                    return int(cid_i)
+
+        return int(filtered[0][0])
 
     def get_trip_period_lock(self, contract_id: int, month: str, service_type: str):
         conn = self.connect()
@@ -1850,6 +2122,7 @@ class DatabaseManager:
         qty: int,
         time_text: str | None = None,
         note: str | None = None,
+        line_no: int = 0,
     ) -> bool:
         conn = self.connect()
         if not conn:
@@ -1860,11 +2133,11 @@ class DatabaseManager:
             cursor.execute(
                 """
                 INSERT INTO trip_entries (
-                    contract_id, route_params_id, trip_date, service_type, time_block,
+                    contract_id, route_params_id, trip_date, service_type, time_block, line_no,
                     qty, time_text, note, created_at, updated_at
                 )
-                VALUES (?,?,?,?,?,?,?,?,?,?)
-                ON CONFLICT(contract_id, route_params_id, trip_date, service_type, time_block)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(contract_id, route_params_id, trip_date, service_type, time_block, line_no)
                 DO UPDATE SET
                     qty=excluded.qty,
                     time_text=excluded.time_text,
@@ -1877,6 +2150,7 @@ class DatabaseManager:
                     (trip_date or "").strip(),
                     (service_type or "").strip(),
                     (time_block or "").strip(),
+                    int(line_no or 0),
                     int(qty or 0),
                     (time_text or "").strip() if time_text is not None else None,
                     (note or "").strip() if note is not None else None,
@@ -2092,6 +2366,7 @@ class DatabaseManager:
                 ("arac_sahibi", "TEXT"),
                 ("photo_path", "TEXT"),
                 ("arac_turu", "TEXT"),
+                ("supplier_customer_id", "INTEGER"),
                 ("hizmet_turu", "TEXT"),
                 ("kategori", "TEXT"),
                 ("yil", "INTEGER"),

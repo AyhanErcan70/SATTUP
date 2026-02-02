@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 
 from PyQt6 import uic
-from PyQt6.QtCore import Qt, QDate
+from PyQt6.QtCore import Qt, QDate, QTimer
 from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
     QAbstractItemView,
@@ -32,8 +32,56 @@ from PyQt6.QtWidgets import (
 
 from app.core.db_manager import DatabaseManager
 from app.utils.excel_utils import create_excel
-from app.utils.style_utils import clear_all_styles
 from config import get_ui_path
+
+
+def _norm_month_key(m: str) -> str:
+    ms = str(m or "").strip()
+    if not ms:
+        return ms
+    try:
+        a, b = ms.split("-", 1)
+        y = int(a)
+        mm = int(b)
+        return f"{y:04d}-{mm:02d}"
+    except Exception:
+        return ms
+
+
+def _parse_hhmm(txt: str):
+    m = re.match(r"^(\d{1,2}):(\d{2})$", (txt or "").strip())
+    if not m:
+        return None
+    hh = int(m.group(1))
+    mm = int(m.group(2))
+    if hh < 0 or hh > 23 or mm < 0 or mm > 59:
+        return None
+    return hh, mm
+
+
+def _tb_sort_key_0700(tb_val: str):
+    tbs = str(tb_val or "").strip().upper()
+    m = re.match(r"^([GC])(\d)$", tbs)
+    if m:
+        gc = 0 if m.group(1) == "G" else 1
+        return (0, int(m.group(2)), gc)
+
+    t0 = tbs
+    if "-" in t0:
+        t0 = (t0.split("-", 1) + [""])[0].strip()
+
+    parsed = _parse_hhmm(t0)
+    if parsed is not None:
+        hh, mm = parsed
+        try:
+            minutes = int(hh) * 60 + int(mm)
+        except Exception:
+            minutes = 999999
+        if minutes < (7 * 60):
+            minutes += 24 * 60
+        return (1, minutes, 0)
+
+    return (2, 999999, 0)
 
 
 @dataclass(frozen=True)
@@ -47,7 +95,7 @@ class AttendanceApp(QWidget):
     def __init__(self, parent=None, user_data=None, db: DatabaseManager | None = None):
         super().__init__(parent)
         uic.loadUi(get_ui_path("attendance_window.ui"), self)
-        clear_all_styles(self)
+        self.setObjectName("main_form")
 
         self.user_data = user_data or {}
         self.db = db if db else DatabaseManager()
@@ -179,13 +227,8 @@ class AttendanceApp(QWidget):
             except Exception:
                 pass
 
-            bg = f"background-color: {bg_color};" if bg_color else ""
-            cmb.setStyleSheet(
-                "QComboBox {"
-                + bg
-                + " padding: 1px 4px; min-height: 18px; border-radius: 4px; font-size: 7pt; }"
-                + "QComboBox::drop-down { width: 14px; border: none; }"
-            )
+            cmb.setProperty("no_zebra", True)
+            cmb.setAlternatingRowColors(False)
         except Exception:
             return
 
@@ -197,7 +240,11 @@ class AttendanceApp(QWidget):
         tbl = self.tbl_toplu_puantaj
 
         try:
-            tbl.setAlternatingRowColors(True)
+            try:
+                tbl.setProperty("no_zebra", True)
+            except Exception:
+                pass
+            tbl.setAlternatingRowColors(False)
             tbl.verticalHeader().setVisible(False)
             tbl.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
             tbl.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -236,9 +283,30 @@ class AttendanceApp(QWidget):
                 GROUP BY p.route_params_id, p.time_block
                 ORDER BY COALESCE(r.route_name,''), p.time_block
                 """,
-                (int(ctx.contract_id), str(ctx.month), *st_values),
+                (int(ctx.contract_id), str(_norm_month_key(ctx.month)), *st_values),
             )
             rows = cur.fetchall() or []
+
+            if not rows:
+                try:
+                    cur.execute(
+                        """
+                        SELECT p.route_params_id,
+                               p.time_block,
+                               COALESCE(r.route_name,'')
+                        FROM trip_plan p
+                        LEFT JOIN route_params r ON r.id = p.route_params_id
+                        WHERE p.contract_id = ?
+                          AND p.month = ?
+                        GROUP BY p.route_params_id, p.time_block
+                        ORDER BY COALESCE(r.route_name,''), p.time_block
+                        """,
+                        (int(ctx.contract_id), str(_norm_month_key(ctx.month))),
+                    )
+                    rows = cur.fetchall() or []
+                except Exception:
+                    rows = []
+
             conn.close()
         except Exception:
             try:
@@ -246,6 +314,20 @@ class AttendanceApp(QWidget):
             except Exception:
                 pass
             rows = []
+
+        # Ensure deterministic ordering for multiple time_blocks per route:
+        # 07:00 is treated as day start, so 08:00.. comes before 00:00..
+        try:
+            rows = sorted(
+                rows,
+                key=lambda x: (
+                    str(x[2] or ""),
+                    _tb_sort_key_0700(str(x[1] or "")),
+                    int(x[0] or 0),
+                ),
+            )
+        except Exception:
+            pass
 
         tbl.setRowCount(0)
         for rid, tb, rn in rows:
@@ -336,6 +418,8 @@ class AttendanceApp(QWidget):
         start_date = QDate(y, m, 1).toString("yyyy-MM-dd")
         end_date = QDate(y, m, days_in_month).toString("yyyy-MM-dd")
 
+        month_key = _norm_month_key(str(ctx.month))
+
         st_values = self._service_type_values(ctx.service_type) or [str(ctx.service_type)]
 
         planned_keys: set[tuple[int, str]] = set()
@@ -351,9 +435,25 @@ class AttendanceApp(QWidget):
                   AND month = ?
                   AND service_type IN ({placeholders})
                 """,
-                (int(ctx.contract_id), str(ctx.month), *st_values),
+                (int(ctx.contract_id), str(month_key), *st_values),
             )
             rows = cur.fetchall() or []
+
+            if not rows:
+                try:
+                    cur.execute(
+                        """
+                        SELECT route_params_id, time_block
+                        FROM trip_plan
+                        WHERE contract_id = ?
+                          AND month = ?
+                        """,
+                        (int(ctx.contract_id), str(month_key)),
+                    )
+                    rows = cur.fetchall() or []
+                except Exception:
+                    rows = []
+
             conn.close()
             planned_keys = {
                 (int(r[0] or 0), str(r[1] or ""))
@@ -463,8 +563,12 @@ class AttendanceApp(QWidget):
 
         try:
             tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+            try:
+                tbl.horizontalHeader().setMinimumSectionSize(20)
+            except Exception:
+                pass
             for c in range(1, tbl.columnCount()):
-                tbl.setColumnWidth(c, 32)
+                tbl.setColumnWidth(c, 40)
         except Exception:
             pass
 
@@ -484,36 +588,50 @@ class AttendanceApp(QWidget):
         return ""
 
     def _service_type_values(self, service_type: str) -> list[str]:
-        st = (service_type or "").strip()
-        if not st:
+        raw = (service_type or "").strip()
+        if not raw:
             return []
 
-        normalized = re.sub(r"\s+", " ", st.upper()).strip()
+        # Keep this in sync with Trips module logic: service_type values in DB can vary
+        # by underscores and TAŞIMA/TASIMA spelling.
+        s = raw.upper().replace("_", " ")
+        s = re.sub(r"\s+", " ", s).strip()
+        s2 = s.replace("TAŞIMA", "TASIMA")
 
-        mapping = {
-            "PERSONEL": ["PERSONEL", "PERSONEL TAŞIMA", "PERSONEL TASIMA"],
-            "PERSONEL TAŞIMA": ["PERSONEL TAŞIMA", "PERSONEL", "PERSONEL TASIMA"],
-            "PERSONEL TASIMA": ["PERSONEL TASIMA", "PERSONEL TAŞIMA", "PERSONEL"],
-            "ÖĞRENCİ": ["ÖĞRENCİ", "ÖĞRENCİ TAŞIMA", "OGRENCI TASIMA", "OGRENCI TAŞIMA"],
-            "ÖĞRENCİ TAŞIMA": ["ÖĞRENCİ TAŞIMA", "ÖĞRENCİ", "OGRENCI TASIMA", "OGRENCI TAŞIMA"],
-            "OGRENCI": ["OGRENCI", "OGRENCI TASIMA", "ÖĞRENCİ", "ÖĞRENCİ TAŞIMA"],
-            "OGRENCI TASIMA": ["OGRENCI TASIMA", "OGRENCI TAŞIMA", "ÖĞRENCİ TAŞIMA", "ÖĞRENCİ"],
-            "OGRENCI TAŞIMA": ["OGRENCI TAŞIMA", "OGRENCI TASIMA", "ÖĞRENCİ TAŞIMA", "ÖĞRENCİ"],
-        }
+        if s in ("PERSONEL", "PERSONEL TAŞIMA", "PERSONEL TASIMA") or s2 in (
+            "PERSONEL",
+            "PERSONEL TASIMA",
+        ):
+            return [
+                "PERSONEL TAŞIMA",
+                "PERSONEL TASIMA",
+                "PERSONEL_TAŞIMA",
+                "PERSONEL_TASIMA",
+                "PERSONEL",
+            ]
 
-        vals = mapping.get(normalized) or [st]
-        out = []
-        seen = set()
-        for v in vals:
-            v2 = (v or "").strip()
-            if not v2:
-                continue
-            k = v2.upper()
-            if k in seen:
-                continue
-            seen.add(k)
-            out.append(v2)
-        return out
+        if s in ("ÖĞRENCİ", "OGRENCI", "ÖĞRENCİ TAŞIMA", "ÖĞRENCİ TASIMA", "OGRENCI TASIMA") or s2 in (
+            "OGRENCI",
+            "OGRENCI TASIMA",
+        ):
+            return [
+                "ÖĞRENCİ TAŞIMA",
+                "ÖĞRENCİ TASIMA",
+                "OGRENCI TASIMA",
+                "ÖĞRENCİ_TAŞIMA",
+                "ÖĞRENCİ_TASIMA",
+                "OGRENCI_TASIMA",
+                "ÖĞRENCİ",
+                "OGRENCI",
+            ]
+
+        vals = []
+        # Add common variants (raw, normalized with spaces, underscore form, TASIMA form)
+        for v in (raw, s, s2, s.replace(" ", "_"), s2.replace(" ", "_")):
+            vv = (v or "").strip()
+            if vv and vv not in vals:
+                vals.append(vv)
+        return vals
 
     def _current_context(self) -> AttendanceContext | None:
         month = self._selected_month_key()
@@ -788,19 +906,8 @@ class AttendanceApp(QWidget):
             self.lbl_ozet.setText("Yükleniyor...")
         except Exception:
             pass
-        try:
-            print("[Attendance] _reload_summary called")
-        except Exception:
-            pass
         ctx = self._current_context()
         if ctx is None:
-            try:
-                c_m = self.cmb_musteri.currentData() if hasattr(self, "cmb_musteri") else None
-                c_s = self.cmb_sozlesme.currentData() if hasattr(self, "cmb_sozlesme") else None
-                c_h = self._selected_service_type() if hasattr(self, "cmb_hizmet_turu") else None
-                print(f"[Attendance] ctx=None müşteri={c_m} sözleşme={c_s} hizmet={c_h}")
-            except Exception:
-                pass
             self.lbl_ozet.setText("Müşteri / Sözleşme / Hizmet seçiniz")
             return
 
@@ -866,6 +973,10 @@ class AttendanceApp(QWidget):
 
             if self._embedded_bulk is not None and self._embedded_bulk_ctx == ctx_key:
                 try:
+                    try:
+                        self._embedded_bulk.refresh_from_db()
+                    except Exception:
+                        pass
                     self._embedded_bulk.setVisible(True)
                 except Exception:
                     pass
@@ -930,6 +1041,11 @@ class AttendanceApp(QWidget):
             embedded=False,
         )
         if dlg.exec() == QDialog.DialogCode.Accepted:
+            try:
+                if self._embedded_bulk is not None and self._embedded_bulk_ctx == ctx_key:
+                    self._embedded_bulk.refresh_from_db()
+            except Exception:
+                pass
             self._reload_summary()
             self._refresh_lock_ui()
 
@@ -1021,6 +1137,27 @@ class AttendanceApp(QWidget):
 
 
 class BulkAttendanceDialog(QDialog):
+    def _official_holiday_set(self, year: int) -> set[str]:
+        # Fixed-date official holidays (Turkey). Stored as ISO yyyy-MM-dd strings.
+        out = set()
+        try:
+            fixed = [
+                (1, 1),   # 1 Ocak
+                (4, 23),  # 23 Nisan
+                (5, 1),   # 1 Mayıs
+                (5, 19),  # 19 Mayıs
+                (7, 15),  # 15 Temmuz
+                (8, 30),  # 30 Ağustos
+                (10, 29), # 29 Ekim
+            ]
+            for m, d in fixed:
+                qd = QDate(int(year), int(m), int(d))
+                if qd.isValid():
+                    out.add(qd.toString("yyyy-MM-dd"))
+        except Exception:
+            return set()
+        return out
+
     def _apply_compact_table_combo(self, cmb: QComboBox, bg_color: str | None = None):
         try:
             if cmb is None:
@@ -1042,14 +1179,6 @@ class BulkAttendanceDialog(QDialog):
                     pass
             except Exception:
                 pass
-
-            bg = f"background-color: {bg_color};" if bg_color else ""
-            cmb.setStyleSheet(
-                "QComboBox {"
-                + bg
-                + " padding: 1px 4px; min-height: 18px; border-radius: 4px; font-size: 7pt; }"
-                + "QComboBox::drop-down { width: 14px; border: none; }"
-            )
         except Exception:
             return
 
@@ -1257,7 +1386,37 @@ class BulkAttendanceDialog(QDialog):
                 self.table.setItem(insert_at, c, nit)
 
             if row < len(self._row_meta):
-                self._row_meta.insert(insert_at, dict(self._row_meta[row] or {}))
+                base_meta = dict(self._row_meta[row] or {})
+                try:
+                    base_ln = int(base_meta.get("line_no") or 0)
+                except Exception:
+                    base_ln = 0
+
+                # Ensure base row has a stable line_no
+                base_meta["line_no"] = int(base_ln)
+
+                # New split row gets next available line_no for same (rid,time_block)
+                try:
+                    rid0 = int(base_meta.get("route_params_id") or 0)
+                except Exception:
+                    rid0 = 0
+                tb0 = str(base_meta.get("time_block") or "").strip()
+                max_ln = 0
+                for m in (self._row_meta or []):
+                    try:
+                        if int((m or {}).get("route_params_id") or 0) != rid0:
+                            continue
+                        if str((m or {}).get("time_block") or "").strip() != tb0:
+                            continue
+                        max_ln = max(max_ln, int((m or {}).get("line_no") or 0))
+                    except Exception:
+                        continue
+                new_meta = dict(base_meta)
+                new_meta["line_no"] = int(max_ln + 1)
+
+                # Update base meta in-place and insert new meta
+                self._row_meta[row] = dict(base_meta)
+                self._row_meta.insert(insert_at, new_meta)
 
             for rr in (row, insert_at):
                 try:
@@ -1473,7 +1632,11 @@ class BulkAttendanceDialog(QDialog):
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.table.verticalHeader().setVisible(False)
-        self.table.setAlternatingRowColors(True)
+        try:
+            self.table.setProperty("no_zebra", True)
+        except Exception:
+            pass
+        self.table.setAlternatingRowColors(False)
 
         try:
             self.table.verticalHeader().setDefaultSectionSize(25)
@@ -1498,6 +1661,7 @@ class BulkAttendanceDialog(QDialog):
             "DURAKLAR",
             "ARAÇ +\nKPST",
             "ŞOFÖR",
+            "HAREKET\nTÜRÜ",
             "GİRİŞ ÇIKIŞ\nSAATLERİ",
         ]
         for d in range(1, self.max_days + 1):
@@ -1515,10 +1679,11 @@ class BulkAttendanceDialog(QDialog):
         h.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         h.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         h.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
-        h.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        h.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
         h.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
-        h.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
-        day_start = 6
+        h.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)
+        h.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)
+        day_start = 7
         for i in range(day_start, day_start + self.max_days):
             h.setSectionResizeMode(i, QHeaderView.ResizeMode.Fixed)
             self.table.setColumnWidth(i, 24)
@@ -1530,9 +1695,10 @@ class BulkAttendanceDialog(QDialog):
             self.table.setColumnWidth(0, 40)
             self.table.setColumnWidth(1, 120)
             self.table.setColumnWidth(2, 256)
-            self.table.setColumnWidth(3, 110)
-            self.table.setColumnWidth(4, 120)
-            self.table.setColumnWidth(5, 120)
+            self.table.setColumnWidth(3, 90)
+            self.table.setColumnWidth(4, 95)
+            self.table.setColumnWidth(5, 80)
+            self.table.setColumnWidth(6, 120)
             self.table.setColumnWidth(self._col_total_qty, 55)
             self.table.setColumnWidth(self._col_price, 85)
             self.table.setColumnWidth(self._col_total_price, 95)
@@ -1551,12 +1717,13 @@ class BulkAttendanceDialog(QDialog):
 
         self._col_vehicle = 3
         self._col_driver = 4
-        self._col_time_text = 5
+        self._col_movement = 5
+        self._col_time_text = 6
         self._col_stops = 2
 
         try:
             h.setSectionResizeMode(self._col_driver, QHeaderView.ResizeMode.Fixed)
-            self.table.setColumnWidth(self._col_driver, 120)
+            self.table.setColumnWidth(self._col_driver, 95)
         except Exception:
             pass
 
@@ -1600,9 +1767,23 @@ class BulkAttendanceDialog(QDialog):
         self._planned_keys = set()
         self._alloc_override_map = {}
 
-        self._bg_weekend = QColor("#f0f0f0")
+        self._bg_weekend = QColor("#cfcfcf")
+        self._bg_holiday = QColor("#cfcfcf")
         self._bg_qty = QColor("#fff3cd")
         self._bg_override = QColor("#f8c291")
+
+        self._official_holidays = self._official_holiday_set(int(self.year))
+
+        try:
+            for d in range(1, int(self.days_in_month) + 1):
+                col = int(self._day_start) + (int(d) - 1)
+                it_h = self.table.horizontalHeaderItem(col)
+                if it_h is None:
+                    continue
+                if self._is_holiday_day(int(d)) or self._is_weekend_day(int(d)):
+                    it_h.setBackground(self._bg_weekend)
+        except Exception:
+            pass
 
         def _fixed_time_blocks():
             return ["08:00", "08:15", "16:00", "16:15", "00:00", "00:15"]
@@ -1711,16 +1892,7 @@ class BulkAttendanceDialog(QDialog):
                 return set()
 
         def _tb_sort_key(tb_val: str):
-            tbs = str(tb_val or "").strip().upper()
-            m = re.match(r"^([GC])(\d)$", tbs)
-            if m:
-                gc = 0 if m.group(1) == "G" else 1
-                return (0, int(m.group(2)), gc)
-            parsed = _parse_time(tbs)
-            if parsed is not None:
-                hh, mm = parsed
-                return (1, hh * 60 + mm, 0)
-            return (2, 9999, 0)
+            return _tb_sort_key_0700(tb_val)
 
         def _split_time_range(tb_val: str, max_minutes: int = 30) -> tuple[str, str] | None:
             t = str(tb_val or "").strip()
@@ -1818,6 +1990,10 @@ class BulkAttendanceDialog(QDialog):
             row = self.table.rowCount()
             self.table.insertRow(row)
 
+            plan_tb = (str(plan_time_block).strip() if plan_time_block is not None else "")
+            if not plan_tb:
+                plan_tb = str(time_block or "").strip()
+
             try:
                 self.table.setRowHeight(row, 25)
             except Exception:
@@ -1829,15 +2005,24 @@ class BulkAttendanceDialog(QDialog):
             self.table.setItem(row, 0, sno)
 
             stops_txt = ""
+            movement_type = ""
             try:
                 for rr in self._route_rows:
                     if int(rr[0] or 0) == int(route_params_id):
                         stops_txt = str(rr[2] or "") if len(rr) > 2 else ""
+                        # get_route_params_for_contract may return different shapes.
+                        # Prefer movement_type column if present; fall back to older positions.
+                        if len(rr) > 4:
+                            movement_type = str(rr[4] or "")
+                        elif len(rr) > 3 and isinstance(rr[3], str):
+                            movement_type = str(rr[3] or "")
                         break
             except Exception:
                 stops_txt = ""
+                movement_type = ""
 
-            r_item = QTableWidgetItem((str(route_name or "").strip() + ("\n" + str(stops_txt).strip() if str(stops_txt).strip() else "")).strip())
+            parts = [p for p in [str(route_name or "").strip(), str(stops_txt).strip()] if str(p).strip()]
+            r_item = QTableWidgetItem(" | ".join(parts))
             r_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             r_item.setData(Qt.ItemDataRole.UserRole, int(route_params_id))
             self.table.setItem(row, 1, r_item)
@@ -1845,63 +2030,40 @@ class BulkAttendanceDialog(QDialog):
             s_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             self.table.setItem(row, self._col_stops, s_item)
 
-            cmb_v = QComboBox()
-            cmb_v.addItem("Seçiniz...", None)
-            for vcode, rec in self._vehicle_map.items():
-                try:
-                    plate, cap = rec
-                except Exception:
-                    plate, cap = str(rec), 0
-                label_v = f"{plate} ({int(cap)})" if int(cap or 0) > 0 else str(plate)
-                cmb_v.addItem(label_v, vcode)
-            self._apply_compact_table_combo(cmb_v)
-            self.table.setCellWidget(row, self._col_vehicle, cmb_v)
+            mt_item = QTableWidgetItem(str(movement_type or "").strip())
+            mt_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            mt_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.table.setItem(row, self._col_movement, mt_item)
 
-            cmb_d = QComboBox()
-            cmb_d.addItem("Seçiniz...", None)
-            for did, name in self._driver_map.items():
-                cmb_d.addItem(name, did)
-            self._apply_compact_table_combo(cmb_d)
-            self.table.setCellWidget(row, self._col_driver, cmb_d)
-
-            t_item = QTableWidgetItem(_time_text_for_time_block(label))
-            t_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
+            t_item = QTableWidgetItem(str(label or "").strip())
+            t_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            t_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.table.setItem(row, self._col_time_text, t_item)
 
-            for d in range(1, self.max_days + 1):
-                col = self._day_start + (d - 1)
-                it = QTableWidgetItem("")
-                it.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                it.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-                if d > self.days_in_month:
-                    it.setFlags(Qt.ItemFlag.ItemIsEnabled)
-                    it.setBackground(QColor("#f0f0f0"))
-                elif QDate(self.year, self.month, d).dayOfWeek() in (6, 7):
-                    it.setBackground(self._bg_weekend)
-                self.table.setItem(row, col, it)
+            for day in range(1, self.max_days + 1):
+                col = self._day_start + (day - 1)
+                it_day = QTableWidgetItem("")
+                it_day.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                it_day.setFlags(
+                    Qt.ItemFlag.ItemIsEnabled
+                    | Qt.ItemFlag.ItemIsSelectable
+                    | Qt.ItemFlag.ItemIsEditable
+                )
+                self.table.setItem(row, col, it_day)
+                if day <= self.days_in_month:
+                    self._apply_day_cell_style(row, col)
 
-            plan_tb = str(plan_time_block) if plan_time_block is not None else str(time_block)
-            is_planned = (int(route_params_id), str(plan_tb)) in (self._planned_keys or set())
-            if is_planned:
-                planned_bg = QColor("#fff3cd")
-                planned_font = QFont()
-                planned_font.setBold(True)
+            v_item = QTableWidgetItem("")
+            v_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            v_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            v_item.setData(Qt.ItemDataRole.UserRole, None)
+            self.table.setItem(row, self._col_vehicle, v_item)
 
-                for cc in (0, 1, self._col_stops, self._col_time_text):
-                    it0 = self.table.item(row, cc)
-                    if it0 is not None:
-                        it0.setBackground(planned_bg)
-                        it0.setFont(planned_font)
-                for cc in (self._col_vehicle, self._col_driver):
-                    w = self.table.cellWidget(row, cc)
-                    if w is not None:
-                        try:
-                            if isinstance(w, QComboBox):
-                                self._apply_compact_table_combo(w, bg_color="#fff3cd")
-                            else:
-                                w.setStyleSheet("background-color: #fff3cd;")
-                        except Exception:
-                            pass
+            d_item = QTableWidgetItem("")
+            d_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            d_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            d_item.setData(Qt.ItemDataRole.UserRole, None)
+            self.table.setItem(row, self._col_driver, d_item)
 
             total_item = QTableWidgetItem("0")
             total_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
@@ -1927,13 +2089,14 @@ class BulkAttendanceDialog(QDialog):
                     "plan_time_block": str(plan_tb),
                 }
             )
-
         self.table.setRowCount(0)
 
         start_date = QDate(self.year, self.month, 1).toString("yyyy-MM-dd")
         end_date = QDate(self.year, self.month, self.days_in_month).toString("yyyy-MM-dd")
-
-        self._planned_keys = _planned_keys_for_context(int(self.contract_id), self.month_key, str(self.service_type))
+        try:
+            self._planned_keys = _planned_keys_for_context(int(self.contract_id), self.month_key, str(self.service_type))
+        except Exception:
+            self._planned_keys = set()
 
         if self._planned_keys:
             planned_by_route: dict[int, list[str]] = {}
@@ -2017,9 +2180,19 @@ class BulkAttendanceDialog(QDialog):
         self.btn_save = QPushButton("KAYDET", self)
         self.btn_save.clicked.connect(self._save)
 
+        try:
+            self.btn_save.setFixedSize(140, 30)
+        except Exception:
+            pass
+
         lay = QVBoxLayout()
         lay.addWidget(self.table)
-        lay.addWidget(self.btn_save)
+
+        btn_row = QHBoxLayout()
+        btn_row.addStretch(1)
+        btn_row.addWidget(self.btn_save)
+        btn_row.addStretch(1)
+        lay.addLayout(btn_row)
         self.setLayout(lay)
 
         self._load_existing_entries()
@@ -2027,6 +2200,13 @@ class BulkAttendanceDialog(QDialog):
         self._apply_route_group_spans()
 
         self.table.itemChanged.connect(self._recalc_row_total)
+
+        try:
+            QTimer.singleShot(0, self._enforce_bulk_column_widths)
+            QTimer.singleShot(50, self._enforce_bulk_column_widths)
+            QTimer.singleShot(250, self._enforce_bulk_column_widths)
+        except Exception:
+            pass
 
         try:
             self.table.cellDoubleClicked.connect(lambda r, c: self._open_day_popup(int(r)))
@@ -2056,6 +2236,15 @@ class BulkAttendanceDialog(QDialog):
         except Exception:
             return False
 
+    def _is_holiday_day(self, day_num: int) -> bool:
+        try:
+            qd = QDate(self.year, self.month, int(day_num))
+            if not qd.isValid():
+                return False
+            return qd.toString("yyyy-MM-dd") in (self._official_holidays or set())
+        except Exception:
+            return False
+
     def _override_key(self, row: int, col: int):
         day_num = self._day_for_col(col)
         if day_num is None:
@@ -2072,8 +2261,13 @@ class BulkAttendanceDialog(QDialog):
         time_block = str((meta or {}).get("time_block") or "").strip()
         if not time_block:
             return None
+
+        try:
+            line_no = int((meta or {}).get("line_no") or 0)
+        except Exception:
+            line_no = 0
         trip_date = QDate(self.year, self.month, day_num).toString("yyyy-MM-dd")
-        return int(route_params_id), str(time_block), str(trip_date)
+        return int(route_params_id), str(time_block), str(trip_date), int(line_no)
 
     def _apply_day_cell_style(self, row: int, col: int):
         day_num = self._day_for_col(col)
@@ -2092,16 +2286,64 @@ class BulkAttendanceDialog(QDialog):
         txt = (it.text() or "").strip()
         has_qty = bool(txt.isdigit() and int(txt) > 0)
 
+        def _set_bg(color: QColor):
+            try:
+                it.setData(Qt.ItemDataRole.BackgroundRole, color)
+            except Exception:
+                pass
+            try:
+                it.setBackground(color)
+            except Exception:
+                pass
+
         if has_override:
-            it.setBackground(self._bg_override)
+            _set_bg(self._bg_override)
+            return
+        if self._is_holiday_day(day_num) or self._is_weekend_day(day_num):
+            _set_bg(self._bg_weekend)
             return
         if has_qty:
-            it.setBackground(self._bg_qty)
+            _set_bg(self._bg_qty)
             return
-        if self._is_weekend_day(day_num):
-            it.setBackground(self._bg_weekend)
+        _set_bg(QColor("#ffffff"))
+
+    def _enforce_bulk_column_widths(self):
+        try:
+            h = self.table.horizontalHeader()
+        except Exception:
             return
-        it.setBackground(QColor("#ffffff"))
+
+        try:
+            h.setStretchLastSection(False)
+        except Exception:
+            pass
+
+        try:
+            h.setCascadingSectionResizes(False)
+        except Exception:
+            pass
+
+        try:
+            h.setSectionResizeMode(int(self._col_vehicle), QHeaderView.ResizeMode.Fixed)
+            h.setSectionResizeMode(int(self._col_driver), QHeaderView.ResizeMode.Fixed)
+            h.setSectionResizeMode(int(self._col_movement), QHeaderView.ResizeMode.Fixed)
+        except Exception:
+            pass
+
+        try:
+            self.table.setColumnWidth(int(self._col_vehicle), 90)
+            self.table.setColumnWidth(int(self._col_driver), 95)
+            self.table.setColumnWidth(int(self._col_movement), 80)
+        except Exception:
+            pass
+
+        try:
+            # Force via header too (some styles/layout passes can ignore setColumnWidth)
+            h.resizeSection(int(self._col_vehicle), 90)
+            h.resizeSection(int(self._col_driver), 95)
+            h.resizeSection(int(self._col_movement), 80)
+        except Exception:
+            pass
 
     def _open_cell_menu(self, pos):
         it = None
@@ -2133,6 +2375,73 @@ class BulkAttendanceDialog(QDialog):
                 self._merge_row(r)
             return
 
+        if c in (self._col_vehicle, self._col_driver):
+            menu = QMenu(self)
+            if c == self._col_vehicle:
+                act_clear = menu.addAction("Araç Temizle")
+                menu.addSeparator()
+                actions = []
+                for vcode, rec in (self._vehicle_map or {}).items():
+                    try:
+                        plate, cap = rec
+                    except Exception:
+                        plate, cap = str(rec), 0
+                    label_v = f"{plate} ({int(cap)})" if int(cap or 0) > 0 else str(plate)
+                    a = menu.addAction(label_v)
+                    a.setData(str(vcode))
+                    actions.append(a)
+                chosen = menu.exec(self.table.viewport().mapToGlobal(pos))
+                if chosen is None:
+                    return
+                itx = self.table.item(r, self._col_vehicle)
+                if itx is None:
+                    itx = QTableWidgetItem("")
+                    itx.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+                    itx.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                    self.table.setItem(r, self._col_vehicle, itx)
+                if chosen == act_clear:
+                    itx.setText("")
+                    itx.setData(Qt.ItemDataRole.UserRole, None)
+                    return
+                v_id = str(chosen.data() or "")
+                rec = (self._vehicle_map or {}).get(v_id)
+                if rec is None:
+                    return
+                try:
+                    plate, cap = rec
+                except Exception:
+                    plate, cap = str(rec), 0
+                label_v = f"{plate} ({int(cap)})" if int(cap or 0) > 0 else str(plate)
+                itx.setText(str(label_v))
+                itx.setData(Qt.ItemDataRole.UserRole, v_id)
+                return
+
+            act_clear = menu.addAction("Şoför Temizle")
+            menu.addSeparator()
+            for did, name in (self._driver_map or {}).items():
+                a = menu.addAction(str(name))
+                a.setData(str(did))
+            chosen = menu.exec(self.table.viewport().mapToGlobal(pos))
+            if chosen is None:
+                return
+            itx = self.table.item(r, self._col_driver)
+            if itx is None:
+                itx = QTableWidgetItem("")
+                itx.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+                itx.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.table.setItem(r, self._col_driver, itx)
+            if chosen == act_clear:
+                itx.setText("")
+                itx.setData(Qt.ItemDataRole.UserRole, None)
+                return
+            d_id = str(chosen.data() or "")
+            nm = (self._driver_map or {}).get(d_id)
+            if nm is None:
+                return
+            itx.setText(str(nm))
+            itx.setData(Qt.ItemDataRole.UserRole, d_id)
+            return
+
         if c < self._day_start or c >= self._day_start + self.max_days:
             return
         day_num = self._day_for_col(c)
@@ -2150,6 +2459,11 @@ class BulkAttendanceDialog(QDialog):
         time_block = str((meta or {}).get("time_block") or "")
         if not time_block:
             return
+
+        try:
+            line_no = int((meta or {}).get("line_no") or 0)
+        except Exception:
+            line_no = 0
 
         # Apply to selected day cells on the same row (range support)
         selected_cols = set()
@@ -2174,16 +2488,16 @@ class BulkAttendanceDialog(QDialog):
         selected_days = sorted({(cc - self._day_start) + 1 for cc in selected_cols})
         selected_dates = [QDate(self.year, self.month, d).toString("yyyy-MM-dd") for d in selected_days]
         first_trip_date = selected_dates[0]
-        key = (int(route_params_id), str(time_block), str(first_trip_date))
+        key = (int(route_params_id), str(time_block), str(first_trip_date), int(line_no))
 
         default_vehicle_id = None
         default_driver_id = None
-        cmb_v = self.table.cellWidget(r, self._col_vehicle)
-        cmb_d = self.table.cellWidget(r, self._col_driver)
-        if cmb_v is not None:
-            default_vehicle_id = cmb_v.currentData()
-        if cmb_d is not None:
-            default_driver_id = cmb_d.currentData()
+        itv0 = self.table.item(r, self._col_vehicle)
+        itd0 = self.table.item(r, self._col_driver)
+        if itv0 is not None:
+            default_vehicle_id = itv0.data(Qt.ItemDataRole.UserRole)
+        if itd0 is not None:
+            default_driver_id = itd0.data(Qt.ItemDataRole.UserRole)
 
         current = self._alloc_override_map.get(key) or {}
         cur_vehicle_id = current.get("vehicle_id")
@@ -2255,7 +2569,7 @@ class BulkAttendanceDialog(QDialog):
         def _apply(clear_only: bool = False):
             if clear_only:
                 for trip_date in selected_dates:
-                    k = (int(route_params_id), str(time_block), str(trip_date))
+                    k = (int(route_params_id), str(time_block), str(trip_date), int(line_no))
                     if k in self._alloc_override_map:
                         del self._alloc_override_map[k]
                 for cc in selected_cols:
@@ -2274,7 +2588,7 @@ class BulkAttendanceDialog(QDialog):
 
             if (not vsel) and (not dsel) and (not note):
                 for trip_date in selected_dates:
-                    k = (int(route_params_id), str(time_block), str(trip_date))
+                    k = (int(route_params_id), str(time_block), str(trip_date), int(line_no))
                     if k in self._alloc_override_map:
                         del self._alloc_override_map[k]
                 for cc in selected_cols:
@@ -2293,7 +2607,7 @@ class BulkAttendanceDialog(QDialog):
                 is_override = True
 
             for trip_date in selected_dates:
-                self._alloc_override_map[(int(route_params_id), str(time_block), str(trip_date))] = {
+                self._alloc_override_map[(int(route_params_id), str(time_block), str(trip_date), int(line_no))] = {
                     "vehicle_id": vsel,
                     "driver_id": dsel,
                     "note": note,
@@ -2351,11 +2665,17 @@ class BulkAttendanceDialog(QDialog):
 
         txt = (item.text() or "").strip()
         if txt and (not txt.isdigit()):
-            item.setText("")
+            try:
+                item.setText("")
+            except Exception:
+                pass
             self._apply_day_cell_style(r, c)
             return
-        if txt and int(txt) < 0:
-            item.setText("")
+        if txt and txt.isdigit() and int(txt) < 0:
+            try:
+                item.setText("")
+            except Exception:
+                pass
             self._apply_day_cell_style(r, c)
             return
 
@@ -2400,6 +2720,14 @@ class BulkAttendanceDialog(QDialog):
             ed.setFixedSize(32, 24)
             ed.setAlignment(Qt.AlignmentFlag.AlignCenter)
             try:
+                ed.setMaxLength(1)
+            except Exception:
+                pass
+            try:
+                ed.setPlaceholderText(str(d))
+            except Exception:
+                pass
+            try:
                 txt = (self.table.item(row, self._day_start + (d - 1)).text() or "").strip()
             except Exception:
                 txt = ""
@@ -2407,11 +2735,39 @@ class BulkAttendanceDialog(QDialog):
             day_edits[d] = ed
             grid.addWidget(ed, rr, cc)
 
+        # auto-advance to next day on 1 char
+        for d, ed in day_edits.items():
+            def _mk_next(_d: int, _ed: QLineEdit):
+                def _on_text(_txt: str):
+                    t = str(_txt or "")
+                    if len(t) >= 1:
+                        try:
+                            _ed.setText(t[:1])
+                        except Exception:
+                            pass
+                        nd = int(_d) + 1
+                        if nd in day_edits:
+                            try:
+                                day_edits[nd].setFocus()
+                                day_edits[nd].selectAll()
+                            except Exception:
+                                pass
+                return _on_text
+            try:
+                ed.textChanged.connect(_mk_next(int(d), ed))
+            except Exception:
+                pass
+
         lay.addLayout(grid)
 
         btn_row = QHBoxLayout()
         btn_apply = QPushButton("GÜN DEĞERLERİNİ AKTAR")
         btn_cancel = QPushButton("Kapat")
+        try:
+            btn_apply.setFixedHeight(25)
+            btn_cancel.setFixedHeight(25)
+        except Exception:
+            pass
         btn_row.addWidget(btn_apply)
         btn_row.addStretch(1)
         btn_row.addWidget(btn_cancel)
@@ -2452,6 +2808,45 @@ class BulkAttendanceDialog(QDialog):
         btn_apply.clicked.connect(_apply)
         btn_cancel.clicked.connect(dlg.reject)
         dlg.exec()
+
+    def refresh_from_db(self):
+        try:
+            self.table.blockSignals(True)
+        except Exception:
+            pass
+
+        try:
+            for r in range(self.table.rowCount()):
+                for day in range(1, self.days_in_month + 1):
+                    col = self._day_start + (day - 1)
+                    it = self.table.item(r, col)
+                    if it is None:
+                        continue
+                    try:
+                        it.setText("")
+                    except Exception:
+                        pass
+                    try:
+                        self._apply_day_cell_style(r, col)
+                    except Exception:
+                        pass
+
+                try:
+                    t_item = self.table.item(r, self._col_total_qty)
+                    if t_item is not None:
+                        t_item.setText("0")
+                except Exception:
+                    pass
+        finally:
+            try:
+                self.table.blockSignals(False)
+            except Exception:
+                pass
+
+        try:
+            self._load_existing_entries()
+        except Exception:
+            pass
 
     def _recalc_price_total_for_row(self, row: int):
         t_item = self.table.item(row, self._col_total_qty)
@@ -2497,17 +2892,32 @@ class BulkAttendanceDialog(QDialog):
         try:
             conn = self.db.connect()
             cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT route_params_id, trip_date, time_block, qty, COALESCE(time_text,'')
-                FROM trip_entries
-                WHERE contract_id = ?
-                  AND service_type = ?
-                  AND trip_date BETWEEN ? AND ?
-                """,
-                (int(self.contract_id), str(self.service_type), start_date, end_date),
-            )
-            rows = cursor.fetchall()
+            # line_no support (fallback to old schema if needed)
+            try:
+                cursor.execute(
+                    """
+                    SELECT route_params_id, trip_date, time_block, line_no, qty, COALESCE(time_text,'')
+                    FROM trip_entries
+                    WHERE contract_id = ?
+                      AND service_type = ?
+                      AND trip_date BETWEEN ? AND ?
+                    ORDER BY route_params_id, time_block, trip_date, line_no
+                    """,
+                    (int(self.contract_id), str(self.service_type), start_date, end_date),
+                )
+                rows = cursor.fetchall()
+            except Exception:
+                cursor.execute(
+                    """
+                    SELECT route_params_id, trip_date, time_block, 0 as line_no, qty, COALESCE(time_text,'')
+                    FROM trip_entries
+                    WHERE contract_id = ?
+                      AND service_type = ?
+                      AND trip_date BETWEEN ? AND ?
+                    """,
+                    (int(self.contract_id), str(self.service_type), start_date, end_date),
+                )
+                rows = cursor.fetchall()
             conn.close()
         except Exception:
             rows = []
@@ -2719,22 +3129,33 @@ class BulkAttendanceDialog(QDialog):
             for key, row_idxs in row_index_plan.items():
                 pv, pd = plan_map.get(key, ("", ""))
                 for row_idx in (row_idxs or []):
-                    cmb_v = self.table.cellWidget(row_idx, self._col_vehicle)
-                    cmb_d = self.table.cellWidget(row_idx, self._col_driver)
-                    if cmb_v is not None and pv:
-                        idx2 = cmb_v.findData(str(pv))
-                        if idx2 >= 0:
-                            cmb_v.setCurrentIndex(idx2)
-                    if cmb_d is not None and pd:
-                        idx2 = cmb_d.findData(str(pd))
-                        if idx2 >= 0:
-                            cmb_d.setCurrentIndex(idx2)
+                    itv = self.table.item(int(row_idx), self._col_vehicle)
+                    itd = self.table.item(int(row_idx), self._col_driver)
+                    if itv is not None and str(pv):
+                        rec = (self._vehicle_map or {}).get(str(pv))
+                        if rec is not None:
+                            try:
+                                plate, cap = rec
+                            except Exception:
+                                plate, cap = str(rec), 0
+                            label_v = f"{plate} ({int(cap)})" if int(cap or 0) > 0 else str(plate)
+                            itv.setText(str(label_v))
+                            itv.setData(Qt.ItemDataRole.UserRole, str(pv))
+                    if itd is not None and str(pd):
+                        nm = (self._driver_map or {}).get(str(pd))
+                        if nm is not None:
+                            itd.setText(str(nm))
+                            itd.setData(Qt.ItemDataRole.UserRole, str(pd))
 
             self._alloc_override_map = {}
-            for rpid, trip_date, time_block, vehicle_id, driver_id, _qty0, _ttext0, note0 in alloc_rows or []:
+            for rpid, trip_date, time_block, line_no, vehicle_id, driver_id, _qty0, _ttext0, note0 in alloc_rows or []:
                 rid_i = int(rpid or 0)
                 tb_s = str(time_block or "").strip()
                 d_s = str(trip_date or "").strip()
+                try:
+                    ln_s = int(line_no or 0)
+                except Exception:
+                    ln_s = 0
                 if rid_i <= 0 or not tb_s or not d_s:
                     continue
                 pv, pd = plan_map.get((rid_i, tb_s), ("", ""))
@@ -2746,7 +3167,7 @@ class BulkAttendanceDialog(QDialog):
                 if (note0 or "").strip():
                     is_override = True
 
-                self._alloc_override_map[(rid_i, tb_s, d_s)] = {
+                self._alloc_override_map[(rid_i, tb_s, d_s, ln_s)] = {
                     "vehicle_id": vehicle_id,
                     "driver_id": driver_id,
                     "note": (note0 or "").strip(),
@@ -2784,10 +3205,26 @@ class BulkAttendanceDialog(QDialog):
                     if p_item is not None:
                         p_item.setText(self._format_tr_currency(pr))
 
-            for route_params_id, trip_date, time_block, qty, time_text in rows:
+            def _row_for_line(rlist0: list[int], ln0: int) -> int | None:
+                if not rlist0:
+                    return None
+                for rr in rlist0:
+                    try:
+                        mm = self._row_meta[int(rr)] if int(rr) < len(self._row_meta) else None
+                        if int((mm or {}).get("line_no") or 0) == int(ln0 or 0):
+                            return int(rr)
+                    except Exception:
+                        continue
+                return int(rlist0[0])
+
+            for route_params_id, trip_date, time_block, line_no, qty, time_text in rows:
                 key = (int(route_params_id or 0), str(time_block or ""))
                 rlist = row_index_time.get(key) or []
                 if not rlist:
+                    continue
+
+                rr = _row_for_line(rlist, int(line_no or 0))
+                if rr is None:
                     continue
 
                 day = 0
@@ -2803,18 +3240,18 @@ class BulkAttendanceDialog(QDialog):
                     q = int(qty or 0)
                 except Exception:
                     q = 0
-                for r in rlist:
-                    it = self.table.item(int(r), col)
-                    if it is None:
-                        continue
-                    it.setText(str(q) if q != 0 else "")
-                    self._apply_day_cell_style(int(r), col)
 
-                    if (time_text or "").strip():
-                        t_item = self.table.item(int(r), self._col_time_text)
-                        if t_item is not None:
-                            if not (t_item.text() or "").strip() or (t_item.text() or "").strip() in ("GİRİŞ", "ÇIKIŞ"):
-                                t_item.setText((time_text or "").strip())
+                it = self.table.item(int(rr), col)
+                if it is None:
+                    continue
+                it.setText(str(q) if q != 0 else "")
+                self._apply_day_cell_style(int(rr), col)
+
+                if (time_text or "").strip():
+                    t_item = self.table.item(int(rr), self._col_time_text)
+                    if t_item is not None:
+                        if not (t_item.text() or "").strip() or (t_item.text() or "").strip() in ("GİRİŞ", "ÇIKIŞ"):
+                            t_item.setText((time_text or "").strip())
 
             for r in range(self.table.rowCount()):
                 total = 0
@@ -2863,16 +3300,28 @@ class BulkAttendanceDialog(QDialog):
         try:
             conn0 = self.db.connect()
             cur0 = conn0.cursor()
-            cur0.execute(
-                """
-                SELECT route_params_id, trip_date, time_block
-                FROM trip_entries
-                WHERE contract_id=? AND service_type=? AND trip_date BETWEEN ? AND ?
-                """,
-                (int(self.contract_id), str(self.service_type), start_date, end_date),
-            )
-            for rid0, d0, tb0 in cur0.fetchall() or []:
-                existing_entries.add((int(rid0 or 0), str(d0 or ""), str(tb0 or "")))
+            try:
+                cur0.execute(
+                    """
+                    SELECT route_params_id, trip_date, time_block, line_no
+                    FROM trip_entries
+                    WHERE contract_id=? AND service_type=? AND trip_date BETWEEN ? AND ?
+                    """,
+                    (int(self.contract_id), str(self.service_type), start_date, end_date),
+                )
+                for rid0, d0, tb0, ln0 in cur0.fetchall() or []:
+                    existing_entries.add((int(rid0 or 0), str(d0 or ""), str(tb0 or ""), int(ln0 or 0)))
+            except Exception:
+                cur0.execute(
+                    """
+                    SELECT route_params_id, trip_date, time_block
+                    FROM trip_entries
+                    WHERE contract_id=? AND service_type=? AND trip_date BETWEEN ? AND ?
+                    """,
+                    (int(self.contract_id), str(self.service_type), start_date, end_date),
+                )
+                for rid0, d0, tb0 in cur0.fetchall() or []:
+                    existing_entries.add((int(rid0 or 0), str(d0 or ""), str(tb0 or ""), 0))
 
             cur0.execute(
                 """
@@ -2885,16 +3334,28 @@ class BulkAttendanceDialog(QDialog):
             for rid0, tb0 in cur0.fetchall() or []:
                 existing_prices.add((int(rid0 or 0), str(tb0 or "")))
 
-            cur0.execute(
-                """
-                SELECT route_params_id, trip_date, time_block
-                FROM trip_allocations
-                WHERE contract_id=? AND service_type=? AND trip_date BETWEEN ? AND ?
-                """,
-                (int(self.contract_id), str(self.service_type), start_date, end_date),
-            )
-            for rid0, d0, tb0 in cur0.fetchall() or []:
-                existing_allocations.add((int(rid0 or 0), str(d0 or ""), str(tb0 or "")))
+            try:
+                cur0.execute(
+                    """
+                    SELECT route_params_id, trip_date, time_block, line_no
+                    FROM trip_allocations
+                    WHERE contract_id=? AND service_type=? AND trip_date BETWEEN ? AND ?
+                    """,
+                    (int(self.contract_id), str(self.service_type), start_date, end_date),
+                )
+                for rid0, d0, tb0, ln0 in cur0.fetchall() or []:
+                    existing_allocations.add((int(rid0 or 0), str(d0 or ""), str(tb0 or ""), int(ln0 or 0)))
+            except Exception:
+                cur0.execute(
+                    """
+                    SELECT route_params_id, trip_date, time_block
+                    FROM trip_allocations
+                    WHERE contract_id=? AND service_type=? AND trip_date BETWEEN ? AND ?
+                    """,
+                    (int(self.contract_id), str(self.service_type), start_date, end_date),
+                )
+                for rid0, d0, tb0 in cur0.fetchall() or []:
+                    existing_allocations.add((int(rid0 or 0), str(d0 or ""), str(tb0 or ""), 0))
             conn0.close()
         except Exception:
             existing_entries = set()
@@ -2916,17 +3377,23 @@ class BulkAttendanceDialog(QDialog):
 
             meta = self._row_meta[r] if r < len(self._row_meta) else None
             time_block = str((meta or {}).get("time_block") or "GUN")
-            is_planned = (int(rid), str(time_block)) in (self._planned_keys or set())
+            try:
+                line_no = int((meta or {}).get("line_no") or 0)
+            except Exception:
+                line_no = 0
+            plan_tb = str((meta or {}).get("plan_time_block") or "").strip()
+            planned_key_tb = plan_tb if plan_tb else str(time_block)
+            is_planned = (int(rid), str(planned_key_tb)) in (self._planned_keys or set())
 
             time_text = ""
             it_time = self.table.item(r, self._col_time_text)
             if it_time is not None:
                 time_text = (it_time.text() or "").strip()
 
-            cmb_v = self.table.cellWidget(r, self._col_vehicle)
-            cmb_d = self.table.cellWidget(r, self._col_driver)
-            vehicle_id = cmb_v.currentData() if cmb_v is not None else None
-            driver_id = cmb_d.currentData() if cmb_d is not None else None
+            it_v = self.table.item(r, self._col_vehicle)
+            it_d = self.table.item(r, self._col_driver)
+            vehicle_id = it_v.data(Qt.ItemDataRole.UserRole) if it_v is not None else None
+            driver_id = it_d.data(Qt.ItemDataRole.UserRole) if it_d is not None else None
 
             p_item = self.table.item(r, self._col_price)
             p_txt = ((p_item.text() if p_item else "") or "").strip()
@@ -2954,7 +3421,7 @@ class BulkAttendanceDialog(QDialog):
                 val = (it.text() or "").strip() if it else ""
                 qty = int(val) if val.isdigit() else 0
                 trip_date = QDate(self.year, self.month, day).toString("yyyy-MM-dd")
-                key = (int(rid), str(trip_date), str(time_block))
+                key = (int(rid), str(trip_date), str(time_block), int(line_no))
                 if is_planned or qty != 0 or key in existing_entries:
                     entry_rows.append(
                         (
@@ -2963,6 +3430,7 @@ class BulkAttendanceDialog(QDialog):
                             str(trip_date),
                             str(self.service_type),
                             str(time_block),
+                            int(line_no),
                             int(qty),
                             str(time_text),
                             now,
@@ -2970,9 +3438,9 @@ class BulkAttendanceDialog(QDialog):
                         )
                     )
 
-                key2 = (int(rid), str(trip_date), str(time_block))
+                key2 = (int(rid), str(trip_date), str(time_block), int(line_no))
                 if is_planned or qty != 0 or key2 in existing_allocations:
-                    override = self._alloc_override_map.get((int(rid), str(time_block), str(trip_date))) or {}
+                    override = self._alloc_override_map.get((int(rid), str(time_block), str(trip_date), int(line_no))) or {}
                     v2 = override.get("vehicle_id", vehicle_id)
                     d2 = override.get("driver_id", driver_id)
                     note2 = (override.get("note") or "").strip()
@@ -2983,6 +3451,7 @@ class BulkAttendanceDialog(QDialog):
                             str(trip_date),
                             str(self.service_type),
                             str(time_block),
+                            int(line_no),
                             d2,
                             v2,
                             float(qty),
@@ -3014,10 +3483,10 @@ class BulkAttendanceDialog(QDialog):
                 cur.executemany(
                     """
                     INSERT INTO trip_entries (
-                        contract_id, route_params_id, trip_date, service_type, time_block,
+                        contract_id, route_params_id, trip_date, service_type, time_block, line_no,
                         qty, time_text, created_at, updated_at
-                    ) VALUES (?,?,?,?,?,?,?,?,?)
-                    ON CONFLICT(contract_id, route_params_id, trip_date, service_type, time_block)
+                    ) VALUES (?,?,?,?,?,?,?,?,?,?)
+                    ON CONFLICT(contract_id, route_params_id, trip_date, service_type, time_block, line_no)
                     DO UPDATE SET qty=excluded.qty, time_text=excluded.time_text, updated_at=excluded.updated_at
                     """,
                     entry_rows,
@@ -3027,10 +3496,10 @@ class BulkAttendanceDialog(QDialog):
                 cur.executemany(
                     """
                     INSERT INTO trip_allocations (
-                        contract_id, route_params_id, trip_date, service_type, time_block,
+                        contract_id, route_params_id, trip_date, service_type, time_block, line_no,
                         driver_id, vehicle_id, qty, time_text, note, created_at, updated_at
-                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-                    ON CONFLICT(contract_id, route_params_id, trip_date, service_type, time_block)
+                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    ON CONFLICT(contract_id, route_params_id, trip_date, service_type, time_block, line_no)
                     DO UPDATE SET
                         driver_id=excluded.driver_id,
                         vehicle_id=excluded.vehicle_id,
@@ -3202,6 +3671,8 @@ class PlanTrackingDialog(QDialog):
         start_date = QDate(self.year, self.month, 1).toString("yyyy-MM-dd")
         end_date = QDate(self.year, self.month, days_in_month).toString("yyyy-MM-dd")
 
+        month_key = _norm_month_key(str(self.ctx.month))
+
         planned_keys: set[tuple[int, str]] = set()
         try:
             conn = self.db.connect()
@@ -3215,9 +3686,25 @@ class PlanTrackingDialog(QDialog):
                   AND month = ?
                   AND service_type IN ({placeholders})
                 """,
-                (int(self.ctx.contract_id), str(self.ctx.month), *self.service_type_values),
+                (int(self.ctx.contract_id), str(month_key), *self.service_type_values),
             )
             rows = cursor.fetchall() or []
+
+            if not rows:
+                try:
+                    cursor.execute(
+                        """
+                        SELECT route_params_id, time_block
+                        FROM trip_plan
+                        WHERE contract_id = ?
+                          AND month = ?
+                        """,
+                        (int(self.ctx.contract_id), str(month_key)),
+                    )
+                    rows = cursor.fetchall() or []
+                except Exception:
+                    rows = []
+
             conn.close()
             planned_keys = {
                 (int(r[0] or 0), str(r[1] or ""))

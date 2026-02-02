@@ -3,7 +3,6 @@ from PyQt6.QtCore import Qt, pyqtSignal, QTime
 from PyQt6 import uic, QtCore
 import ui.icons.context_rc 
 from config import get_ui_path
-from app.utils.style_utils import clear_all_styles
 
 class ConstantsApp(QWidget):
     onoff_settings_changed = pyqtSignal(int, int)
@@ -11,7 +10,7 @@ class ConstantsApp(QWidget):
     def __init__(self, db_manager, parent=None):
         super().__init__(parent)
         uic.loadUi(get_ui_path("constants_window.ui"), self)
-        clear_all_styles(self)
+        self.setObjectName("main_form")
         self.db = db_manager
 
         self._selected_belge_id = None

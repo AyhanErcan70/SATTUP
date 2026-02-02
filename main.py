@@ -12,7 +12,9 @@ from PyQt6.QtCore import QDate
 from PyQt6.QtWidgets import QApplication, QComboBox, QDialog, QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout
 from app.core.db_manager import DatabaseManager
 from app.modules.main_menu import MainMenuApp
-from app.utils.style_utils import ensure_global_polisher
+
+# Register Qt resources early so Designer stylesheets using ":/..." paths always work.
+import ui.icons.context_rc
 
 
 class PeriodSelectDialog(QDialog):
@@ -114,21 +116,6 @@ def main():
     db = DatabaseManager()
 
     app = QApplication(sys.argv)
-
-    ensure_global_polisher(app, row_height=20)
-
-    # Global QSS: enabled by default. Set SATTUP_ENABLE_GLOBAL_QSS=0 to disable.
-    try:
-        env_val = str(os.environ.get("SATTUP_ENABLE_GLOBAL_QSS", "")).strip()
-        enable_global_qss = env_val not in ("0", "false", "False", "no", "NO")
-    except Exception:
-        enable_global_qss = True
-
-    if enable_global_qss:
-        style_path = os.path.join(BASE_DIR, "ui", "styles", "main_style.qss")
-        if os.path.exists(style_path):
-            with open(style_path, "r", encoding="utf-8") as f:
-                app.setStyleSheet(f.read())
 
     user_data = {}
     main_window = MainMenuApp(user_data=user_data, start_passive=True, offline_timeout_ms=120000)

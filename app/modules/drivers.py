@@ -4,14 +4,13 @@ from PyQt6.QtWidgets import QWidget, QMessageBox, QListWidgetItem
 
 from app.core.db_manager import DatabaseManager
 from config import get_ui_path
-from app.utils.style_utils import clear_all_styles
 
 
 class DriversApp(QWidget):
     def __init__(self, user_data=None, db_manager=None, parent=None):
         super().__init__(parent)
         uic.loadUi(get_ui_path("drivers_window.ui"), self)
-        clear_all_styles(self)
+        self.setObjectName("main_form")
 
         self.user_data = user_data or {}
         self.db = db_manager if db_manager else DatabaseManager()

@@ -11,6 +11,8 @@
   </qresource>
   <qresource prefix="simgeler">
     <file>arrow-down.png</file>
+    <file>down-arrow.png</file>
+    <file>down-arrow2.png</file>
     <file>ekle.ico</file>
     <file>remove.ico</file>
   </qresource>

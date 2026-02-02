@@ -28,7 +28,11 @@
   <property name="styleSheet">
    <string notr="true">*#auth_form{
 background-color: #162D6D;
+border-radius: 10px;
 }
+
+QWidget#logo_wid{
+image: url(:/resimler/logo-w.png);}
 QPushButton {
 	background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                                       stop:0 #dcdcdd, stop: 0.5 #acacac,
@@ -110,7 +114,8 @@ color:#ebebeb;
     <widget class="QWidget" name="logo_wid" native="true">
      <property name="styleSheet">
       <string notr="true">
-image: url(:/resimler/logo-w.png);
+ image: url(:/resimler/logo-w.png);
+
 </string>
      </property>
     </widget>

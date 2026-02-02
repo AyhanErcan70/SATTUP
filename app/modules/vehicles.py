@@ -18,6 +18,7 @@ class VehiclesApp(QWidget):
     def __init__(self, user_data=None, parent=None):
         super().__init__(parent)
         uic.loadUi(get_ui_path("vehicles_window.ui"), self)
+        self.setObjectName("main_form")
 
         self.db = DatabaseManager()
         self.user_data = user_data
@@ -55,6 +56,53 @@ class VehiclesApp(QWidget):
         self.load_data()
         self._setup_filters()
         self._assign_next_code()
+
+    def _load_subcontractor_customers(self):
+        cmb = getattr(self, "cmb_alt_yuklenici", None)
+        if cmb is None:
+            return
+        try:
+            cmb.blockSignals(True)
+        except Exception:
+            pass
+        try:
+            cmb.clear()
+            cmb.addItem("Seçiniz...", None)
+        except Exception:
+            return
+
+        items = []
+        try:
+            conn = self.db.connect()
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT id, COALESCE(title,'')
+                FROM customers
+                WHERE COALESCE(is_active,1)=1
+                  AND (COALESCE(musteri_turu,'') = 'ALT YÜKLENICI' OR COALESCE(musteri_turu,'') = 'ALT YÜKLENİCİ')
+                ORDER BY title COLLATE NOCASE
+                """
+            )
+            items = cur.fetchall() or []
+            conn.close()
+        except Exception:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            items = []
+
+        for _id, title in items:
+            try:
+                cmb.addItem(str(title or ""), int(_id) if _id is not None else None)
+            except Exception:
+                continue
+
+        try:
+            cmb.blockSignals(False)
+        except Exception:
+            pass
 
     def _init_dates(self):
         bugun = QDate.currentDate()
@@ -106,6 +154,7 @@ class VehiclesApp(QWidget):
             self.cmb_model.clear()
             self.cmb_model.addItem("Seçiniz...")
 
+        self._load_subcontractor_customers()
         self._update_kategori()
 
     def _update_kategori(self):
@@ -324,6 +373,14 @@ class VehiclesApp(QWidget):
         kapasite = (self.txt_kapasite.text() or "").strip() if hasattr(self, "txt_kapasite") else ""
         arac_sahibi = (self.txt_arac_sahibi.text() or "").strip() if hasattr(self, "txt_arac_sahibi") else ""
 
+        supplier_customer_id = None
+        cmb_sup = getattr(self, "cmb_alt_yuklenici", None)
+        if cmb_sup is not None:
+            try:
+                supplier_customer_id = cmb_sup.currentData()
+            except Exception:
+                supplier_customer_id = None
+
         def to_int(val):
             try:
                 return int(val)
@@ -336,6 +393,7 @@ class VehiclesApp(QWidget):
             "arac_sahibi": arac_sahibi,
             "photo_path": (self._photo_path or "").strip(),
             "arac_turu": (self.cmb_arac_turu.currentText() or "").strip() if hasattr(self, "cmb_arac_turu") else "",
+            "supplier_customer_id": (int(supplier_customer_id) if supplier_customer_id is not None else None),
             "hizmet_turu": (self.cmb_hizmet_turu.currentText() or "").strip() if hasattr(self, "cmb_hizmet_turu") else "",
             "kategori": (self.cmb_kategori.currentText() or "").strip() if hasattr(self, "cmb_kategori") else "",
             "brand": (self.cmb_marka.currentText() or "").strip() if hasattr(self, "cmb_marka") else "",
@@ -401,6 +459,12 @@ class VehiclesApp(QWidget):
         if hasattr(self, "txt_arac_sahibi"):
             self.txt_arac_sahibi.clear()
 
+        if hasattr(self, "cmb_alt_yuklenici"):
+            try:
+                self.cmb_alt_yuklenici.setCurrentIndex(0)
+            except Exception:
+                pass
+
         if hasattr(self, "cmb_arac_turu"):
             self.cmb_arac_turu.setCurrentIndex(0)
         if hasattr(self, "cmb_hizmet_turu"):
@@ -421,6 +485,7 @@ class VehiclesApp(QWidget):
     def select_record(self, item):
         if item is None:
             return
+
         row = item.row()
         code_item = self.tableView.item(row, 0) if hasattr(self, "tableView") else None
         code = code_item.text().strip() if code_item else ""
@@ -437,6 +502,20 @@ class VehiclesApp(QWidget):
 
         if hasattr(self, "txt_arac_sahibi"):
             self.txt_arac_sahibi.setText(str(data.get("arac_sahibi") or ""))
+
+        if hasattr(self, "cmb_alt_yuklenici"):
+            try:
+                sid = data.get("supplier_customer_id")
+                if sid is None or str(sid).strip() == "":
+                    self.cmb_alt_yuklenici.setCurrentIndex(0)
+                else:
+                    idx = self.cmb_alt_yuklenici.findData(int(sid))
+                    self.cmb_alt_yuklenici.setCurrentIndex(idx if idx >= 0 else 0)
+            except Exception:
+                try:
+                    self.cmb_alt_yuklenici.setCurrentIndex(0)
+                except Exception:
+                    pass
 
         self._photo_path = str(data.get("photo_path") or "").strip()
         self._refresh_photo_label()

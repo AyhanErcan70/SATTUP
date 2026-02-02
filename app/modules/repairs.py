@@ -15,14 +15,13 @@ from PyQt6.QtWidgets import (
 
 from app.core.db_manager import DatabaseManager
 from config import get_ui_path
-from app.utils.style_utils import clear_all_styles
 
 
 class RepairsApp(QWidget):
     def __init__(self, user_data=None, db_manager=None, parent=None):
         super().__init__(parent)
         uic.loadUi(get_ui_path("repairs_window.ui"), self)
-        clear_all_styles(self)
+        self.setObjectName("main_form")
 
         self.user_data = user_data or {}
         self.db = db_manager if db_manager else DatabaseManager()
@@ -159,7 +158,6 @@ class RepairsApp(QWidget):
             self.date_sonraki_bakim.setDate(QDate.currentDate())
         if hasattr(self, "btn_kaydet"):
             self.btn_kaydet.setText("KAYDET")
-            self.btn_kaydet.setStyleSheet("")
 
     def _open_islemler_popup(self):
         popup = QDialog(self)

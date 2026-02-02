@@ -6,7 +6,6 @@ from app.core.db_manager import DatabaseManager
 import ui.icons.context_rc
 
 from config import get_ui_path, BASE_DIR
-from app.utils.style_utils import clear_all_styles
 import os
 import re
 import shutil
@@ -21,12 +20,22 @@ class EmployeesApp(QWidget):
     def __init__(self, user_data=None, parent=None): # Ebeveyn kuralı gereği parent=None ekledik
         super().__init__(parent)
         uic.loadUi(get_ui_path("employees_window.ui"), self)
-        clear_all_styles(self)
+        self.setObjectName("main_form")
+        try:
+            self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        except Exception:
+            pass
+        try:
+            if hasattr(self, "top_frame") and self.top_frame is not None:
+                self.top_frame.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        except Exception:
+            pass
         try:
             if str(os.environ.get("SATTUP_RELAX_UI_CONSTRAINTS", "")).strip() in ("1", "true", "True", "yes", "YES"):
                 self._relax_ui_constraints()
         except Exception:
             pass
+
         self.db = DatabaseManager()
 
         self.user_data = user_data
@@ -327,7 +336,7 @@ class EmployeesApp(QWidget):
             data = self.db.get_constants(group_name) 
             
             # Boş bir seçenek ekleyelim ki kullanıcı seçmeye zorlansın
-            combo_obj.addItem("Seçiniz...", None)
+            combo_obj.addItem(" Seçiniz...", None)
             
             for id_val, value in data:
                 # addItem(GörünenMetin, ArkaPlandakiVeri) -> id_val çok kritik!
@@ -668,7 +677,7 @@ class EmployeesApp(QWidget):
                 is_active = 1
                 if durum_txt:
                     d = durum_txt.strip().upper()
-                    if d in ("PASİF", "PASIF", "0", "FALSE", "HAYIR"):
+                    if d in ("PASİF", "PASİF", "0", "FALSE", "HAYIR"):
                         is_active = 0
                     elif d in ("AKTİF", "AKTIF", "1", "TRUE", "EVET"):
                         is_active = 1
@@ -757,10 +766,6 @@ class EmployeesApp(QWidget):
             self.clear_form()
 
     def save(self):
-        # 0. Stil Temizliği: Önce tüm kutuların rengini normale döndür
-        for ui_obj in self.fields.keys():
-            getattr(self, ui_obj).setStyleSheet("")
-
         # 1. Değerleri al
         ad_soyad = self.txt_ad_soyad.text().strip()
         tckn = self.txt_tckn.text().strip()
@@ -774,10 +779,8 @@ class EmployeesApp(QWidget):
             QMessageBox.warning(self, "Eksik Bilgi", "Ad Soyad ve TCKN alanları boş bırakılamaz!")
             if not ad_soyad: 
                 self.txt_ad_soyad.setFocus()
-                self.txt_ad_soyad.setStyleSheet("background-color: #ffcccc;")
             else: 
                 self.txt_tckn.setFocus()
-                self.txt_tckn.setStyleSheet("background-color: #ffcccc;")
             return
 
         # 3. TCKN Algoritma Doğruluğu
@@ -785,7 +788,6 @@ class EmployeesApp(QWidget):
             QMessageBox.warning(self, "TCKN Hatası", "Girdiğiniz TC Kimlik Numarası geçersizdir!")
             self.txt_tckn.clear()
             self.txt_tckn.setFocus()
-            self.txt_tckn.setStyleSheet("background-color: #ffcccc;")
             return
 
         # 4. Email Format Kontrolü (Sadece doluysa)
@@ -793,7 +795,6 @@ class EmployeesApp(QWidget):
             QMessageBox.warning(self, "Email Hatası", "Lütfen geçerli bir e-posta adresi giriniz!")
             self.txt_email.clear()
             self.txt_email.setFocus()
-            self.txt_email.setStyleSheet("background-color: #ffcccc;")
             return
 
         # 5. Veritabanı Mükerrer TCKN Kontrolü
@@ -803,7 +804,6 @@ class EmployeesApp(QWidget):
             QMessageBox.warning(self, "Hata", "Bu TCKN başka bir personelde kayıtlı!")
             self.txt_tckn.clear()
             self.txt_tckn.setFocus()
-            self.txt_tckn.setStyleSheet("background-color: #ffcccc;")
             return
 
         # 6. Veritabanı Mükerrer IBAN Kontrolü
@@ -811,20 +811,17 @@ class EmployeesApp(QWidget):
             QMessageBox.warning(self, "Hata", "Bu IBAN başka bir personelde kayıtlı!")
             self.txt_iban.clear()
             self.txt_iban.setFocus()
-            self.txt_iban.setStyleSheet("background-color: #ffcccc;")
             return
 
         # 6.1 GSM / IBAN Uzunluk Kontrolü (Maskeli input -> sadece rakam sayılır)
         if gsm_digits and len(gsm_digits) != 10:
             QMessageBox.warning(self, "GSM Hatası", "Telefon numarası 10 haneli olmalıdır!")
             self.txt_gsm.setFocus()
-            self.txt_gsm.setStyleSheet("background-color: #ffcccc;")
             return
 
         if iban_digits and len(iban_digits) != 24:
             QMessageBox.warning(self, "IBAN Hatası", "IBAN (TR hariç) 24 haneli olmalıdır!")
             self.txt_iban.setFocus()
-            self.txt_iban.setStyleSheet("background-color: #ffcccc;")
             return
 
         # --- Her şey tamamsa kayıt başlasın ---

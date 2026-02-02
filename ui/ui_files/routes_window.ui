@@ -13,6 +13,9 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget#main_form{border-radius: 8px}</string>
+  </property>
   <layout class="QGridLayout" name="gridLayout_3">
    <property name="leftMargin">
     <number>0</number>

@@ -14,7 +14,6 @@ from PyQt6.QtCore import QTimer
 import ui.icons.context_rc
 from config import get_ui_path, BASE_DIR
 from app.core.db_manager import DatabaseManager
-from app.utils.style_utils import clear_all_styles
 
 class AuthApp(QDialog):
     def __init__(self):
@@ -22,7 +21,6 @@ class AuthApp(QDialog):
         # 1. UI Yükleme (Yeni yol yapısı)
         ui_path = get_ui_path("auth_window.ui")
         uic.loadUi(ui_path, self)
-        clear_all_styles(self)
         
         self.db = DatabaseManager()
         self.deneme_hakki = 3
