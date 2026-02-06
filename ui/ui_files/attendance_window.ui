@@ -7,11 +7,30 @@
     <x>0</x>
     <y>0</y>
     <width>1091</width>
-    <height>632</height>
+    <height>0</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget#main_form QPushButton, QLineEdit, QComboBox{
+
+border :1px solid black;
+border-radius: 6px;
+}
+QWidget#main_form QPushButton{
+background-color: #b0b0b0;
+}
+QWidget#main_form QPushButton:hover{
+border:2px solid black;
+padding-top: 4px;
+font-weight: bold;
+}
+QWidget#main_form QPushButton:pressed{
+background-color: #7e7e7e;
+border-color: red;
+}</string>
   </property>
   <layout class="QGridLayout" name="gridLayout_8">
    <property name="leftMargin">
@@ -26,7 +45,7 @@
    <property name="bottomMargin">
     <number>0</number>
    </property>
-   <property name="horizontalSpacing">
+   <property name="spacing">
     <number>0</number>
    </property>
    <item row="0" column="0">
@@ -34,10 +53,13 @@
      <item row="0" column="0">
       <widget class="QFrame" name="top_frame">
        <property name="frameShape">
-        <enum>QFrame::Shape::NoFrame</enum>
+        <enum>QFrame::Shape::Box</enum>
        </property>
        <property name="frameShadow">
         <enum>QFrame::Shadow::Plain</enum>
+       </property>
+       <property name="lineWidth">
+        <number>2</number>
        </property>
        <layout class="QGridLayout" name="gridLayout_2">
         <item row="0" column="0">
@@ -246,7 +268,10 @@
              <enum>QFrame::Shape::Box</enum>
             </property>
             <property name="frameShadow">
-             <enum>QFrame::Shadow::Raised</enum>
+             <enum>QFrame::Shadow::Plain</enum>
+            </property>
+            <property name="lineWidth">
+             <number>2</number>
             </property>
             <property name="text">
              <string>Toplam Sefer:                          DURUM:</string>
@@ -261,10 +286,13 @@
      <item row="1" column="0">
       <widget class="QFrame" name="middle_n_frame">
        <property name="frameShape">
-        <enum>QFrame::Shape::NoFrame</enum>
+        <enum>QFrame::Shape::Box</enum>
        </property>
        <property name="frameShadow">
         <enum>QFrame::Shadow::Plain</enum>
+       </property>
+       <property name="lineWidth">
+        <number>2</number>
        </property>
        <layout class="QGridLayout" name="gridLayout_6">
         <item row="0" column="0">
@@ -303,14 +331,39 @@
      <item row="2" column="0">
       <widget class="QFrame" name="bottom_frame">
        <property name="frameShape">
-        <enum>QFrame::Shape::NoFrame</enum>
+        <enum>QFrame::Shape::Box</enum>
        </property>
        <property name="frameShadow">
         <enum>QFrame::Shadow::Plain</enum>
        </property>
+       <property name="lineWidth">
+        <number>2</number>
+       </property>
        <layout class="QGridLayout" name="gridLayout_4">
         <item row="0" column="0">
          <layout class="QGridLayout" name="gridLayout_3">
+          <property name="verticalSpacing">
+           <number>0</number>
+          </property>
+          <item row="0" column="2">
+           <widget class="QPushButton" name="btn_ay_kapat">
+            <property name="minimumSize">
+             <size>
+              <width>140</width>
+              <height>40</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>140</width>
+              <height>40</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Dönem/Ay KAPAT</string>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="0">
            <widget class="QPushButton" name="btn_onayla_kilitle">
             <property name="minimumSize">
@@ -330,7 +383,45 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="2">
+          <item row="0" column="4">
+           <widget class="QPushButton" name="btn_yazdir">
+            <property name="minimumSize">
+             <size>
+              <width>140</width>
+              <height>40</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>140</width>
+              <height>40</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>YAZDIR</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="btn_onay_kaldir">
+            <property name="minimumSize">
+             <size>
+              <width>140</width>
+              <height>40</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>140</width>
+              <height>40</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>ONAY KALDIR</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
            <widget class="QPushButton" name="btn_excele_aktar">
             <property name="minimumSize">
              <size>
@@ -356,7 +447,7 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="4">
+          <item row="0" column="5">
            <widget class="QPushButton" name="btn_geri_don">
             <property name="minimumSize">
              <size>
@@ -379,44 +470,6 @@
             </property>
             <property name="text">
              <string>GERİ DÖN</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QPushButton" name="btn_onay_kaldir">
-            <property name="minimumSize">
-             <size>
-              <width>140</width>
-              <height>40</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>140</width>
-              <height>40</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>ONAY KALDIR</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="3">
-           <widget class="QPushButton" name="btn_yazdir">
-            <property name="minimumSize">
-             <size>
-              <width>140</width>
-              <height>40</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>140</width>
-              <height>40</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>YAZDIR</string>
             </property>
            </widget>
           </item>
