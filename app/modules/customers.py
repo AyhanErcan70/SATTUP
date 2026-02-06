@@ -39,6 +39,7 @@ class CustomersApp(QWidget):
             "cmb_musteri_turu": "musteri_turu",
             "cmb_kisilik": "kisilik",
             "cmb_sektor": "sektor",
+            "cmb_pricing_model": "pricing_model",
             "txt_firma": "title",
             "txt_vergi_tckn": "tax_number",
             "txt_vergi_dairesi": "vergi_dairesi",
@@ -129,6 +130,11 @@ class CustomersApp(QWidget):
             self.cmb_sektor.addItem("Seçiniz...", None)
             self.cmb_sektor.addItem("ÖZEL SEKTÖR", "ÖZEL SEKTÖR")
             self.cmb_sektor.addItem("KAMU", "KAMU")
+
+        if hasattr(self, "cmb_pricing_model"):
+            self.cmb_pricing_model.clear()
+            self.cmb_pricing_model.addItem("VARDİYALI", "VARDIYALI")
+            self.cmb_pricing_model.addItem("VARDIYASIZ", "VARDIYASIZ")
 
         # İl/İlçe sabit tablosundan
         if hasattr(self, "cmb_il"):
@@ -426,7 +432,12 @@ class CustomersApp(QWidget):
 
             if ui_obj.startswith("cmb_"):
                 txt = (widget.currentText() or "").strip()
-                data[db_col] = "" if (not txt or txt.lower().startswith("seç")) else txt
+                val = "" if (not txt or txt.lower().startswith("seç")) else txt
+                if db_col == "pricing_model":
+                    val = str(val or "").strip().upper() or "VARDIYALI"
+                    if val not in ("VARDIYALI", "VARDIYASIZ"):
+                        val = "VARDIYALI"
+                data[db_col] = val
             else:
                 val = (widget.text() or "").strip()
                 if ui_obj == "txt_bakiye":
@@ -545,6 +556,11 @@ class CustomersApp(QWidget):
             self._update_kisilik_ui()
         if hasattr(self, "cmb_sektor"):
             set_combo_by_text(self.cmb_sektor, data.get("sektor"))
+        if hasattr(self, "cmb_pricing_model"):
+            pm = str(data.get("pricing_model") or "").strip().upper() or "VARDIYALI"
+            if pm not in ("VARDIYALI", "VARDIYASIZ"):
+                pm = "VARDIYALI"
+            set_combo_by_text(self.cmb_pricing_model, pm)
 
         if hasattr(self, "txt_firma"):
             self.txt_firma.setText(str(data.get("title") or ""))
