@@ -2,7 +2,9 @@ import os
 
 import traceback
 
+from PyQt6.QtCore import QDate
 from PyQt6.QtWidgets import QMainWindow, QScrollArea, QSizePolicy, QGraphicsOpacityEffect, QLabel, QGraphicsColorizeEffect, QFrame, QMessageBox, QComboBox, QPushButton, QGraphicsBlurEffect
+from PyQt6.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout
 from PyQt6.QtGui import QPixmap, QIcon, QColor, QFontMetrics
 from PyQt6.QtCore import QSize
 from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, QSequentialAnimationGroup, QEvent, QPoint, QRect, QParallelAnimationGroup, QUrl, QVariantAnimation
@@ -20,6 +22,113 @@ from app.modules.constants import ConstantsApp
 from app.modules.routes import RoutesApp
 from app.modules.trips import TripsGridApp
 from app.modules.attendance import AttendanceApp
+
+
+def _prev_month_key(month_key: str) -> str | None:
+    try:
+        y_str, m_str = str(month_key).split("-", 1)
+        y = int(y_str)
+        m = int(m_str)
+        if m <= 1:
+            return f"{y - 1:04d}-12"
+        return f"{y:04d}-{m - 1:02d}"
+    except Exception:
+        return None
+
+
+def _prev_month_same_year(month_key: str) -> str | None:
+    try:
+        y_str, m_str = str(month_key).split("-", 1)
+        y = int(y_str)
+        m = int(m_str)
+        if m <= 1:
+            return None
+        return f"{y:04d}-{m - 1:02d}"
+    except Exception:
+        return None
+
+
+class PeriodSelectDialog(QDialog):
+    def __init__(self, parent=None, initial_month: str | None = None):
+        super().__init__(parent)
+        self.setWindowTitle("Dönem Seçimi")
+        self._selected = None
+
+        self.cmb_year = QComboBox()
+        self.cmb_month = QComboBox()
+
+        for y in range(2025, 2031):
+            self.cmb_year.addItem(str(y), y)
+
+        self._months = [
+            ("OCAK", 1),
+            ("ŞUBAT", 2),
+            ("MART", 3),
+            ("NİSAN", 4),
+            ("MAYIS", 5),
+            ("HAZİRAN", 6),
+            ("TEMMUZ", 7),
+            ("AĞUSTOS", 8),
+            ("EYLÜL", 9),
+            ("EKİM", 10),
+            ("KASIM", 11),
+            ("ARALIK", 12),
+        ]
+        for name, m in self._months:
+            self.cmb_month.addItem(name, m)
+
+        d = QDate.currentDate()
+        init_y = int(d.year())
+        init_m = int(d.month())
+        if initial_month:
+            try:
+                y_str, m_str = str(initial_month).split("-", 1)
+                init_y = int(y_str)
+                init_m = int(m_str)
+            except Exception:
+                pass
+
+        yi = self.cmb_year.findData(init_y)
+        if yi >= 0:
+            self.cmb_year.setCurrentIndex(yi)
+        mi = self.cmb_month.findData(init_m)
+        if mi >= 0:
+            self.cmb_month.setCurrentIndex(mi)
+
+        btn_ok = QPushButton("Devam")
+        btn_cancel = QPushButton("İptal")
+        btn_ok.clicked.connect(self._on_ok)
+        btn_cancel.clicked.connect(self.reject)
+
+        lay = QVBoxLayout()
+        lay.addWidget(QLabel("Lütfen dönem seçiniz (Ay/Yıl):"))
+
+        row = QHBoxLayout()
+        row.addWidget(QLabel("Yıl:"))
+        row.addWidget(self.cmb_year)
+        row.addWidget(QLabel("Ay:"))
+        row.addWidget(self.cmb_month)
+        lay.addLayout(row)
+
+        btns = QHBoxLayout()
+        btns.addStretch(1)
+        btns.addWidget(btn_cancel)
+        btns.addWidget(btn_ok)
+        lay.addLayout(btns)
+
+        self.setLayout(lay)
+
+    def _on_ok(self):
+        y = int(self.cmb_year.currentData() or 0)
+        m = int(self.cmb_month.currentData() or 0)
+        if y <= 0 or m <= 0:
+            QMessageBox.warning(self, "Uyarı", "Lütfen ay ve yıl seçiniz.")
+            return
+        self._selected = f"{y:04d}-{m:02d}"
+        self.accept()
+
+    def selected_month(self) -> str | None:
+        return self._selected
 
 class DownComboBox(QComboBox):
     def showPopup(self):
@@ -147,7 +256,8 @@ class MainMenuApp(QMainWindow):
         self._ensure_active_indicator()
         self._ensure_title_anim_layer()
 
-        self._ensure_welcome_overlay()
+        # Startup'ta dönem/ay seçimi istemiyoruz. Zorunlu dönem seçimi sadece
+        # Puantaj modülüne girerken PeriodSelectDialog ile yapılır.
         self._load_onoff_settings_from_db()
         self.set_mode(active=not bool(start_passive))
 
@@ -528,6 +638,29 @@ class MainMenuApp(QMainWindow):
         dlg.addButton(btn_extend, QMessageBox.ButtonRole.AcceptRole)
         dlg.addButton(btn_offline, QMessageBox.ButtonRole.DestructiveRole)
 
+        try:
+            btn_extend.clicked.connect(self._on_offline_extend)
+        except Exception:
+            pass
+        try:
+            btn_offline.clicked.connect(self._on_offline_go_offline)
+        except Exception:
+            pass
+
+        def _clicked(btn):
+            try:
+                if btn is btn_extend:
+                    self._on_offline_extend()
+                elif btn is btn_offline:
+                    self._on_offline_go_offline()
+            except Exception:
+                return
+
+        try:
+            dlg.buttonClicked.connect(_clicked)
+        except Exception:
+            pass
+
         row = QHBoxLayout()
         row.addStretch(1)
 
@@ -720,6 +853,8 @@ class MainMenuApp(QMainWindow):
         self._on_offline_timeout()
 
     def _ensure_welcome_overlay(self):
+        # Startup'ta dönem/ay overlay'ı kullanılmıyor.
+        return
         if self._welcome_overlay is not None:
             return
         page_main = None
@@ -1525,19 +1660,6 @@ class MainMenuApp(QMainWindow):
             self._title_anim_running = False
             self.lbl_title.setText(text)
             self._clear_title_letter_items()
-
-            # Açılışta başlık animasyonu bittikten sonra dönem overlay'ını aktif et
-            try:
-                if (
-                    not self._session_active
-                    and self._welcome_overlay is not None
-                    and self._welcome_overlay.isVisible()
-                    and getattr(self, "_startup_title_gating", False)
-                ):
-                    self._startup_title_gating = False
-                    self._set_welcome_overlay_interactive(True, animate=True)
-            except Exception:
-                pass
 
             # Tüm metin tamamlanınca tek seferlik glow/parlama
             try:
@@ -2655,6 +2777,20 @@ class MainMenuApp(QMainWindow):
         QTimer.singleShot(50, self._force_maximized)
 
     def open_trips(self):
+        initial_month = str((self.user_data or {}).get("active_month") or "").strip() or None
+        dlg = PeriodSelectDialog(parent=self, initial_month=initial_month)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        selected_month = str(dlg.selected_month() or "").strip()
+        if not selected_month:
+            return
+        try:
+            if self.user_data is None:
+                self.user_data = {}
+            self.user_data["active_month"] = str(selected_month)
+        except Exception:
+            pass
+
         # 1. Eski modülleri güvenli bir şekilde temizle (Ana sayfa hariç)
         for i in reversed(range(self.mainStack.count())):
             widget = self.mainStack.widget(i)
@@ -2696,6 +2832,142 @@ class MainMenuApp(QMainWindow):
         QTimer.singleShot(50, self._force_maximized)
 
     def open_attendance(self):
+        initial_month = str((self.user_data or {}).get("active_month") or "").strip() or None
+        dlg = PeriodSelectDialog(parent=self, initial_month=initial_month)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        selected_month = str(dlg.selected_month() or "").strip()
+        if not selected_month:
+            return
+
+        # Eğer seçilen ay için operasyon şablonu yoksa, aynı yılın bir önceki ayından kopyalamayı teklif et.
+        try:
+            from app.core.db_manager import DatabaseManager
+
+            db = DatabaseManager()
+            if selected_month and not db.month_has_operational_template(str(selected_month)):
+                prev_for_template = _prev_month_same_year(str(selected_month))
+                if prev_for_template and db.month_has_operational_template(str(prev_for_template)):
+                    ok = QMessageBox.question(
+                        self,
+                        "Şablon Kopyalama",
+                        f"{selected_month} dönemi için şablon bulunamadı.\n\n"
+                        f"{prev_for_template} dönemindeki şablonlar kopyalansın mı?",
+                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    )
+                    if ok == QMessageBox.StandardButton.Yes:
+                        done = db.copy_month_operational_template(str(prev_for_template), str(selected_month))
+                        if not done:
+                            QMessageBox.warning(self, "Uyarı", "Şablon kopyalama yapılamadı.")
+                else:
+                    QMessageBox.information(
+                        self,
+                        "Bilgi",
+                        f"{selected_month} dönemi için şablon bulunamadı ve kopyalanacak önceki dönem yok.",
+                    )
+        except Exception:
+            pass
+
+        prev_month = _prev_month_same_year(selected_month)
+        if prev_month and selected_month != (initial_month or ""):
+            try:
+                from app.core.db_manager import DatabaseManager
+
+                db = DatabaseManager()
+                close_state = db.get_period_close(str(prev_month)) or {}
+                is_closed = bool(int((close_state or {}).get("closed") or 0))
+
+                if not is_closed:
+                    conn = db.connect()
+                    if conn:
+                        cur = conn.cursor()
+
+                        cur.execute(
+                            """
+                            SELECT COUNT(1)
+                            FROM trip_period_lock
+                            WHERE month = ? AND COALESCE(locked,0) = 0
+                            """,
+                            (str(prev_month),),
+                        )
+                        unlocked_cnt = int((cur.fetchone() or [0])[0] or 0)
+
+                        cur.execute(
+                            """
+                            SELECT COUNT(1)
+                            FROM hakedis
+                            WHERE period = ?
+                              AND UPPER(COALESCE(status,'')) NOT IN ('ONAYLANDI','FATURALANDI')
+                            """,
+                            (str(prev_month),),
+                        )
+                        pending_hakedis_cnt = int((cur.fetchone() or [0])[0] or 0)
+
+                        conn.close()
+                    else:
+                        unlocked_cnt = 0
+                        pending_hakedis_cnt = 0
+
+                    msg = (
+                        f"Seçilen dönem: {selected_month}\n\n"
+                        f"Önceki dönem ({prev_month}) AY KAPATILMAMIŞ.\n\n"
+                        f"- Kilitlenmemiş dönem kaydı: {unlocked_cnt}\n"
+                        f"- Onaylanmamış/Faturalanmamış hakediş: {pending_hakedis_cnt}\n\n"
+                        "Puantaj modülünde 'Dönem/Ay Kapat' işlemi yapılmadan yeni döneme geçilemez."
+                    )
+                    QMessageBox.warning(self, "Uyarı", msg)
+                    return
+
+                conn = db.connect()
+                if conn:
+                    cur = conn.cursor()
+
+                    cur.execute(
+                        """
+                        SELECT COUNT(1)
+                        FROM trip_period_lock
+                        WHERE month = ? AND COALESCE(locked,0) = 0
+                        """,
+                        (str(prev_month),),
+                    )
+                    unlocked_cnt = int((cur.fetchone() or [0])[0] or 0)
+
+                    cur.execute(
+                        """
+                        SELECT COUNT(1)
+                        FROM hakedis
+                        WHERE period = ?
+                          AND UPPER(COALESCE(status,'')) NOT IN ('ONAYLANDI','FATURALANDI')
+                        """,
+                        (str(prev_month),),
+                    )
+                    pending_hakedis_cnt = int((cur.fetchone() or [0])[0] or 0)
+
+                    conn.close()
+                else:
+                    unlocked_cnt = 0
+                    pending_hakedis_cnt = 0
+            except Exception:
+                unlocked_cnt = 0
+                pending_hakedis_cnt = 0
+
+            if unlocked_cnt > 0 or pending_hakedis_cnt > 0:
+                msg = (
+                    f"Seçilen dönem: {selected_month}\n\n"
+                    f"Önceki dönem ({prev_month}) tamamlanmamış görünüyor.\n\n"
+                    f"- Onay/kilit kaldırılmış dönem kaydı: {unlocked_cnt}\n"
+                    f"- Onaylanmamış/Faturalanmamış hakediş: {pending_hakedis_cnt}\n\n"
+                    "Lütfen önceki dönemi tamamlayıp tekrar deneyiniz."
+                )
+                QMessageBox.warning(self, "Uyarı", msg)
+                return
+
+        try:
+            if self.user_data is not None:
+                self.user_data["active_month"] = selected_month
+        except Exception:
+            pass
+
         # 1. Eski modülleri güvenli bir şekilde temizle (Ana sayfa hariç)
         for i in reversed(range(self.mainStack.count())):
             widget = self.mainStack.widget(i)

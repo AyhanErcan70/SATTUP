@@ -28,6 +28,9 @@ build/
 dist/
 *.egg-info/
 
+# Local dev notes
+DEV_NOTES/
+
 # Inno Setup / installer outputs
 installer/output/
 *.exe

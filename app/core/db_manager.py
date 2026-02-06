@@ -1,6 +1,8 @@
 import sqlite3
 import os
+import json
 from datetime import datetime
+from typing import Optional
 from config import DB_PATH, BASE_DIR
 
 class DatabaseManager:
@@ -132,6 +134,16 @@ class DatabaseManager:
                 locked_at TEXT,
                 UNIQUE (contract_id, month, service_type)
             )""")
+
+            cursor.execute(
+                """CREATE TABLE IF NOT EXISTS period_close (
+                month TEXT PRIMARY KEY,
+                closed INTEGER NOT NULL DEFAULT 0,
+                closed_at TEXT,
+                closed_by_user_id INTEGER,
+                note TEXT
+            )"""
+            )
             cursor.execute("SELECT COUNT(*) FROM users")
             if cursor.fetchone()[0] == 0:
                 cursor.execute("""
@@ -141,6 +153,690 @@ class DatabaseManager:
                 print("Bilgi: İlk admin kullanıcısı (admin/1234) oluşturuldu.")
 
             conn.commit()
+            conn.close()
+
+    def get_period_close(self, month: str):
+        conn = self.connect()
+        if not conn:
+            return None
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT closed, closed_at, closed_by_user_id, note
+                FROM period_close
+                WHERE month = ?
+                """,
+                (str(month),),
+            )
+            row = cur.fetchone()
+            if not row:
+                return {
+                    "month": str(month),
+                    "closed": 0,
+                    "closed_at": None,
+                    "closed_by_user_id": None,
+                    "note": None,
+                }
+            return {
+                "month": str(month),
+                "closed": int(row[0] or 0),
+                "closed_at": row[1],
+                "closed_by_user_id": row[2],
+                "note": row[3],
+            }
+        finally:
+            conn.close()
+
+    def list_trip_tariff_effective_from_dates(self, contract_id: int, service_type: str) -> list[str]:
+        """Return distinct effective_from dates (YYYY-MM-DD) for tariff rows."""
+        self._ensure_trip_prices_table()
+        conn = self.connect()
+        if not conn:
+            return []
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT DISTINCT effective_from
+                FROM trip_prices
+                WHERE contract_id=?
+                  AND service_type=?
+                  AND COALESCE(pricing_category,'') <> ''
+                  AND COALESCE(effective_from,'') <> ''
+                ORDER BY effective_from DESC
+                """,
+                (int(contract_id), str(service_type)),
+            )
+            return [str(r[0]) for r in (cur.fetchall() or []) if r and r[0]]
+        finally:
+            conn.close()
+
+    def upsert_trip_tariff_price(
+        self,
+        contract_id: int,
+        service_type: str,
+        route_params_id: int,
+        pricing_category: str,
+        effective_from: str,
+        price: float,
+        subcontractor_price: float = 0.0,
+    ) -> bool:
+        """Upsert a tariff price row (pricing_category+effective_from based).
+
+        Notes:
+        - We store these in trip_prices for now, but use a special time_block that won't match
+          operational allocations, to avoid interfering with attendance/hakediş legacy lookups.
+        - get_trip_price_for_date() does NOT depend on month/time_block.
+        """
+        self._ensure_trip_prices_table()
+        conn = self.connect()
+        if not conn:
+            return False
+        try:
+            cur = conn.cursor()
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            eff = str(effective_from or "").strip()
+            if not eff:
+                return False
+            pc = str(pricing_category or "").strip().upper()
+            if not pc:
+                return False
+            month = eff[:7] if len(eff) >= 7 else ""
+            tb = f"TARIFE|{pc}|{eff}"
+            cur.execute(
+                """
+                INSERT INTO trip_prices(
+                    contract_id, route_params_id, month, service_type, time_block,
+                    pricing_category, effective_from, price, subcontractor_price, updated_at
+                ) VALUES (?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(contract_id, route_params_id, month, service_type, time_block)
+                DO UPDATE SET
+                    pricing_category=excluded.pricing_category,
+                    effective_from=excluded.effective_from,
+                    price=excluded.price,
+                    subcontractor_price=excluded.subcontractor_price,
+                    updated_at=excluded.updated_at
+                """,
+                (
+                    int(contract_id),
+                    int(route_params_id),
+                    str(month),
+                    str(service_type),
+                    str(tb),
+                    str(pc),
+                    str(eff),
+                    float(price or 0.0),
+                    float(subcontractor_price or 0.0),
+                    now,
+                ),
+            )
+            conn.commit()
+            return True
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return False
+        finally:
+            conn.close()
+
+    def list_trip_tariff_prices_for_effective_from(
+        self,
+        contract_id: int,
+        service_type: str,
+        effective_from: str,
+    ):
+        """Return rows: (route_params_id, pricing_category, price, subcontractor_price)."""
+        self._ensure_trip_prices_table()
+        conn = self.connect()
+        if not conn:
+            return []
+        try:
+            cur = conn.cursor()
+            eff = str(effective_from or "").strip()
+            cur.execute(
+                """
+                SELECT route_params_id, UPPER(COALESCE(pricing_category,'')), COALESCE(price,0), COALESCE(subcontractor_price,0)
+                FROM trip_prices
+                WHERE contract_id=?
+                  AND service_type=?
+                  AND COALESCE(effective_from,'') = ?
+                  AND COALESCE(pricing_category,'') <> ''
+                """,
+                (int(contract_id), str(service_type), str(eff)),
+            )
+            return cur.fetchall() or []
+        finally:
+            conn.close()
+
+    def delete_trip_tariff_prices_for_effective_from(
+        self,
+        contract_id: int,
+        service_type: str,
+        effective_from: str,
+    ) -> bool:
+        self._ensure_trip_prices_table()
+        conn = self.connect()
+        if not conn:
+            return False
+        try:
+            cur = conn.cursor()
+            eff = str(effective_from or "").strip()
+            cur.execute(
+                """
+                DELETE FROM trip_prices
+                WHERE contract_id=?
+                  AND service_type=?
+                  AND COALESCE(effective_from,'') = ?
+                  AND COALESCE(pricing_category,'') <> ''
+                """,
+                (int(contract_id), str(service_type), str(eff)),
+            )
+            conn.commit()
+            return True
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return False
+        finally:
+            conn.close()
+
+    def delete_contract_special_items_for_context(self, contract_id: int, period: str, service_type: str) -> bool:
+        self._ensure_contract_special_items_table()
+        conn = self.connect()
+        if not conn:
+            return False
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "DELETE FROM contract_special_items WHERE contract_id=? AND period=? AND service_type=?",
+                (int(contract_id), str(period), str(service_type)),
+            )
+            conn.commit()
+            return True
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return False
+        finally:
+            conn.close()
+
+    def _ensure_contract_special_items_table(self):
+        conn = self.connect()
+        if not conn:
+            return
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS contract_special_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    contract_id INTEGER NOT NULL,
+                    period TEXT NOT NULL,
+                    service_type TEXT NOT NULL,
+                    title TEXT,
+                    date_from TEXT,
+                    date_to TEXT,
+                    time_text TEXT,
+                    distance_km REAL NOT NULL DEFAULT 0,
+                    qty_days REAL NOT NULL DEFAULT 0,
+                    unit_price REAL NOT NULL DEFAULT 0,
+                    total_amount REAL NOT NULL DEFAULT 0,
+                    note TEXT,
+                    created_at TEXT,
+                    updated_at TEXT
+                )
+                """
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_csi_key ON contract_special_items(contract_id, period, service_type)"
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def list_contract_special_items(self, contract_id: int, period: str, service_type: str):
+        self._ensure_contract_special_items_table()
+        conn = self.connect()
+        if not conn:
+            return []
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT id, COALESCE(title,''), COALESCE(date_from,''), COALESCE(date_to,''),
+                       COALESCE(time_text,''), COALESCE(distance_km,0), COALESCE(qty_days,0),
+                       COALESCE(unit_price,0), COALESCE(total_amount,0), COALESCE(note,'')
+                FROM contract_special_items
+                WHERE contract_id=? AND period=? AND service_type=?
+                ORDER BY id ASC
+                """,
+                (int(contract_id), str(period), str(service_type)),
+            )
+            return cur.fetchall() or []
+        finally:
+            conn.close()
+
+    def upsert_contract_special_item(
+        self,
+        contract_id: int,
+        period: str,
+        service_type: str,
+        title: str,
+        qty_days: float = 0.0,
+        unit_price: float = 0.0,
+        total_amount: float = 0.0,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        time_text: str | None = None,
+        distance_km: float = 0.0,
+        note: str | None = None,
+        item_id: int | None = None,
+    ) -> int | None:
+        self._ensure_contract_special_items_table()
+        conn = self.connect()
+        if not conn:
+            return None
+        try:
+            cur = conn.cursor()
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            if item_id is not None:
+                cur.execute(
+                    """
+                    UPDATE contract_special_items
+                    SET title=?, date_from=?, date_to=?, time_text=?, distance_km=?,
+                        qty_days=?, unit_price=?, total_amount=?, note=?, updated_at=?
+                    WHERE id=?
+                    """,
+                    (
+                        str(title or ""),
+                        str(date_from or ""),
+                        str(date_to or ""),
+                        str(time_text or ""),
+                        float(distance_km or 0.0),
+                        float(qty_days or 0.0),
+                        float(unit_price or 0.0),
+                        float(total_amount or 0.0),
+                        str(note or ""),
+                        now,
+                        int(item_id),
+                    ),
+                )
+                conn.commit()
+                return int(item_id)
+
+            cur.execute(
+                """
+                INSERT INTO contract_special_items(
+                    contract_id, period, service_type, title,
+                    date_from, date_to, time_text, distance_km,
+                    qty_days, unit_price, total_amount, note,
+                    created_at, updated_at
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """,
+                (
+                    int(contract_id),
+                    str(period),
+                    str(service_type),
+                    str(title or ""),
+                    str(date_from or ""),
+                    str(date_to or ""),
+                    str(time_text or ""),
+                    float(distance_km or 0.0),
+                    float(qty_days or 0.0),
+                    float(unit_price or 0.0),
+                    float(total_amount or 0.0),
+                    str(note or ""),
+                    now,
+                    now,
+                ),
+            )
+            new_id = cur.lastrowid
+            conn.commit()
+            try:
+                return int(new_id)
+            except Exception:
+                return None
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return None
+        finally:
+            conn.close()
+
+    def delete_contract_special_item(self, item_id: int) -> bool:
+        self._ensure_contract_special_items_table()
+        conn = self.connect()
+        if not conn:
+            return False
+        try:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM contract_special_items WHERE id=?", (int(item_id),))
+            conn.commit()
+            return True
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return False
+        finally:
+            conn.close()
+
+    def _parse_hhmm_to_minutes(self, s: str) -> Optional[int]:
+        try:
+            txt = str(s or "").strip()
+            if not txt:
+                return None
+            parts = txt.split(":")
+            if len(parts) != 2:
+                return None
+            if (not parts[0].isdigit()) or (not parts[1].isdigit()):
+                return None
+            hh = int(parts[0])
+            mm = int(parts[1])
+            if hh < 0 or hh > 23 or mm < 0 or mm > 59:
+                return None
+            return hh * 60 + mm
+        except Exception:
+            return None
+
+    def _parse_time_range_minutes(self, time_block: str, time_text: str = "") -> tuple[Optional[int], Optional[int]]:
+        t = str(time_text or "").strip()
+        if not t:
+            t = str(time_block or "").strip()
+        if not t:
+            return None, None
+
+        if "-" in t:
+            left, right = (t.split("-", 1) + [""])[:2]
+            m1 = self._parse_hhmm_to_minutes(left.strip())
+            m2 = self._parse_hhmm_to_minutes(right.strip())
+            if m1 is None or m2 is None:
+                return None, None
+            if m2 == m1:
+                return m1, (m1 + 15) % 1440
+            return m1, m2
+
+        m = self._parse_hhmm_to_minutes(t)
+        if m is None:
+            return None, None
+        return m, (m + 15) % 1440
+
+    def _ranges_overlap(self, a_start: int, a_end: int, b_start: int, b_end: int) -> bool:
+        def _segments(s: int, e: int):
+            if s < 0 or e < 0:
+                return []
+            if s == e:
+                return [(s, (s + 1) % 1440)]
+            if s < e:
+                return [(s, e)]
+            return [(s, 1440), (0, e)]
+
+        for s1, e1 in _segments(int(a_start), int(a_end)):
+            for s2, e2 in _segments(int(b_start), int(b_end)):
+                if max(s1, s2) < min(e1, e2):
+                    return True
+        return False
+
+    def get_vehicle_movements_for_day(self, contract_id: int, trip_date: str, vehicle_id) -> int:
+        conn = self.connect()
+        if not conn:
+            return 0
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT COUNT(*)
+                FROM trip_allocations
+                WHERE contract_id=?
+                  AND trip_date=?
+                  AND vehicle_id=?
+                  AND COALESCE(qty,0) > 0
+                """,
+                (int(contract_id), str(trip_date), vehicle_id),
+            )
+            return int((cur.fetchone() or [0])[0] or 0)
+        except Exception:
+            return 0
+        finally:
+            conn.close()
+
+    def find_allocation_conflict(
+        self,
+        contract_id: int,
+        trip_date: str,
+        service_type: str,
+        time_block: str,
+        vehicle_id=None,
+        driver_id=None,
+        time_text: str = "",
+        route_params_id: int | None = None,
+        line_no: int | None = None,
+        qty: float | None = None,
+        note: str = "",
+        exclude_route_params_id: int | None = None,
+        exclude_time_block: str | None = None,
+        exclude_line_no: int | None = None,
+    ) -> dict | None:
+        start_m, end_m = self._parse_time_range_minutes(str(time_block or ""), str(time_text or ""))
+        if start_m is None or end_m is None:
+            return None
+
+        conn = self.connect()
+        if not conn:
+            return None
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT route_params_id, time_block, line_no, vehicle_id, driver_id, COALESCE(time_text,''), COALESCE(qty,0)
+                FROM trip_allocations
+                WHERE contract_id=?
+                  AND trip_date=?
+                  AND service_type=?
+                  AND COALESCE(qty,0) > 0
+                  AND (
+                        (? IS NOT NULL AND vehicle_id = ?)
+                     OR (? IS NOT NULL AND driver_id = ?)
+                  )
+                """,
+                (
+                    int(contract_id),
+                    str(trip_date),
+                    str(service_type),
+                    vehicle_id,
+                    vehicle_id,
+                    driver_id,
+                    driver_id,
+                ),
+            )
+            rows = cur.fetchall() or []
+        except Exception:
+            rows = []
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+        for rid, tb, ln, vid, did, tt, qty in rows:
+            try:
+                if exclude_route_params_id is not None and int(rid or 0) == int(exclude_route_params_id):
+                    if exclude_time_block is not None and str(tb or "") == str(exclude_time_block or ""):
+                        if exclude_line_no is not None and int(ln or 0) == int(exclude_line_no or 0):
+                            continue
+            except Exception:
+                pass
+
+            s2, e2 = self._parse_time_range_minutes(str(tb or ""), str(tt or ""))
+            if s2 is None or e2 is None:
+                continue
+            if self._ranges_overlap(int(start_m), int(end_m), int(s2), int(e2)):
+                return {
+                    "route_params_id": int(rid or 0),
+                    "time_block": str(tb or ""),
+                    "line_no": int(ln or 0),
+                    "vehicle_id": vid,
+                    "driver_id": did,
+                    "time_text": str(tt or ""),
+                    "qty": float(qty or 0),
+                }
+        return None
+
+    def _month_keys_in_range(self, start_date: str, end_date: str) -> list[str]:
+        try:
+            sd = datetime.strptime(str(start_date), "%Y-%m-%d")
+            ed = datetime.strptime(str(end_date), "%Y-%m-%d")
+        except Exception:
+            return []
+
+        if ed < sd:
+            sd, ed = ed, sd
+
+        out: list[str] = []
+        y = int(sd.year)
+        m = int(sd.month)
+        end_y = int(ed.year)
+        end_m = int(ed.month)
+
+        while (y < end_y) or (y == end_y and m <= end_m):
+            out.append(f"{y:04d}-{m:02d}")
+            m += 1
+            if m > 12:
+                m = 1
+                y += 1
+        return out
+
+    def _find_seed_month_for_contract(self, contract_id: int, months: list[str]) -> str | None:
+        conn = self.connect()
+        if not conn:
+            return None
+        try:
+            cur = conn.cursor()
+
+            for mk in months or []:
+                try:
+                    cur.execute(
+                        """
+                        SELECT 1
+                        FROM trip_plan
+                        WHERE contract_id=? AND month=?
+                        LIMIT 1
+                        """,
+                        (int(contract_id), str(mk)),
+                    )
+                    if cur.fetchone() is not None:
+                        return str(mk)
+                except Exception:
+                    continue
+
+            cur.execute(
+                """
+                SELECT month
+                FROM trip_plan
+                WHERE contract_id=?
+                ORDER BY month ASC
+                LIMIT 1
+                """,
+                (int(contract_id),),
+            )
+            row = cur.fetchone()
+            if row and row[0]:
+                return str(row[0])
+            return None
+        finally:
+            conn.close()
+
+    def sync_contract_operational_templates(self, contract_id: int, start_date: str, end_date: str) -> bool:
+        """Sözleşmenin tarih aralığındaki tüm aylar için operasyon şablonlarını üretir/günceller.
+
+        Not: Bu fonksiyon, sözleşmede zaten mevcut olan bir plan ayını (seed) bulup, aynı sözleşme
+        için diğer aylara kopyalar. Seed bulunamazsa (hiç plan yoksa) işlem yapılmaz.
+        """
+        months = self._month_keys_in_range(str(start_date or ""), str(end_date or ""))
+        if not months:
+            return False
+
+        seed = self._find_seed_month_for_contract(int(contract_id), months)
+        if not seed:
+            return False
+
+        ok_any = False
+        for mk in months:
+            if str(mk) == str(seed):
+                ok_any = True
+                continue
+            if self.copy_month_operational_template(str(seed), str(mk)):
+                ok_any = True
+        return ok_any
+
+    def set_period_closed(self, month: str, user_id: int, note: str = "") -> bool:
+        conn = self.connect()
+        if not conn:
+            return False
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                INSERT INTO period_close (month, closed, closed_at, closed_by_user_id, note)
+                VALUES (?, 1, datetime('now'), ?, ?)
+                ON CONFLICT(month)
+                DO UPDATE SET
+                    closed = 1,
+                    closed_at = datetime('now'),
+                    closed_by_user_id = excluded.closed_by_user_id,
+                    note = excluded.note
+                """,
+                (str(month), int(user_id or 0), str(note or "")),
+            )
+            conn.commit()
+            return True
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return False
+        finally:
+            conn.close()
+
+    def set_period_opened(self, month: str, user_id: int, reason: str = "") -> bool:
+        conn = self.connect()
+        if not conn:
+            return False
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                INSERT INTO period_close (month, closed, closed_at, closed_by_user_id, note)
+                VALUES (?, 0, NULL, ?, ?)
+                ON CONFLICT(month)
+                DO UPDATE SET
+                    closed = 0,
+                    closed_at = NULL,
+                    closed_by_user_id = excluded.closed_by_user_id,
+                    note = excluded.note
+                """,
+                (str(month), int(user_id or 0), str(reason or "")),
+            )
+            conn.commit()
+            return True
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return False
+        finally:
             conn.close()
 
     def create_trip_entries_tables(self):
@@ -1465,16 +2161,202 @@ class DatabaseManager:
                     month TEXT NOT NULL,
                     service_type TEXT NOT NULL,
                     time_block TEXT NOT NULL,
+                    pricing_category TEXT DEFAULT '',
+                    effective_from TEXT DEFAULT '',
                     price REAL NOT NULL DEFAULT 0,
+                    subcontractor_price REAL NOT NULL DEFAULT 0,
                     updated_at TEXT,
                     UNIQUE (contract_id, route_params_id, month, service_type, time_block)
                 )
                 """
             )
+
+            # --- schema migrations (backward compatible) ---
+            cursor.execute("PRAGMA table_info(trip_prices)")
+            cols = {row[1] for row in cursor.fetchall()}
+            if "pricing_category" not in cols:
+                cursor.execute("ALTER TABLE trip_prices ADD COLUMN pricing_category TEXT DEFAULT ''")
+            if "effective_from" not in cols:
+                cursor.execute("ALTER TABLE trip_prices ADD COLUMN effective_from TEXT DEFAULT ''")
+            if "subcontractor_price" not in cols:
+                cursor.execute("ALTER TABLE trip_prices ADD COLUMN subcontractor_price REAL NOT NULL DEFAULT 0")
+
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS idx_trip_prices_key ON trip_prices(contract_id, month, service_type)"
             )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_trip_prices_effective ON trip_prices(contract_id, service_type, route_params_id, pricing_category, effective_from)"
+            )
             conn.commit()
+        finally:
+            conn.close()
+
+    def _ensure_contract_pricing_model_history_table(self):
+        conn = self.connect()
+        if not conn:
+            return
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS contract_pricing_model_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    contract_id INTEGER NOT NULL,
+                    effective_from TEXT NOT NULL,
+                    pricing_model TEXT NOT NULL,
+                    note TEXT,
+                    created_at TEXT,
+                    UNIQUE(contract_id, effective_from)
+                )
+                """
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_cpmh_key ON contract_pricing_model_history(contract_id, effective_from)"
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def upsert_contract_pricing_model_change(
+        self,
+        contract_id: int,
+        effective_from: str,
+        pricing_model: str,
+        note: str | None = None,
+    ) -> bool:
+        """Insert/update a pricing model change for a contract.
+
+        pricing_model: VARDIYALI / VARDIYASIZ
+        effective_from: YYYY-MM-DD
+        """
+        self._ensure_contract_pricing_model_history_table()
+        conn = self.connect()
+        if not conn:
+            return False
+        try:
+            cur = conn.cursor()
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            pm = str(pricing_model or "").strip().upper()
+            if pm not in ("VARDIYALI", "VARDIYASIZ"):
+                pm = "VARDIYALI"
+            eff = str(effective_from or "").strip()
+            if not eff:
+                return False
+            cur.execute(
+                """
+                INSERT INTO contract_pricing_model_history(
+                    contract_id, effective_from, pricing_model, note, created_at
+                ) VALUES (?,?,?,?,?)
+                ON CONFLICT(contract_id, effective_from)
+                DO UPDATE SET pricing_model=excluded.pricing_model, note=excluded.note
+                """,
+                (int(contract_id), eff, pm, str(note or ""), now),
+            )
+            conn.commit()
+            return True
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return False
+        finally:
+            conn.close()
+
+    def get_pricing_model_for_date(self, contract_id: int, trip_date: str) -> str:
+        """Return pricing model (VARDIYALI/VARDIYASIZ) for given contract and trip_date.
+
+        Falls back to customers.pricing_model if no history exists.
+        """
+        self._ensure_contract_pricing_model_history_table()
+        conn = self.connect()
+        if not conn:
+            return "VARDIYALI"
+        try:
+            cur = conn.cursor()
+            d = str(trip_date or "").strip()
+            cur.execute(
+                """
+                SELECT pricing_model
+                FROM contract_pricing_model_history
+                WHERE contract_id = ? AND effective_from <= ?
+                ORDER BY effective_from DESC
+                LIMIT 1
+                """,
+                (int(contract_id), d),
+            )
+            row = cur.fetchone()
+            if row and str(row[0] or "").strip():
+                pm = str(row[0]).strip().upper()
+                return pm if pm in ("VARDIYALI", "VARDIYASIZ") else "VARDIYALI"
+
+            # fallback: customer.pricing_model (default)
+            cur.execute(
+                """
+                SELECT COALESCE(cu.pricing_model,'')
+                FROM contracts co
+                LEFT JOIN customers cu ON cu.id = co.customer_id
+                WHERE co.id = ?
+                LIMIT 1
+                """,
+                (int(contract_id),),
+            )
+            row2 = cur.fetchone()
+            pm2 = str(row2[0] if row2 else "").strip().upper()
+            return pm2 if pm2 in ("VARDIYALI", "VARDIYASIZ") else "VARDIYALI"
+        except Exception:
+            return "VARDIYALI"
+        finally:
+            conn.close()
+
+    def get_trip_price_for_date(
+        self,
+        contract_id: int,
+        service_type: str,
+        route_params_id: int,
+        pricing_category: str,
+        trip_date: str,
+    ) -> tuple[float, float, str] | None:
+        """Return (price, subcontractor_price, effective_from) for trip_date.
+
+        Looks up trip_prices by latest effective_from <= trip_date.
+        """
+        self._ensure_trip_prices_table()
+        conn = self.connect()
+        if not conn:
+            return None
+        try:
+            cur = conn.cursor()
+            d = str(trip_date or "").strip()
+            pc = str(pricing_category or "").strip().upper()
+            cur.execute(
+                """
+                SELECT price, subcontractor_price, effective_from
+                FROM trip_prices
+                WHERE contract_id = ?
+                  AND service_type = ?
+                  AND route_params_id = ?
+                  AND UPPER(COALESCE(pricing_category,'')) = ?
+                  AND COALESCE(effective_from,'') <> ''
+                  AND effective_from <= ?
+                ORDER BY effective_from DESC
+                LIMIT 1
+                """,
+                (int(contract_id), str(service_type), int(route_params_id), pc, d),
+            )
+            row = cur.fetchone()
+            if not row:
+                return None
+            try:
+                p = float(row[0] or 0.0)
+            except Exception:
+                p = 0.0
+            try:
+                sp = float(row[1] or 0.0)
+            except Exception:
+                sp = 0.0
+            eff = str(row[2] or "")
+            return (p, sp, eff)
         finally:
             conn.close()
 
@@ -1586,6 +2468,87 @@ class DatabaseManager:
             return (row[0] if row else "") or ""
         finally:
             conn.close()
+
+    @staticmethod
+    def _normalize_price_matrix_movement_type(raw: str) -> tuple[str, str]:
+        """Return (pricing_category, movement_type_norm).
+
+        pricing_category: TEK_SERVIS / PAKET / FAZLA_MESAI
+        movement_type_norm: tek servis / sabah-akşam / fazla mesai
+        """
+        s = str(raw or "").strip().lower()
+        if "mesai" in s:
+            return ("FAZLA_MESAI", "fazla mesai")
+        if "paket" in s or (("sabah" in s) and ("akşam" in s or "aksam" in s)):
+            return ("PAKET", "sabah-akşam")
+        if "cift" in s or "çift" in s:
+            return ("TEK_SERVIS", "tek servis")
+        if "tek" in s:
+            return ("TEK_SERVIS", "tek servis")
+        if s == "teks" or s == "tekservis":
+            return ("TEK_SERVIS", "tek servis")
+        # Default: treat as TEK_SERVIS but keep whatever free-form text normalized.
+        return ("TEK_SERVIS", s)
+
+    def parse_contract_price_matrix_rows(self, price_matrix_json: str, service_type: str | None = None) -> list[dict]:
+        """Parse and normalize a price_matrix_json payload.
+
+        Does NOT mutate DB.
+        - Ensures each row has 'pricing_category' and 'movement_type_norm'
+        - Supports legacy keys and free-form movement texts like 'TEK SERVİS'/'ÇİFT SERVİS'
+        - Optional service_type filter using row['_service_type'] or row['service_type']
+        """
+        try:
+            parsed = json.loads(price_matrix_json) if price_matrix_json else []
+        except Exception:
+            parsed = []
+        if not isinstance(parsed, list):
+            return []
+
+        out: list[dict] = []
+        st_filter = str(service_type or "").strip().lower()
+
+        for rec in parsed:
+            if not isinstance(rec, dict):
+                continue
+
+            st = str(rec.get("_service_type") or rec.get("service_type") or "").strip().lower()
+            if st_filter and st and st != st_filter:
+                continue
+
+            # Determine movement source in order of preference.
+            raw_mov = (
+                rec.get("movement_type_norm")
+                or rec.get("pricing_category")
+                or rec.get("gidis_gelis")
+                or rec.get("movement_type")
+                or rec.get("hareket_turu")
+                or rec.get("hareket")
+                or rec.get("hareketTuru")
+                or rec.get("hareket_tipi")
+                or rec.get("tip")
+                or ""
+            )
+            cat, mt_norm = self._normalize_price_matrix_movement_type(str(raw_mov))
+
+            # Create a shallow copy and fill canonical fields.
+            rr = dict(rec)
+            if not str(rr.get("pricing_category") or "").strip():
+                rr["pricing_category"] = cat
+            if not str(rr.get("movement_type_norm") or "").strip():
+                rr["movement_type_norm"] = mt_norm
+
+            # Normalize subcontractor price legacy key.
+            if rr.get("alt_yuklenici_fiyat") is None and rr.get("ay_fiyati") is not None:
+                rr["alt_yuklenici_fiyat"] = rr.get("ay_fiyati")
+
+            out.append(rr)
+
+        return out
+
+    def get_contract_price_matrix_rows(self, contract_id: int, service_type: str | None = None) -> list[dict]:
+        raw = self.get_contract_price_matrix_json(int(contract_id))
+        return self.parse_contract_price_matrix_rows(raw, service_type=service_type)
 
     def resolve_subcontract_contract_id(
         self,
@@ -2025,6 +2988,7 @@ class DatabaseManager:
                     start_point TEXT,
                     stops TEXT,
                     distance_km REAL,
+                    vehicle_capacity REAL,
                     created_at TEXT,
                     FOREIGN KEY (contract_id) REFERENCES contracts (id)
                 )
@@ -2036,9 +3000,83 @@ class DatabaseManager:
                 cols = {row[1] for row in (cursor.fetchall() or [])}
                 if "movement_type" not in cols:
                     cursor.execute("ALTER TABLE route_params ADD COLUMN movement_type TEXT")
+                if "vehicle_capacity" not in cols:
+                    cursor.execute("ALTER TABLE route_params ADD COLUMN vehicle_capacity REAL")
             except Exception:
                 pass
             conn.commit()
+        finally:
+            conn.close()
+
+    def replace_route_params_for_contract(
+        self,
+        contract_id: int,
+        contract_number: str,
+        start_date: str,
+        end_date: str,
+        service_type: str,
+        rows: list[dict],
+    ) -> bool:
+        self._ensure_route_params_table()
+        conn = self.connect()
+        if not conn:
+            return False
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            cur = conn.cursor()
+            cur.execute("BEGIN")
+            cur.execute(
+                "DELETE FROM route_params WHERE contract_id=? AND service_type=?",
+                (int(contract_id), str(service_type or "").strip()),
+            )
+
+            for r in rows or []:
+                route_name = str((r or {}).get("route_name") or "").strip()
+                movement_type = str((r or {}).get("movement_type") or "").strip()
+                try:
+                    distance_km = float((r or {}).get("distance_km") or 0)
+                except Exception:
+                    distance_km = 0.0
+                try:
+                    cap = (r or {}).get("vehicle_capacity")
+                    vehicle_capacity = None if cap is None or str(cap).strip() == "" else float(cap)
+                except Exception:
+                    vehicle_capacity = None
+
+                if not any([route_name, movement_type, distance_km, vehicle_capacity]):
+                    continue
+
+                cur.execute(
+                    """
+                    INSERT INTO route_params (
+                        contract_id, contract_number, start_date, end_date, service_type,
+                        route_name, movement_type, stops, distance_km, vehicle_capacity, created_at
+                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                    """,
+                    (
+                        int(contract_id),
+                        str(contract_number or "").strip(),
+                        str(start_date or "").strip(),
+                        str(end_date or "").strip(),
+                        str(service_type or "").strip(),
+                        route_name,
+                        movement_type,
+                        "",
+                        float(distance_km or 0.0),
+                        vehicle_capacity,
+                        now,
+                    ),
+                )
+
+            conn.commit()
+            return True
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            print(f"replace_route_params_for_contract error: {e}")
+            return False
         finally:
             conn.close()
 
@@ -2056,7 +3094,8 @@ class DatabaseManager:
                            COALESCE(route_name,''),
                            COALESCE(stops,''),
                            COALESCE(distance_km,0),
-                           COALESCE(movement_type,'')
+                           COALESCE(movement_type,''),
+                           COALESCE(vehicle_capacity,0)
                     FROM route_params
                     WHERE contract_id = ? AND service_type = ?
                     ORDER BY id ASC
@@ -2219,6 +3258,7 @@ class DatabaseManager:
                 ("musteri_turu", "TEXT"),
                 ("kisilik", "TEXT"),
                 ("sektor", "TEXT"),
+                ("pricing_model", "TEXT DEFAULT 'VARDIYALI'"),
                 ("yetkili", "TEXT"),
                 ("gorevi", "TEXT"),
                 ("il", "TEXT"),

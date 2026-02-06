@@ -13,6 +13,25 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget#main_form QPushButton, QLineEdit, QComboBox{
+
+border :1px solid black;
+border-radius: 6px;
+}
+QWidget#main_form QPushButton{
+background-color: #b0b0b0;
+}
+QWidget#main_form QPushButton:hover{
+border:2px solid black;
+padding-top: 4px;
+font-weight: bold;
+}
+QWidget#main_form QPushButton:pressed{
+background-color: #7e7e7e;
+border-color: red;
+}</string>
+  </property>
   <layout class="QGridLayout" name="gridLayout_4">
    <property name="leftMargin">
     <number>0</number>
@@ -813,58 +832,200 @@
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
       <item row="0" column="0">
-       <widget class="QTableWidget" name="table_View">
-        <property name="frameShape">
-         <enum>QFrame::Shape::Box</enum>
-        </property>
-        <property name="frameShadow">
-         <enum>QFrame::Shadow::Plain</enum>
-        </property>
-        <property name="lineWidth">
-         <number>1</number>
-        </property>
-        <property name="midLineWidth">
+       <widget class="QTabWidget" name="tab_contracts">
+        <property name="currentIndex">
          <number>0</number>
         </property>
-        <property name="sizeAdjustPolicy">
-         <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustIgnored</enum>
-        </property>
-        <attribute name="horizontalHeaderDefaultSectionSize">
-         <number>110</number>
-        </attribute>
-        <attribute name="verticalHeaderMinimumSectionSize">
-         <number>40</number>
-        </attribute>
-        <column>
-         <property name="text">
-          <string>SÖZLEŞME KODU</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>MÜŞTERİ (CARİ)</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>HİZMET TİPİ</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>İŞE BAŞLAMA TARİHİ</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>İŞ BİTİŞ TARİHİ</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>DURUM</string>
-         </property>
-        </column>
+        <widget class="QWidget" name="tab_list">
+         <attribute name="title">
+          <string>SÖZLEŞMELER</string>
+         </attribute>
+         <layout class="QGridLayout" name="gridLayout_tab_list">
+          <item row="0" column="0">
+           <widget class="QTableWidget" name="table_View">
+            <property name="frameShape">
+             <enum>QFrame::Shape::Box</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Shadow::Plain</enum>
+            </property>
+            <property name="lineWidth">
+             <number>1</number>
+            </property>
+            <property name="midLineWidth">
+             <number>0</number>
+            </property>
+            <property name="sizeAdjustPolicy">
+             <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustIgnored</enum>
+            </property>
+            <attribute name="horizontalHeaderDefaultSectionSize">
+             <number>110</number>
+            </attribute>
+            <attribute name="verticalHeaderMinimumSectionSize">
+             <number>40</number>
+            </attribute>
+            <column>
+             <property name="text">
+              <string>SÖZLEŞME KODU</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>MÜŞTERİ (CARİ)</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>HİZMET TİPİ</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>İŞE BAŞLAMA TARİHİ</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>İŞ BİTİŞ TARİHİ</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>DURUM</string>
+             </property>
+            </column>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="tab_tarife">
+         <attribute name="title">
+          <string>TARİFE / ÖZEL KALEM</string>
+         </attribute>
+         <layout class="QGridLayout" name="gridLayout_tab_tarife">
+          <item row="0" column="0">
+           <layout class="QGridLayout" name="gridLayout_tarife_filters">
+            <item row="0" column="0">
+             <widget class="QLabel" name="lbl_tarife_period">
+              <property name="text">
+               <string>Dönem</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QComboBox" name="cmb_tarife_period"/>
+            </item>
+            <item row="0" column="2">
+             <widget class="QLabel" name="lbl_tarife_service_type">
+              <property name="text">
+               <string>Hizmet Tipi</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="3">
+             <widget class="QComboBox" name="cmb_tarife_service_type"/>
+            </item>
+            <item row="0" column="4">
+             <widget class="QLabel" name="lbl_tarife_effective_from">
+              <property name="text">
+               <string>Geçerlilik</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="5">
+             <widget class="QDateEdit" name="date_tarife_effective_from"/>
+            </item>
+            <item row="0" column="6">
+             <widget class="QLabel" name="lbl_tarife_pricing_model">
+              <property name="text">
+               <string>Model</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="7">
+             <widget class="QLineEdit" name="txt_tarife_pricing_model">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="8">
+             <spacer name="horizontalSpacer_tarife">
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item row="0" column="9">
+             <widget class="QPushButton" name="btn_tarife_save">
+              <property name="text">
+               <string>TARİFE KAYDET</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="10">
+             <widget class="QPushButton" name="btn_special_add">
+              <property name="text">
+               <string>SATIR EKLE</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="11">
+             <widget class="QPushButton" name="btn_special_delete">
+              <property name="text">
+               <string>SATIR SİL</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="12">
+             <widget class="QPushButton" name="btn_special_save">
+              <property name="text">
+               <string>KAYDET</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="1" column="0">
+           <widget class="QTableWidget" name="tbl_tarife_prices"/>
+          </item>
+          <item row="2" column="0">
+           <widget class="QTableWidget" name="tbl_special_items">
+            <column>
+             <property name="text">
+              <string>AÇIKLAMA</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>GÜN</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>BİRİM FİYAT</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>TUTAR</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>NOT</string>
+             </property>
+            </column>
+           </widget>
+          </item>
+         </layout>
+        </widget>
        </widget>
       </item>
      </layout>

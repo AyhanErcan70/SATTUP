@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import QDialog, QWidget, QMessageBox, QTableWidgetItem, QHe
 from app.core.db_manager import DatabaseManager
 from config import get_ui_path
 import json
+from datetime import datetime
 
 class ContractsApp(QWidget):
     def __init__(self, user_data=None, parent=None):
@@ -16,6 +17,7 @@ class ContractsApp(QWidget):
         self.user_data = user_data or {}
         self.current_number = None
         self._price_matrix_cache = []
+        self._tarife_loading = False
         if hasattr(self, "txt_sozlesme_kodu"):
             self.txt_sozlesme_kodu.setReadOnly(True)
             self.txt_sozlesme_kodu.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -28,6 +30,7 @@ class ContractsApp(QWidget):
         self._init_dates()
         self._init_combos()
         self._init_price_table()
+        self._init_tarife_tab()
         self._setup_connections()
         self._assign_next_number()
         self.load_table()
@@ -163,12 +166,752 @@ class ContractsApp(QWidget):
         if list_tbl is not None:
             list_tbl.doubleClicked.connect(self.select_contract)
 
+        if hasattr(self, "cmb_tarife_period"):
+            try:
+                self.cmb_tarife_period.currentIndexChanged.connect(self._tarife_reload)
+            except Exception:
+                pass
+        if hasattr(self, "cmb_tarife_service_type"):
+            try:
+                self.cmb_tarife_service_type.currentIndexChanged.connect(self._tarife_reload)
+            except Exception:
+                pass
+        if hasattr(self, "btn_special_add"):
+            try:
+                self.btn_special_add.clicked.connect(self._tarife_add_special_row)
+            except Exception:
+                pass
+        if hasattr(self, "btn_special_delete"):
+            try:
+                self.btn_special_delete.clicked.connect(self._tarife_delete_special_row)
+            except Exception:
+                pass
+        if hasattr(self, "btn_special_save"):
+            try:
+                self.btn_special_save.clicked.connect(self._tarife_save_special_items)
+            except Exception:
+                pass
+
+        if hasattr(self, "btn_tarife_save"):
+            try:
+                self.btn_tarife_save.clicked.connect(self._tarife_save_prices)
+            except Exception:
+                pass
+        if hasattr(self, "date_tarife_effective_from"):
+            try:
+                self.date_tarife_effective_from.dateChanged.connect(self._tarife_reload)
+            except Exception:
+                pass
+
+    def _tarife_effective_from_iso(self) -> str | None:
+        if not hasattr(self, "date_tarife_effective_from"):
+            return None
+        try:
+            qd = self.date_tarife_effective_from.date()
+            return qd.toString("yyyy-MM-dd")
+        except Exception:
+            return None
+
+    def _tarife_setup_price_table(self, pricing_model: str):
+        tbl = getattr(self, "tbl_tarife_prices", None)
+        if tbl is None:
+            return
+
+        pm = str(pricing_model or "").strip().upper()
+        if pm not in ("VARDIYALI", "VARDIYASIZ"):
+            pm = "VARDIYALI"
+
+        if pm == "VARDIYALI":
+            # categories shown in this order; CIFT is computed
+            self._tarife_price_categories = ["TEK_SERVIS", "PAKET_SERVIS", "MESAI"]
+            headers = [
+                "GÜZERGAH",
+                "HAREKET TÜRÜ",
+                "KM",
+                "TEK",
+                "PAKET",
+                "MESAI",
+                "A.Y.TEK",
+                "A.Y.PAKET",
+                "A.Y.MESAI",
+            ]
+        else:
+            self._tarife_price_categories = ["TEK_SERVIS", "CIFT_SERVIS", "MESAI"]
+            headers = [
+                "GÜZERGAH",
+                "HAREKET TÜRÜ",
+                "KM",
+                "TEK",
+                "ÇİFT",
+                "MESAI",
+                "A.Y.TEK",
+                "A.Y.ÇİFT",
+                "A.Y.MESAI",
+            ]
+
+        try:
+            tbl.setColumnCount(len(headers))
+            tbl.setHorizontalHeaderLabels(headers)
+            h = tbl.horizontalHeader()
+            h.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+
+            # Column widths
+            try:
+                tbl.setColumnWidth(0, 260)
+                tbl.setColumnWidth(1, 140)
+                tbl.setColumnWidth(2, 70)
+            except Exception:
+                pass
+
+            # Numeric columns fixed width (~10-11 chars like 11.000,00)
+            for c in range(3, len(headers)):
+                try:
+                    h.setSectionResizeMode(c, QHeaderView.ResizeMode.Fixed)
+                    tbl.setColumnWidth(c, 95)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    def _tarife_load_price_rows(self):
+        tbl = getattr(self, "tbl_tarife_prices", None)
+        if tbl is None:
+            return
+
+        contract_id, _period, service_type = self._tarife_context()
+        if not contract_id or not service_type:
+            tbl.setRowCount(0)
+            return
+
+        eff = self._tarife_effective_from_iso()
+        if not eff:
+            tbl.setRowCount(0)
+            return
+
+        pm = "VARDIYALI"
+        try:
+            pm = self.db.get_pricing_model_for_date(int(contract_id), str(eff))
+        except Exception:
+            pm = "VARDIYALI"
+        if hasattr(self, "txt_tarife_pricing_model"):
+            try:
+                self.txt_tarife_pricing_model.setText(str(pm))
+            except Exception:
+                pass
+        self._tarife_setup_price_table(str(pm))
+
+        # Route list
+        route_rows = []
+        try:
+            route_rows = self.db.get_route_params_for_contract(int(contract_id), str(service_type))
+        except Exception:
+            route_rows = []
+
+        # Existing tariff map: (route_params_id, pricing_category) -> (price, subcontractor_price)
+        tmap: dict[tuple[int, str], tuple[float, float]] = {}
+        try:
+            rows = self.db.list_trip_tariff_prices_for_effective_from(int(contract_id), str(service_type), str(eff))
+            for rid, pc, pr, spr in rows or []:
+                try:
+                    tmap[(int(rid), str(pc).strip().upper())] = (float(pr or 0.0), float(spr or 0.0))
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # If nothing found for selected date, auto-switch to last saved effective_from (better UX on re-entry)
+        if not tmap:
+            try:
+                dates = self.db.list_trip_tariff_effective_from_dates(int(contract_id), str(service_type))
+                if dates:
+                    last_eff = str(dates[0] or "").strip()
+                    if last_eff and last_eff != str(eff):
+                        try:
+                            dt = datetime.strptime(last_eff, "%Y-%m-%d")
+                            self._tarife_loading = True
+                            self.date_tarife_effective_from.setDate(QDate(dt.year, dt.month, dt.day))
+                        except Exception:
+                            pass
+                        finally:
+                            self._tarife_loading = False
+                        # Reload will be triggered by dateChanged; stop here
+                        tbl.setRowCount(0)
+                        return
+            except Exception:
+                pass
+
+        tbl.blockSignals(True)
+        tbl.setRowCount(0)
+        for rr in route_rows or []:
+            try:
+                rid = int(rr[0])
+            except Exception:
+                continue
+            rname = str(rr[1] if len(rr) > 1 else "")
+            stops = str(rr[2] if len(rr) > 2 else "")
+            km = rr[3] if len(rr) > 3 else 0
+            mv = str(rr[4] if len(rr) > 4 else "")
+
+            r = tbl.rowCount()
+            tbl.insertRow(r)
+
+            # col 0: route name
+            it0 = QTableWidgetItem(str(rname or ""))
+            it0.setData(Qt.ItemDataRole.UserRole + 1, int(rid))
+            tbl.setItem(r, 0, it0)
+            tbl.setItem(r, 1, QTableWidgetItem(str(mv or "")))
+            itkm = QTableWidgetItem("" if km is None else str(km))
+            itkm.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            tbl.setItem(r, 2, itkm)
+
+            # price columns
+            col = 3
+            for pc in getattr(self, "_tarife_price_categories", []) or []:
+                pr, spr = tmap.get((int(rid), str(pc).upper()), (0.0, 0.0))
+                itp = QTableWidgetItem("" if float(pr or 0.0) <= 0 else self._format_money_tr(float(pr or 0.0)))
+                itp.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                tbl.setItem(r, col, itp)
+                col += 1
+
+            # subcontractor price columns per category
+            for pc in getattr(self, "_tarife_price_categories", []) or []:
+                _pr, spr = tmap.get((int(rid), str(pc).upper()), (0.0, 0.0))
+                its = QTableWidgetItem("" if float(spr or 0.0) <= 0 else self._format_money_tr(float(spr or 0.0)))
+                its.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                tbl.setItem(r, col, its)
+                col += 1
+
+        tbl.blockSignals(False)
+
+    def _tarife_save_prices(self):
+        tbl = getattr(self, "tbl_tarife_prices", None)
+        if tbl is None:
+            return
+
+        contract_id, _period, service_type = self._tarife_context()
+        if not contract_id:
+            QMessageBox.warning(self, "Uyarı", "Önce bir sözleşme seçiniz.")
+            return
+        if not service_type:
+            QMessageBox.warning(self, "Uyarı", "Hizmet Tipi seçiniz.")
+            return
+        eff = self._tarife_effective_from_iso()
+        if not eff:
+            QMessageBox.warning(self, "Uyarı", "Geçerlilik tarihi seçiniz.")
+            return
+
+        pm = "VARDIYALI"
+        try:
+            pm = self.db.get_pricing_model_for_date(int(contract_id), str(eff))
+        except Exception:
+            pm = "VARDIYALI"
+
+        categories = list(getattr(self, "_tarife_price_categories", []) or [])
+        # col mapping: 0 route,1 mv,2 km, 3.. prices, then 3+len(categories) .. subcontractor prices
+        sub_base = 3 + len(categories)
+
+        def _parse_money(s: str) -> float:
+            txt = str(s or "").strip()
+            if not txt:
+                return 0.0
+            txt = txt.replace(".", "").replace(",", ".")
+            try:
+                return float(txt)
+            except Exception:
+                return 0.0
+
+        # Replace all tariff rows for this effective_from
+        if not self.db.delete_trip_tariff_prices_for_effective_from(int(contract_id), str(service_type).strip(), str(eff)):
+            QMessageBox.warning(self, "Uyarı", "Eski tarife satırları temizlenemedi.")
+            return
+
+        for r in range(tbl.rowCount()):
+            it0 = tbl.item(r, 0)
+            if not it0:
+                continue
+            rid = it0.data(Qt.ItemDataRole.UserRole + 1)
+            try:
+                rid = int(rid)
+            except Exception:
+                continue
+            # save each category; VARDIYALI: no CIFT in DB, will be computed later
+            for i, pc in enumerate(categories):
+                price = _parse_money(tbl.item(r, 3 + i).text() if tbl.item(r, 3 + i) else "")
+                sub_price = _parse_money(tbl.item(r, sub_base + i).text() if tbl.item(r, sub_base + i) else "")
+                if float(price or 0.0) <= 0 and float(sub_price or 0.0) <= 0:
+                    continue
+                ok = self.db.upsert_trip_tariff_price(
+                    contract_id=int(contract_id),
+                    service_type=str(service_type).strip(),
+                    route_params_id=int(rid),
+                    pricing_category=str(pc).strip().upper(),
+                    effective_from=str(eff),
+                    price=float(price or 0.0),
+                    subcontractor_price=float(sub_price or 0.0),
+                )
+                if not ok:
+                    QMessageBox.warning(self, "Uyarı", "Tarife kaydında hata oluştu.")
+                    return
+
+        QMessageBox.information(self, "Başarılı", "Tarife kaydedildi.")
+        self._tarife_load_price_rows()
+
+    def _init_tarife_tab(self):
+        # Period combo
+        if hasattr(self, "cmb_tarife_period"):
+            try:
+                self.cmb_tarife_period.clear()
+                self.cmb_tarife_period.addItem("Seçiniz...", None)
+            except Exception:
+                pass
+
+        # Service type combo
+        if hasattr(self, "cmb_tarife_service_type"):
+            try:
+                self.cmb_tarife_service_type.clear()
+                self.cmb_tarife_service_type.addItem("Seçiniz...", None)
+            except Exception:
+                pass
+
+        # Special items table
+        tbl = getattr(self, "tbl_special_items", None)
+        if tbl is not None:
+            try:
+                headers = ["AÇIKLAMA", "GÜN", "BİRİM FİYAT", "TUTAR", "NOT"]
+                tbl.setColumnCount(len(headers))
+                tbl.setHorizontalHeaderLabels(headers)
+                tbl.verticalHeader().setVisible(False)
+                tbl.setAlternatingRowColors(True)
+                tbl.setSelectionBehavior(tbl.SelectionBehavior.SelectRows)
+                tbl.setSelectionMode(tbl.SelectionMode.ExtendedSelection)
+                h = tbl.horizontalHeader()
+                h.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+                h.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+                for c in (1, 2, 3):
+                    h.setSectionResizeMode(c, QHeaderView.ResizeMode.ResizeToContents)
+                h.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+            except Exception:
+                pass
+
+        # Tariff effective date
+        if hasattr(self, "date_tarife_effective_from"):
+            try:
+                self.date_tarife_effective_from.setCalendarPopup(True)
+                self.date_tarife_effective_from.setDisplayFormat("dd.MM.yyyy")
+                self.date_tarife_effective_from.setDate(QDate.currentDate())
+            except Exception:
+                pass
+        if hasattr(self, "txt_tarife_pricing_model"):
+            try:
+                self.txt_tarife_pricing_model.setText("")
+            except Exception:
+                pass
+
+        # Tariff prices table
+        tpt = getattr(self, "tbl_tarife_prices", None)
+        if tpt is not None:
+            try:
+                tpt.verticalHeader().setVisible(False)
+                tpt.setAlternatingRowColors(True)
+                tpt.setSelectionBehavior(tpt.SelectionBehavior.SelectRows)
+                tpt.setSelectionMode(tpt.SelectionMode.ExtendedSelection)
+            except Exception:
+                pass
+
+            try:
+                tpt.cellChanged.connect(self._tarife_on_price_cell_changed)
+            except Exception:
+                pass
+
+        self._tarife_setup_price_table("VARDIYALI")
+
+    def _tarife_on_price_cell_changed(self, row: int, col: int):
+        tbl = getattr(self, "tbl_tarife_prices", None)
+        if tbl is None:
+            return
+        # format only numeric cells (price/subcontract columns)
+        try:
+            if col < 3:
+                return
+            it = tbl.item(row, col)
+            if it is None:
+                return
+            txt = (it.text() or "").strip()
+            if not txt:
+                return
+            # parse + format
+            val = self._parse_money(txt)
+            tbl.blockSignals(True)
+            it.setText("" if float(val or 0.0) <= 0 else self._format_money_tr(float(val or 0.0)))
+        except Exception:
+            return
+        finally:
+            try:
+                tbl.blockSignals(False)
+            except Exception:
+                pass
+
+    def _tarife_context(self):
+        # contract_id
+        contract_no = (self.txt_sozlesme_kodu.text() or "").strip() if hasattr(self, "txt_sozlesme_kodu") else ""
+        if not contract_no:
+            return None, None, None
+        details = None
+        try:
+            details = self.db.get_contract_details_by_number(str(contract_no))
+        except Exception:
+            details = None
+        contract_id = None
+        try:
+            contract_id = int((details or {}).get("id")) if isinstance(details, dict) and (details or {}).get("id") else None
+        except Exception:
+            contract_id = None
+
+        # period
+        period = None
+        if hasattr(self, "cmb_tarife_period"):
+            try:
+                period = self.cmb_tarife_period.currentData()
+                if period is None or str(period).strip() == "":
+                    txt = (self.cmb_tarife_period.currentText() or "").strip()
+                    period = txt if txt and not txt.lower().startswith("seç") else None
+            except Exception:
+                period = None
+
+        # service_type
+        service_type = None
+        if hasattr(self, "cmb_tarife_service_type"):
+            try:
+                service_type = self.cmb_tarife_service_type.currentData()
+                if service_type is None or str(service_type).strip() == "":
+                    txt = (self.cmb_tarife_service_type.currentText() or "").strip()
+                    service_type = txt if txt and not txt.lower().startswith("seç") else None
+            except Exception:
+                service_type = None
+
+        try:
+            period = (str(period).strip() if period is not None else None)
+        except Exception:
+            period = None
+        try:
+            service_type = (str(service_type).strip() if service_type is not None else None)
+        except Exception:
+            service_type = None
+
+        return contract_id, period, service_type
+
+    def _tarife_reload(self, *_args):
+        if self._tarife_loading:
+            return
+        self._tarife_load_price_rows()
+        self._load_tarife_special_items()
+
+    def _load_tarife_periods(self, contract_id: int):
+        if not hasattr(self, "cmb_tarife_period"):
+            return
+        try:
+            self.cmb_tarife_period.blockSignals(True)
+            self.cmb_tarife_period.clear()
+            self.cmb_tarife_period.addItem("Seçiniz...", None)
+            conn = self.db.connect()
+            if not conn:
+                return
+            try:
+                cur = conn.cursor()
+                cur.execute(
+                    """
+                    SELECT DISTINCT month
+                    FROM trip_plan
+                    WHERE contract_id=?
+                    ORDER BY month DESC
+                    """,
+                    (int(contract_id),),
+                )
+                months = [str(r[0]) for r in (cur.fetchall() or []) if r and r[0]]
+            finally:
+                conn.close()
+
+            if not months:
+                # fallback: derive from contract start/end date
+                try:
+                    contract_no = (self.txt_sozlesme_kodu.text() or "").strip() if hasattr(self, "txt_sozlesme_kodu") else ""
+                    details = self.db.get_contract_details_by_number(str(contract_no)) if contract_no else None
+                    sd = str((details or {}).get("start_date") or "").strip()
+                    ed = str((details or {}).get("end_date") or "").strip()
+                    if sd:
+                        sdt = datetime.strptime(sd, "%Y-%m-%d")
+                        edt = datetime.strptime(ed, "%Y-%m-%d") if ed else sdt
+                        y, m = int(sdt.year), int(sdt.month)
+                        y2, m2 = int(edt.year), int(edt.month)
+                        months = []
+                        while (y < y2) or (y == y2 and m <= m2):
+                            months.append(f"{y:04d}-{m:02d}")
+                            m += 1
+                            if m > 12:
+                                m = 1
+                                y += 1
+                except Exception:
+                    months = []
+
+            if not months:
+                months = [QDate.currentDate().toString("yyyy-MM")]
+            for m in months:
+                self.cmb_tarife_period.addItem(str(m), str(m))
+
+            # prefer active_month if exists
+            ym = str((self.user_data or {}).get("active_month") or "").strip()
+            if ym:
+                idx = self.cmb_tarife_period.findData(ym)
+                if idx >= 0:
+                    self.cmb_tarife_period.setCurrentIndex(idx)
+        except Exception:
+            pass
+        finally:
+            try:
+                self.cmb_tarife_period.blockSignals(False)
+            except Exception:
+                pass
+
+    def _load_tarife_service_types(self, contract_id: int):
+        if not hasattr(self, "cmb_tarife_service_type"):
+            return
+        try:
+            self.cmb_tarife_service_type.blockSignals(True)
+            self.cmb_tarife_service_type.clear()
+            self.cmb_tarife_service_type.addItem("Seçiniz...", None)
+            conn = self.db.connect()
+            if not conn:
+                return
+            try:
+                cur = conn.cursor()
+                cur.execute(
+                    """
+                    SELECT DISTINCT COALESCE(service_type,'')
+                    FROM route_params
+                    WHERE contract_id=?
+                      AND COALESCE(service_type,'') <> ''
+                    ORDER BY service_type
+                    """,
+                    (int(contract_id),),
+                )
+                service_types = [str(r[0]) for r in (cur.fetchall() or []) if r and r[0]]
+            finally:
+                conn.close()
+            for st in service_types:
+                self.cmb_tarife_service_type.addItem(str(st), str(st))
+
+            # default: contract_type if it exists
+            try:
+                details = self.db.get_contract_details_by_number((self.txt_sozlesme_kodu.text() or "").strip())
+                cst = str((details or {}).get("contract_type") or "").strip()
+                if cst and not service_types:
+                    self.cmb_tarife_service_type.addItem(str(cst), str(cst))
+                if cst:
+                    idx = self.cmb_tarife_service_type.findData(cst)
+                    if idx >= 0:
+                        self.cmb_tarife_service_type.setCurrentIndex(idx)
+            except Exception:
+                pass
+        except Exception:
+            pass
+        finally:
+            try:
+                self.cmb_tarife_service_type.blockSignals(False)
+            except Exception:
+                pass
+
+    def _load_tarife_special_items(self):
+        tbl = getattr(self, "tbl_special_items", None)
+        if tbl is None:
+            return
+        contract_id, period, service_type = self._tarife_context()
+        tbl.setRowCount(0)
+        if not contract_id:
+            return
+        if not period or not service_type:
+            return
+
+        rows = []
+        try:
+            rows = self.db.list_contract_special_items(int(contract_id), str(period).strip(), str(service_type).strip())
+        except Exception:
+            rows = []
+
+        for rec in rows or []:
+            try:
+                item_id = int(rec[0])
+            except Exception:
+                item_id = None
+            title = rec[1] if len(rec) > 1 else ""
+            qty_days = rec[6] if len(rec) > 6 else 0
+            unit_price = rec[7] if len(rec) > 7 else 0
+            total_amount = rec[8] if len(rec) > 8 else 0
+            note = rec[9] if len(rec) > 9 else ""
+
+            r = tbl.rowCount()
+            tbl.insertRow(r)
+            vals = [str(title or ""), str(qty_days or ""), str(unit_price or ""), str(total_amount or ""), str(note or "")]
+            for c, v in enumerate(vals):
+                it = QTableWidgetItem(v)
+                if c in (1, 2, 3):
+                    it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                if c == 0 and item_id is not None:
+                    it.setData(Qt.ItemDataRole.UserRole + 1, int(item_id))
+                tbl.setItem(r, c, it)
+
+    def _tarife_add_special_row(self):
+        tbl = getattr(self, "tbl_special_items", None)
+        if tbl is None:
+            return
+        contract_id, period, service_type = self._tarife_context()
+        if not contract_id:
+            QMessageBox.warning(self, "Uyarı", "Önce bir sözleşme seçiniz.")
+            return
+        if not period or not service_type:
+            QMessageBox.warning(self, "Uyarı", "Dönem ve Hizmet Tipi seçiniz.")
+            return
+
+        period = str(period).strip()
+        service_type = str(service_type).strip()
+
+        r = tbl.rowCount()
+        tbl.insertRow(r)
+        for c in range(tbl.columnCount()):
+            it = QTableWidgetItem("")
+            if c in (1, 2, 3):
+                it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            tbl.setItem(r, c, it)
+
+    def _tarife_delete_special_row(self):
+        tbl = getattr(self, "tbl_special_items", None)
+        if tbl is None:
+            return
+        selected = sorted({it.row() for it in (tbl.selectedItems() or [])}, reverse=True)
+        if not selected and tbl.rowCount() > 0:
+            selected = [tbl.rowCount() - 1]
+
+        for r in selected:
+            if 0 <= r < tbl.rowCount():
+                tbl.removeRow(r)
+
+    def _tarife_save_special_items(self):
+        tbl = getattr(self, "tbl_special_items", None)
+        if tbl is None:
+            return
+        contract_id, period, service_type = self._tarife_context()
+        if not contract_id:
+            QMessageBox.warning(self, "Uyarı", "Önce bir sözleşme seçiniz.")
+            return
+        if not period or not service_type:
+            QMessageBox.warning(self, "Uyarı", "Dönem ve Hizmet Tipi seçiniz.")
+            return
+
+        out = []
+        for r in range(tbl.rowCount()):
+            it_title = tbl.item(r, 0)
+            it_days = tbl.item(r, 1)
+            it_unit = tbl.item(r, 2)
+            it_total = tbl.item(r, 3)
+            it_note = tbl.item(r, 4)
+
+            title = (it_title.text() or "").strip() if it_title else ""
+            days_txt = (it_days.text() or "").strip() if it_days else ""
+            unit_txt = (it_unit.text() or "").strip() if it_unit else ""
+            total_txt = (it_total.text() or "").strip() if it_total else ""
+            note = (it_note.text() or "").strip() if it_note else ""
+
+            item_id = None
+            try:
+                item_id = (it_title.data(Qt.ItemDataRole.UserRole + 1) if it_title else None)
+                item_id = int(item_id) if item_id is not None else None
+            except Exception:
+                item_id = None
+
+            def _parse_money(s: str) -> float:
+                txt = str(s or "").strip()
+                if not txt:
+                    return 0.0
+                txt = txt.replace(".", "").replace(",", ".")
+                try:
+                    return float(txt)
+                except Exception:
+                    return 0.0
+
+            qty_days = _parse_money(days_txt)
+            unit_price = _parse_money(unit_txt)
+            total_amount = _parse_money(total_txt)
+
+            if not any([title, note, qty_days, unit_price, total_amount]):
+                continue
+
+            # minimal validation: must be monetizable
+            if total_amount <= 0 and (qty_days <= 0 or unit_price <= 0):
+                QMessageBox.warning(self, "Uyarı", "Özel kalemlerde Tutar veya Gün+Birim Fiyat girilmelidir.")
+                return
+
+            out.append(
+                {
+                    "item_id": item_id,
+                    "title": title,
+                    "qty_days": qty_days,
+                    "unit_price": unit_price,
+                    "total_amount": total_amount,
+                    "note": note,
+                }
+            )
+
+        # Replace semantics: clear existing context then insert rows
+        if not self.db.delete_contract_special_items_for_context(int(contract_id), str(period).strip(), str(service_type).strip()):
+            QMessageBox.warning(self, "Uyarı", "Kayıt sırasında eski özel kalemler silinemedi.")
+            return
+
+        for rec in out:
+            try:
+                new_id = self.db.upsert_contract_special_item(
+                    contract_id=int(contract_id),
+                    period=str(period).strip(),
+                    service_type=str(service_type).strip(),
+                    title=str(rec.get("title") or ""),
+                    qty_days=float(rec.get("qty_days") or 0.0),
+                    unit_price=float(rec.get("unit_price") or 0.0),
+                    total_amount=float(rec.get("total_amount") or 0.0),
+                    note=str(rec.get("note") or ""),
+                    item_id=None,
+                )
+                if new_id is None:
+                    QMessageBox.warning(self, "Uyarı", "Özel kalemler kaydedilemedi (DB insert başarısız).")
+                    return
+            except Exception:
+                QMessageBox.warning(self, "Uyarı", "Özel kalemler kaydedilirken hata oluştu.")
+                return
+
+        QMessageBox.information(self, "Başarılı", "Özel kalemler kaydedildi.")
+        self._load_tarife_special_items()
+
     def _open_hat_dialog(self):
         # Sözleşme kodu olmadan kalem girişi yapmayalım
         contract_no = (self.txt_sozlesme_kodu.text() or "").strip() if hasattr(self, "txt_sozlesme_kodu") else ""
         if not contract_no:
             QMessageBox.warning(self, "Uyarı", "Önce sözleşme kaydını oluşturunuz.")
             return
+
+        details = None
+        try:
+            details = self.db.get_contract_details_by_number(contract_no)
+        except Exception:
+            details = None
+        contract_id = None
+        service_type = ""
+        start_date = ""
+        end_date = ""
+        try:
+            if isinstance(details, dict):
+                contract_id = details.get("id")
+                service_type = str(details.get("contract_type") or "").strip()
+                start_date = str(details.get("start_date") or "").strip()
+                end_date = str(details.get("end_date") or "").strip()
+        except Exception:
+            contract_id = None
 
         dlg = QDialog(self)
         try:
@@ -187,7 +930,12 @@ class ContractsApp(QWidget):
             QMessageBox.critical(self, "Hata", "hat_dialog: table_kalemler bulunamadı")
             return
 
-        headers = ["İŞ KALEMİ (HAT)", "HAREKET TÜRÜ", "MESAFE (KM)", "ARAÇ KPST.", "FİYAT"]
+        headers = [
+            "İŞ KALEMİ (HAT)",
+            "HAREKET TÜRÜ",
+            "MESAFE (KM)",
+            "ARAÇ KPST.",
+        ]
         tbl.setColumnCount(len(headers))
         tbl.setHorizontalHeaderLabels(headers)
         tbl.verticalHeader().setVisible(False)
@@ -200,34 +948,44 @@ class ContractsApp(QWidget):
         h.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         h.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         h.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-        h.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
 
-        # mevcut cache veya DB'deki json'u yükle
-        pm = self._price_matrix_cache
-        if not pm and self.current_number:
-            details = self.db.get_contract_details_by_number(self.current_number)
-            try:
-                raw = (details or {}).get("price_matrix_json")
-                parsed = json.loads(raw) if raw else []
-                if isinstance(parsed, list):
-                    pm = parsed
-            except Exception:
-                pm = []
+        # route_params tablosundan yükle
+        pm = []
+        try:
+            if contract_id:
+                rows = self.db.get_route_params_for_contract(int(contract_id), str(service_type))
+                for rr in rows or []:
+                    rid = rr[0]
+                    rname = rr[1] if len(rr) > 1 else ""
+                    stops = rr[2] if len(rr) > 2 else ""
+                    km = rr[3] if len(rr) > 3 else 0
+                    mv = rr[4] if len(rr) > 4 else ""
+                    cap = rr[5] if len(rr) > 5 else 0
+                    pm.append(
+                        {
+                            "id": rid,
+                            "route_name": str(rname or ""),
+                            "movement_type": str(mv or ""),
+                            "distance_km": km,
+                            "vehicle_capacity": cap,
+                        }
+                    )
+        except Exception:
+            pm = []
 
         tbl.setRowCount(0)
         for row in pm or []:
             r = tbl.rowCount()
             tbl.insertRow(r)
             vals = [
-                str((row or {}).get("guzergah") or ""),
-                str((row or {}).get("gidis_gelis") or ""),
-                ("" if (row or {}).get("km") is None else str((row or {}).get("km"))),
-                ("" if (row or {}).get("arac_kpst") is None else str((row or {}).get("arac_kpst"))),
-                ("" if (row or {}).get("fiyat") is None else str((row or {}).get("fiyat"))),
+                str((row or {}).get("route_name") or ""),
+                str((row or {}).get("movement_type") or ""),
+                ("" if (row or {}).get("distance_km") is None else str((row or {}).get("distance_km"))),
+                ("" if (row or {}).get("vehicle_capacity") is None else str((row or {}).get("vehicle_capacity"))),
             ]
             for c, v in enumerate(vals):
                 it = QTableWidgetItem(v)
-                if c in (2, 3, 4):
+                if c in (2, 3):
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 tbl.setItem(r, c, it)
 
@@ -236,7 +994,7 @@ class ContractsApp(QWidget):
             tbl.insertRow(r)
             for c in range(tbl.columnCount()):
                 it = QTableWidgetItem("")
-                if c in (2, 3, 4):
+                if c in (2, 3):
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 tbl.setItem(r, c, it)
 
@@ -255,38 +1013,36 @@ class ContractsApp(QWidget):
                 hareket = (tbl.item(r, 1).text().strip() if tbl.item(r, 1) else "")
                 km_txt = (tbl.item(r, 2).text().strip() if tbl.item(r, 2) else "")
                 kps_txt = (tbl.item(r, 3).text().strip() if tbl.item(r, 3) else "")
-                fiyat_txt = (tbl.item(r, 4).text().strip() if tbl.item(r, 4) else "")
-                if not any([hat, hareket, km_txt, kps_txt, fiyat_txt]):
+                if not any([hat, hareket, km_txt, kps_txt]):
                     continue
-
-                row = {
-                    "guzergah": hat,
-                    "gidis_gelis": hareket,
-                    "km": self._parse_money(km_txt),
-                    "arac_kpst": self._parse_money(kps_txt),
-                    "fiyat": self._parse_money(fiyat_txt),
-                }
-                out.append(row)
-
-            self._price_matrix_cache = out
-            # Sözleşme DB'de mevcutsa (update modu) iş kalemlerini anında DB'ye yaz.
-            # Yeni sözleşmede ise ana formdaki KAYDET ile yazılacak.
-            contract_number = (self.current_number or "").strip()
-            if contract_number:
-                try:
-                    payload = {
-                        "contract_number": contract_number,
-                        "price_matrix_json": json.dumps(out, ensure_ascii=False),
+                out.append(
+                    {
+                        "route_name": str(hat or "").strip(),
+                        "movement_type": str(hareket or "").strip(),
+                        "distance_km": self._parse_money(km_txt),
+                        "vehicle_capacity": self._parse_money(kps_txt),
                     }
-                    ok = self.db.save_contract(payload, is_update=True)
-                    if ok:
-                        QMessageBox.information(self, "Başarılı", "İş kalemleri kaydedildi.")
-                    else:
-                        QMessageBox.warning(self, "Uyarı", "İş kalemleri kaydedildi ancak DB güncellemesi yapılamadı. Lütfen sözleşmeyi tekrar KAYDET ediniz.")
-                except Exception:
-                    QMessageBox.warning(self, "Uyarı", "İş kalemleri kaydedildi ancak DB güncellemesi sırasında hata oluştu. Lütfen sözleşmeyi tekrar KAYDET ediniz.")
-            else:
-                QMessageBox.information(self, "Başarılı", "İş kalemleri kaydedildi. Sözleşmeyi KAYDET ile tamamlayınız.")
+                )
+
+            if not contract_id:
+                QMessageBox.warning(self, "Uyarı", "Sözleşme bulunamadı. Lütfen sözleşmeyi kaydedip tekrar deneyiniz.")
+                return
+
+            try:
+                ok = self.db.replace_route_params_for_contract(
+                    contract_id=int(contract_id),
+                    contract_number=str(contract_no),
+                    start_date=str(start_date),
+                    end_date=str(end_date),
+                    service_type=str(service_type),
+                    rows=out,
+                )
+                if ok:
+                    QMessageBox.information(self, "Başarılı", "İş kalemleri kaydedildi.")
+                else:
+                    QMessageBox.warning(self, "Uyarı", "İş kalemleri kaydedilemedi.")
+            except Exception:
+                QMessageBox.warning(self, "Uyarı", "İş kalemleri kaydedilirken hata oluştu.")
             dlg.accept()
 
         if btn_add is not None:
@@ -485,6 +1241,19 @@ class ContractsApp(QWidget):
         else:
             self._price_matrix_cache = []
 
+        # Tarife tab combos + table refresh
+        try:
+            self._tarife_loading = True
+            if details.get("id"):
+                self._load_tarife_periods(int(details.get("id")))
+                self._load_tarife_service_types(int(details.get("id")))
+        except Exception:
+            pass
+        finally:
+            self._tarife_loading = False
+        self._tarife_load_price_rows()
+        self._load_tarife_special_items()
+
         if hasattr(self, "btn_kaydet"):
             self.btn_kaydet.setText("GÜNCELLE")
 
@@ -661,6 +1430,22 @@ class ContractsApp(QWidget):
         ok = self.db.save_contract(data, is_update=is_update)
         if ok:
             QMessageBox.information(self, "Başarılı", "Kayıt tamamlandı.")
+
+            try:
+                contract_no = str(data.get("contract_number") or "").strip()
+                details = self.db.get_contract_details_by_number(contract_no) if contract_no else None
+                contract_id = None
+                if isinstance(details, dict):
+                    contract_id = details.get("id")
+                if contract_id:
+                    self.db.sync_contract_operational_templates(
+                        int(contract_id),
+                        str(data.get("start_date") or ""),
+                        str(data.get("end_date") or ""),
+                    )
+            except Exception:
+                pass
+
             self.load_table()
             self.clear_form()
         else:
