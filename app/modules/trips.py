@@ -477,6 +477,12 @@ class TripsGridApp(QWidget):
         return s
 
     def _month_key(self) -> str:
+        try:
+            m = str((self.user_data or {}).get("active_month") or "").strip()
+            if m and re.match(r"^\d{4}-\d{2}$", m):
+                return m
+        except Exception:
+            pass
         d = QDate.currentDate()
         return d.toString("yyyy-MM")
 

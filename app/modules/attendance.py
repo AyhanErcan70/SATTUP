@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 
 from PyQt6 import uic
-from PyQt6.QtCore import Qt, QDate, QTimer
+from PyQt6.QtCore import Qt, QDate, QTimer, QSignalBlocker
 from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
     QAbstractItemView,
@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
     QMenu,
     QMessageBox,
     QPushButton,
+    QCheckBox,
     QTableWidget,
     QTableWidgetItem,
     QLabel,
@@ -169,6 +170,12 @@ class AttendanceApp(QWidget):
         if hasattr(self, "btn_onay_kaldir"):
             self.btn_onay_kaldir.clicked.connect(self._unlock_period)
 
+        if hasattr(self, "btn_ay_kapat"):
+            try:
+                self.btn_ay_kapat.clicked.connect(self._close_month)
+            except Exception:
+                pass
+
         if hasattr(self, "btn_excele_aktar"):
             try:
                 self.btn_excele_aktar.clicked.connect(self._export_excel)
@@ -204,6 +211,73 @@ class AttendanceApp(QWidget):
             self.btn_geri_don.clicked.connect(self._return_to_main)
 
         self._reload_summary()
+
+    def _close_month(self):
+        month = str(self._selected_month_key() or "").strip()
+        if not month or "-" not in month:
+            QMessageBox.warning(self, "Uyarı", "Ay kapatma için dönem seçiniz.")
+            return
+
+        try:
+            from app.core.db_manager import DatabaseManager
+
+            db = DatabaseManager()
+            conn = db.connect()
+            if not conn:
+                QMessageBox.critical(self, "Hata", "Veritabanına bağlanılamadı.")
+                return
+
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT COUNT(1)
+                FROM trip_period_lock
+                WHERE month = ? AND COALESCE(locked,0) = 0
+                """,
+                (str(month),),
+            )
+            unlocked_cnt = int((cur.fetchone() or [0])[0] or 0)
+
+            cur.execute(
+                """
+                SELECT COUNT(1)
+                FROM hakedis
+                WHERE period = ?
+                  AND UPPER(COALESCE(status,'')) NOT IN ('ONAYLANDI','FATURALANDI')
+                """,
+                (str(month),),
+            )
+            pending_hakedis_cnt = int((cur.fetchone() or [0])[0] or 0)
+
+            conn.close()
+        except Exception:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            QMessageBox.critical(self, "Hata", "Ay kapatma kontrolü sırasında hata oluştu.")
+            return
+
+        if unlocked_cnt > 0 or pending_hakedis_cnt > 0:
+            msg = (
+                f"Ay kapatılamaz: {month}\n\n"
+                f"- Kilitlenmemiş dönem kaydı: {unlocked_cnt}\n"
+                f"- Onaylanmamış/Faturalanmamış hakediş: {pending_hakedis_cnt}\n\n"
+                "Eksikleri tamamlayıp tekrar deneyiniz."
+            )
+            QMessageBox.warning(self, "Uyarı", msg)
+            return
+
+        user_id = int((self.user_data or {}).get("id") or 0)
+        try:
+            ok = self.db.set_period_closed(str(month), user_id)
+        except Exception:
+            ok = False
+        if not ok:
+            QMessageBox.critical(self, "Hata", "Ay kapatma işlemi kaydedilemedi.")
+            return
+
+        QMessageBox.information(self, "Bilgi", f"Ay kapatıldı: {month}")
 
     def _apply_compact_table_combo(self, cmb: QComboBox, bg_color: str | None = None):
         try:
@@ -1582,7 +1656,9 @@ class BulkAttendanceDialog(QDialog):
         if not isinstance(rec, dict):
             return ""
         raw = (
-            rec.get("gidis_gelis")
+            rec.get("movement_type_norm")
+            or rec.get("pricing_category")
+            or rec.get("gidis_gelis")
             or rec.get("movement_type")
             or rec.get("hareket_turu")
             or rec.get("hareket")
@@ -1591,7 +1667,18 @@ class BulkAttendanceDialog(QDialog):
             or rec.get("tip")
             or ""
         )
-        return str(raw or "").strip().lower()
+        s = str(raw or "").strip().lower()
+        if "mesai" in s:
+            return "fazla mesai"
+        if "paket" in s or (("sabah" in s) and ("akşam" in s or "aksam" in s)):
+            return "sabah-akşam"
+        if "cift" in s or "çift" in s:
+            return "tek servis"
+        if "tek" in s:
+            return "tek servis"
+        if s == "teks" or s == "tekservis":
+            return "tek servis"
+        return s
 
     def __init__(
         self,
@@ -2270,42 +2357,61 @@ class BulkAttendanceDialog(QDialog):
         return int(route_params_id), str(time_block), str(trip_date), int(line_no)
 
     def _apply_day_cell_style(self, row: int, col: int):
-        day_num = self._day_for_col(col)
-        if day_num is None:
+        # Prevent recursion if style changes trigger itemChanged
+        if bool(getattr(self, "_in_apply_day_cell_style", False)):
             return
-        it = self.table.item(row, col)
-        if it is None:
-            return
+        setattr(self, "_in_apply_day_cell_style", True)
+        try:
+            day_num = self._day_for_col(col)
+            if day_num is None:
+                return
+            it = self.table.item(row, col)
+            if it is None:
+                return
 
-        key = self._override_key(row, col)
-        has_override = False
-        if key is not None:
-            rec = self._alloc_override_map.get(key) or {}
-            has_override = bool(rec.get("is_override"))
+            key = self._override_key(row, col)
+            has_override = False
+            if key is not None:
+                rec = self._alloc_override_map.get(key) or {}
+                has_override = bool(rec.get("is_override"))
 
-        txt = (it.text() or "").strip()
-        has_qty = bool(txt.isdigit() and int(txt) > 0)
+            txt = (it.text() or "").strip()
+            has_qty = bool(txt.isdigit() and int(txt) > 0)
 
-        def _set_bg(color: QColor):
-            try:
-                it.setData(Qt.ItemDataRole.BackgroundRole, color)
-            except Exception:
-                pass
-            try:
-                it.setBackground(color)
-            except Exception:
-                pass
+            def _set_bg(color: QColor):
+                try:
+                    with QSignalBlocker(self.table):
+                        try:
+                            it.setData(Qt.ItemDataRole.BackgroundRole, color)
+                        except Exception:
+                            pass
+                        try:
+                            it.setBackground(color)
+                        except Exception:
+                            pass
+                except Exception:
+                    try:
+                        it.setData(Qt.ItemDataRole.BackgroundRole, color)
+                    except Exception:
+                        pass
+                    try:
+                        it.setBackground(color)
+                    except Exception:
+                        pass
 
-        if has_override:
-            _set_bg(self._bg_override)
-            return
-        if self._is_holiday_day(day_num) or self._is_weekend_day(day_num):
-            _set_bg(self._bg_weekend)
-            return
-        if has_qty:
-            _set_bg(self._bg_qty)
-            return
-        _set_bg(QColor("#ffffff"))
+            if has_override:
+                _set_bg(self._bg_override)
+                return
+            if self._is_holiday_day(day_num) or self._is_weekend_day(day_num):
+                _set_bg(self._bg_weekend)
+                return
+            if has_qty:
+                _set_bg(self._bg_qty)
+                return
+            _set_bg(QColor("#ffffff"))
+
+        finally:
+            setattr(self, "_in_apply_day_cell_style", False)
 
     def _enforce_bulk_column_widths(self):
         try:
@@ -2504,6 +2610,27 @@ class BulkAttendanceDialog(QDialog):
         cur_driver_id = current.get("driver_id")
         cur_note = current.get("note") or ""
 
+        ceza_flag = "__CEZA_HATIRLAT__"
+
+        def _note_has_flag(s: str) -> bool:
+            return ceza_flag in (s or "")
+
+        def _note_strip_flag(s: str) -> str:
+            txt = (s or "")
+            if ceza_flag not in txt:
+                return txt.strip()
+            out = txt.replace(ceza_flag, "")
+            out = " ".join(out.split())
+            return out.strip()
+
+        def _note_apply_flag(s: str, enabled: bool) -> str:
+            base = _note_strip_flag(s)
+            if not enabled:
+                return base
+            if base:
+                return f"{base} {ceza_flag}".strip()
+            return ceza_flag
+
         dlg = QDialog(self)
         if len(selected_dates) == 1:
             dlg.setWindowTitle(f"Günlük Atama / Not ({first_trip_date})")
@@ -2541,9 +2668,19 @@ class BulkAttendanceDialog(QDialog):
         row3 = QHBoxLayout()
         row3.addWidget(QLabel("Not:"))
         txt_note = QLineEdit()
-        txt_note.setText(str(cur_note))
+        txt_note.setText(str(_note_strip_flag(str(cur_note))))
         row3.addWidget(txt_note)
         lay.addLayout(row3)
+
+        row4 = QHBoxLayout()
+        chk_ceza = QCheckBox("Taşeron ceza hatırlat")
+        try:
+            chk_ceza.setChecked(bool(_note_has_flag(str(cur_note))))
+        except Exception:
+            pass
+        row4.addWidget(chk_ceza)
+        row4.addStretch(1)
+        lay.addLayout(row4)
 
         btns = QHBoxLayout()
         btn_clear = QPushButton("Temizle")
@@ -2574,19 +2711,77 @@ class BulkAttendanceDialog(QDialog):
                         del self._alloc_override_map[k]
                 for cc in selected_cols:
                     self._mark_day_override_cell(r, cc, None)
+
+                # Persist clear to DB immediately so reminders do not re-appear after reload
+                try:
+                    for trip_date in selected_dates:
+                        try:
+                            qd = QDate.fromString(str(trip_date), "yyyy-MM-dd")
+                            day_num = int(qd.day()) if qd.isValid() else None
+                        except Exception:
+                            day_num = None
+                        qty = 0
+                        if day_num is not None:
+                            col = self._day_start + (int(day_num) - 1)
+                            itq = self.table.item(r, col)
+                            txtq = (itq.text() or "").strip() if itq is not None else ""
+                            qty = int(txtq) if txtq.isdigit() else 0
+                        try:
+                            conflict = self.db.find_allocation_conflict(
+                                contract_id=int(self.contract_id),
+                                route_params_id=int(route_params_id),
+                                trip_date=str(trip_date),
+                                service_type=str(self.service_type),
+                                time_block=str(time_block),
+                                line_no=int(line_no),
+                                vehicle_id=default_vehicle_id,
+                                driver_id=default_driver_id,
+                                qty=float(qty),
+                                time_text=str((self.table.item(r, self._col_time_text).text() if self.table.item(r, self._col_time_text) else "") or ""),
+                                note="",
+                            )
+                        except Exception:
+                            conflict = None
+                        if conflict:
+                            QMessageBox.critical(self, "Çakışma", "Aynı gün içinde araç/şoför saat çakışması olduğu için kayıt yapılamadı.")
+                            return
+                        self.db.upsert_trip_allocation(
+                            contract_id=int(self.contract_id),
+                            route_params_id=int(route_params_id),
+                            trip_date=str(trip_date),
+                            service_type=str(self.service_type),
+                            time_block=str(time_block),
+                            vehicle_id=default_vehicle_id,
+                            driver_id=default_driver_id,
+                            qty=float(qty),
+                            time_text=str((self.table.item(r, self._col_time_text).text() if self.table.item(r, self._col_time_text) else "") or ""),
+                            note="",
+                            line_no=int(line_no),
+                        )
+                        try:
+                            if default_vehicle_id is not None and str(default_vehicle_id).strip():
+                                mv = int(self.db.get_vehicle_movements_for_day(int(self.contract_id), str(trip_date), default_vehicle_id) or 0)
+                                if mv > 8:
+                                    QMessageBox.warning(self, "Uyarı", f"Bu araç için {trip_date} tarihinde hareket sayısı {mv} oldu (limit: 8).")
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
                 dlg.accept()
                 return
 
             vsel = cmb_v2.currentData()
             dsel = cmb_d2.currentData()
-            note = (txt_note.text() or "").strip()
+            note_ui = (txt_note.text() or "").strip()
+            note = _note_apply_flag(note_ui, bool(chk_ceza.isChecked()))
 
             if vsel == "__DEFAULT__":
                 vsel = default_vehicle_id
             if dsel == "__DEFAULT__":
                 dsel = default_driver_id
 
-            if (not vsel) and (not dsel) and (not note):
+            if (not vsel) and (not dsel) and (not note_ui) and (not chk_ceza.isChecked()):
                 for trip_date in selected_dates:
                     k = (int(route_params_id), str(time_block), str(trip_date), int(line_no))
                     if k in self._alloc_override_map:
@@ -2614,7 +2809,64 @@ class BulkAttendanceDialog(QDialog):
                     "is_override": bool(is_override),
                 }
             for cc in selected_cols:
-                self._mark_day_override_cell(r, cc, note)
+                self._mark_day_override_cell(r, cc, note_ui)
+
+            # Persist immediately to DB so module reload + hakediş reminder works without requiring main KAYDET.
+            try:
+                for trip_date in selected_dates:
+                    try:
+                        qd = QDate.fromString(str(trip_date), "yyyy-MM-dd")
+                        day_num = int(qd.day()) if qd.isValid() else None
+                    except Exception:
+                        day_num = None
+                    qty = 0
+                    if day_num is not None:
+                        col = self._day_start + (int(day_num) - 1)
+                        itq = self.table.item(r, col)
+                        txtq = (itq.text() or "").strip() if itq is not None else ""
+                        qty = int(txtq) if txtq.isdigit() else 0
+                    try:
+                        conflict = self.db.find_allocation_conflict(
+                            contract_id=int(self.contract_id),
+                            route_params_id=int(route_params_id),
+                            trip_date=str(trip_date),
+                            service_type=str(self.service_type),
+                            time_block=str(time_block),
+                            line_no=int(line_no),
+                            vehicle_id=vsel,
+                            driver_id=dsel,
+                            qty=float(qty),
+                            time_text=str((self.table.item(r, self._col_time_text).text() if self.table.item(r, self._col_time_text) else "") or ""),
+                            note=str(note),
+                        )
+                    except Exception:
+                        conflict = None
+                    if conflict:
+                        QMessageBox.critical(self, "Çakışma", "Aynı gün içinde araç/şoför saat çakışması olduğu için kayıt yapılamadı.")
+                        return
+                    self.db.upsert_trip_allocation(
+                        contract_id=int(self.contract_id),
+                        route_params_id=int(route_params_id),
+                        trip_date=str(trip_date),
+                        service_type=str(self.service_type),
+                        time_block=str(time_block),
+                        vehicle_id=vsel,
+                        driver_id=dsel,
+                        qty=float(qty),
+                        time_text=str((self.table.item(r, self._col_time_text).text() if self.table.item(r, self._col_time_text) else "") or ""),
+                        note=str(note),
+                        line_no=int(line_no),
+                    )
+                    try:
+                        if vsel is not None and str(vsel).strip():
+                            mv = int(self.db.get_vehicle_movements_for_day(int(self.contract_id), str(trip_date), vsel) or 0)
+                            if mv > 8:
+                                QMessageBox.warning(self, "Uyarı", f"Bu araç için {trip_date} tarihinde hareket sayısı {mv} oldu (limit: 8).")
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
             dlg.accept()
 
         btn_ok.clicked.connect(lambda: _apply(clear_only=False))
@@ -2637,59 +2889,100 @@ class BulkAttendanceDialog(QDialog):
     def _recalc_row_total(self, item: QTableWidgetItem):
         if item is None:
             return
-        r = item.row()
-        c = item.column()
-        if c in (0, 1, self._col_vehicle, self._col_driver, self._col_time_text, self._col_total_qty, self._col_total_price):
-            return
 
-        if c == self._col_price:
+        # Prevent recursion if itemChanged is triggered from within this handler
+        if bool(getattr(self, "_in_recalc_row_total", False)):
+            return
+        setattr(self, "_in_recalc_row_total", True)
+
+        try:
+            # Defensive: if any key column indexes are not initialized properly, do nothing.
+            # This also prevents accidental recursion when -1 indexes point to last column.
             try:
-                txtp = (item.text() or "").strip()
-                self._parse_tr_float(txtp)
+                if any(int(x) < 0 for x in (self._col_total_qty, self._col_total_price, self._col_price, self._day_start)):
+                    return
             except Exception:
                 return
-            item.setText(self._format_tr_currency(self._parse_tr_float(txtp)))
+
+            r = item.row()
+            c = item.column()
+            if c in (0, 1, self._col_vehicle, self._col_driver, self._col_time_text, self._col_total_qty, self._col_total_price):
+                return
+
+            if c == self._col_price:
+                try:
+                    txtp = (item.text() or "").strip()
+                    self._parse_tr_float(txtp)
+                except Exception:
+                    return
+                try:
+                    with QSignalBlocker(self.table):
+                        item.setText(self._format_tr_currency(self._parse_tr_float(txtp)))
+                except Exception:
+                    item.setText(self._format_tr_currency(self._parse_tr_float(txtp)))
+                self._recalc_price_total_for_row(r)
+                return
+
+            if c < self._day_start or c >= self._day_start + self.max_days:
+                return
+
+            day_num = (c - self._day_start) + 1
+            if day_num > self.days_in_month:
+                try:
+                    with QSignalBlocker(self.table):
+                        item.setText("")
+                except Exception:
+                    pass
+                return
+
+            txt = (item.text() or "").strip()
+            if txt and (not txt.isdigit()):
+                try:
+                    with QSignalBlocker(self.table):
+                        item.setText("")
+                except Exception:
+                    pass
+                try:
+                    with QSignalBlocker(self.table):
+                        self._apply_day_cell_style(r, c)
+                except Exception:
+                    self._apply_day_cell_style(r, c)
+                return
+            if txt and txt.isdigit() and int(txt) < 0:
+                try:
+                    with QSignalBlocker(self.table):
+                        item.setText("")
+                except Exception:
+                    pass
+                try:
+                    with QSignalBlocker(self.table):
+                        self._apply_day_cell_style(r, c)
+                except Exception:
+                    self._apply_day_cell_style(r, c)
+                return
+
+            total = 0
+            for day_col in range(self._day_start, self._day_start + self.days_in_month):
+                it = self.table.item(r, day_col)
+                if it and (it.text() or "").strip().isdigit():
+                    total += int(it.text().strip())
+            t_item = self.table.item(r, self._col_total_qty)
+            if t_item is not None:
+                try:
+                    with QSignalBlocker(self.table):
+                        t_item.setText(str(total))
+                except Exception:
+                    t_item.setText(str(total))
+
             self._recalc_price_total_for_row(r)
-            return
-
-        if c < self._day_start or c >= self._day_start + self.max_days:
-            return
-
-        day_num = (c - self._day_start) + 1
-        if day_num > self.days_in_month:
             try:
-                item.setText("")
+                with QSignalBlocker(self.table):
+                    self._apply_day_cell_style(r, c)
             except Exception:
-                pass
-            return
+                self._apply_day_cell_style(r, c)
 
-        txt = (item.text() or "").strip()
-        if txt and (not txt.isdigit()):
-            try:
-                item.setText("")
-            except Exception:
-                pass
-            self._apply_day_cell_style(r, c)
-            return
-        if txt and txt.isdigit() and int(txt) < 0:
-            try:
-                item.setText("")
-            except Exception:
-                pass
-            self._apply_day_cell_style(r, c)
-            return
-
-        total = 0
-        for day_col in range(self._day_start, self._day_start + self.days_in_month):
-            it = self.table.item(r, day_col)
-            if it and (it.text() or "").strip().isdigit():
-                total += int(it.text().strip())
-        t_item = self.table.item(r, self._col_total_qty)
-        if t_item is not None:
-            t_item.setText(str(total))
-
-        self._recalc_price_total_for_row(r)
-        self._apply_day_cell_style(r, c)
+        finally:
+            setattr(self, "_in_recalc_row_total", False)
 
     def _open_day_popup(self, row: int):
         if row < 0 or row >= self.table.rowCount():
@@ -2849,6 +3142,11 @@ class BulkAttendanceDialog(QDialog):
             pass
 
     def _recalc_price_total_for_row(self, row: int):
+        try:
+            if any(int(x) < 0 for x in (self._col_total_qty, self._col_total_price, self._col_price)):
+                return
+        except Exception:
+            return
         t_item = self.table.item(row, self._col_total_qty)
         p_item = self.table.item(row, self._col_price)
         out_item = self.table.item(row, self._col_total_price)
@@ -2863,7 +3161,11 @@ class BulkAttendanceDialog(QDialog):
         except Exception:
             p = 0.0
         total = float(t) * float(p)
-        out_item.setText(self._format_tr_currency(total))
+        try:
+            with QSignalBlocker(self.table):
+                out_item.setText(self._format_tr_currency(total))
+        except Exception:
+            out_item.setText(self._format_tr_currency(total))
         try:
             out_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         except Exception:
@@ -3000,7 +3302,7 @@ class BulkAttendanceDialog(QDialog):
 
         if price_json:
             try:
-                parsed = json.loads(price_json)
+                parsed = self.db.parse_contract_price_matrix_rows(str(price_json or ""), service_type=str(self.service_type))
             except Exception:
                 parsed = []
             if isinstance(parsed, list):
@@ -3467,6 +3769,126 @@ class BulkAttendanceDialog(QDialog):
             cur = conn.cursor()
             cur.execute("BEGIN")
 
+            try:
+                def _parse_hhmm_to_minutes(s: str):
+                    t = str(s or "").strip()
+                    if not t:
+                        return None
+                    parts = t.split(":")
+                    if len(parts) != 2:
+                        return None
+                    if (not parts[0].isdigit()) or (not parts[1].isdigit()):
+                        return None
+                    hh = int(parts[0])
+                    mm = int(parts[1])
+                    if hh < 0 or hh > 23 or mm < 0 or mm > 59:
+                        return None
+                    return hh * 60 + mm
+
+                def _parse_range_minutes(tb: str, tt: str):
+                    txt = str(tt or "").strip() or str(tb or "").strip()
+                    if not txt:
+                        return None, None
+                    if "-" in txt:
+                        left, right = (txt.split("-", 1) + [""])[:2]
+                        m1 = _parse_hhmm_to_minutes(left.strip())
+                        m2 = _parse_hhmm_to_minutes(right.strip())
+                        if m1 is None or m2 is None:
+                            return None, None
+                        if m2 == m1:
+                            return m1, (m1 + 15) % 1440
+                        return m1, m2
+                    m = _parse_hhmm_to_minutes(txt)
+                    if m is None:
+                        return None, None
+                    return m, (m + 15) % 1440
+
+                def _segments(s: int, e: int):
+                    if s == e:
+                        return [(s, (s + 1) % 1440)]
+                    if s < e:
+                        return [(s, e)]
+                    return [(s, 1440), (0, e)]
+
+                def _overlap(a1: int, a2: int, b1: int, b2: int):
+                    for s1, e1 in _segments(int(a1), int(a2)):
+                        for s2, e2 in _segments(int(b1), int(b2)):
+                            if max(s1, s2) < min(e1, e2):
+                                return True
+                    return False
+
+                local_by_vehicle = {}
+                local_by_driver = {}
+                for row in alloc_rows or []:
+                    try:
+                        c_id, rid, tdate, st, tb, ln, did, vid, q, tt, nt, ca, ua = row
+                    except Exception:
+                        continue
+                    try:
+                        if float(q or 0) <= 0:
+                            continue
+                    except Exception:
+                        continue
+                    s_m, e_m = _parse_range_minutes(str(tb or ""), str(tt or ""))
+                    if s_m is None or e_m is None:
+                        continue
+
+                    key_date = str(tdate)
+                    if vid is not None and str(vid).strip():
+                        local_by_vehicle.setdefault((key_date, str(vid)), []).append((int(s_m), int(e_m), int(rid), str(tb or ""), int(ln or 0)))
+                    if did is not None and str(did).strip():
+                        local_by_driver.setdefault((key_date, str(did)), []).append((int(s_m), int(e_m), int(rid), str(tb or ""), int(ln or 0)))
+
+                for (dkey, vkey), rr in (local_by_vehicle or {}).items():
+                    rr2 = sorted(rr, key=lambda x: (x[0], x[1]))
+                    for i in range(len(rr2)):
+                        for j in range(i + 1, len(rr2)):
+                            if _overlap(rr2[i][0], rr2[i][1], rr2[j][0], rr2[j][1]):
+                                raise RuntimeError("vehicle_conflict")
+                            if rr2[j][0] > rr2[i][1] and rr2[i][0] < rr2[i][1]:
+                                break
+
+                for (dkey, drkey), rr in (local_by_driver or {}).items():
+                    rr2 = sorted(rr, key=lambda x: (x[0], x[1]))
+                    for i in range(len(rr2)):
+                        for j in range(i + 1, len(rr2)):
+                            if _overlap(rr2[i][0], rr2[i][1], rr2[j][0], rr2[j][1]):
+                                raise RuntimeError("driver_conflict")
+                            if rr2[j][0] > rr2[i][1] and rr2[i][0] < rr2[i][1]:
+                                break
+
+                for row in alloc_rows or []:
+                    try:
+                        c_id, rid, tdate, st, tb, ln, did, vid, q, tt, nt, ca, ua = row
+                    except Exception:
+                        continue
+                    try:
+                        if float(q or 0) <= 0:
+                            continue
+                    except Exception:
+                        continue
+                    if (vid is None or not str(vid).strip()) and (did is None or not str(did).strip()):
+                        continue
+                    conflict = self.db.find_allocation_conflict(
+                        contract_id=int(self.contract_id),
+                        trip_date=str(tdate),
+                        service_type=str(self.service_type),
+                        time_block=str(tb),
+                        time_text=str(tt or ""),
+                        vehicle_id=vid,
+                        driver_id=did,
+                        exclude_route_params_id=int(rid),
+                        exclude_time_block=str(tb),
+                        exclude_line_no=int(ln or 0),
+                    )
+                    if conflict:
+                        raise RuntimeError("db_conflict")
+            except RuntimeError:
+                QMessageBox.critical(self, "Çakışma", "Aynı gün içinde araç/şoför saat çakışması olduğu için kayıt yapılamadı.")
+                raise
+            except Exception:
+                pass
+
             if price_rows:
                 cur.executemany(
                     """
@@ -3510,6 +3932,30 @@ class BulkAttendanceDialog(QDialog):
                     """,
                     alloc_rows,
                 )
+
+            try:
+                warned = set()
+                for row in alloc_rows or []:
+                    try:
+                        c_id, rid, tdate, st, tb, ln, did, vid, q, tt, nt, ca, ua = row
+                    except Exception:
+                        continue
+                    try:
+                        if float(q or 0) <= 0:
+                            continue
+                    except Exception:
+                        continue
+                    if vid is None or not str(vid).strip():
+                        continue
+                    k = (str(tdate), str(vid))
+                    if k in warned:
+                        continue
+                    warned.add(k)
+                    mv = int(self.db.get_vehicle_movements_for_day(int(self.contract_id), str(tdate), vid) or 0)
+                    if mv > 8:
+                        QMessageBox.warning(self, "Uyarı", f"Bu araç için {tdate} tarihinde hareket sayısı {mv} oldu (limit: 8).")
+            except Exception:
+                pass
 
             conn.commit()
             conn.close()

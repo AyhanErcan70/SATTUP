@@ -7,6 +7,8 @@ from PyQt6 import uic
 from app.core.db_manager import DatabaseManager
 from config import get_ui_path
 
+import ui.icons.context_rc
+
 def _normalize_plate(text: str) -> str:
     import re
     t = (text or "").strip().upper()
