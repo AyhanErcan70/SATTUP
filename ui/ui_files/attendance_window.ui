@@ -7,30 +7,11 @@
     <x>0</x>
     <y>0</y>
     <width>1091</width>
-    <height>0</height>
+    <height>339</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
-  </property>
-  <property name="styleSheet">
-   <string notr="true">QWidget#main_form QPushButton, QLineEdit, QComboBox{
-
-border :1px solid black;
-border-radius: 6px;
-}
-QWidget#main_form QPushButton{
-background-color: #b0b0b0;
-}
-QWidget#main_form QPushButton:hover{
-border:2px solid black;
-padding-top: 4px;
-font-weight: bold;
-}
-QWidget#main_form QPushButton:pressed{
-background-color: #7e7e7e;
-border-color: red;
-}</string>
   </property>
   <layout class="QGridLayout" name="gridLayout_8">
    <property name="leftMargin">
@@ -53,19 +34,143 @@ border-color: red;
      <item row="0" column="0">
       <widget class="QFrame" name="top_frame">
        <property name="frameShape">
-        <enum>QFrame::Shape::Box</enum>
+        <enum>QFrame::Shape::NoFrame</enum>
        </property>
        <property name="frameShadow">
         <enum>QFrame::Shadow::Plain</enum>
        </property>
        <property name="lineWidth">
-        <number>2</number>
+        <number>1</number>
        </property>
        <layout class="QGridLayout" name="gridLayout_2">
+        <property name="leftMargin">
+         <number>10</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <property name="spacing">
+         <number>0</number>
+        </property>
         <item row="0" column="0">
-         <layout class="QHBoxLayout" name="horizontalLayout">
+         <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0">
+          <property name="spacing">
+           <number>20</number>
+          </property>
           <item>
            <layout class="QGridLayout" name="gridLayout">
+            <property name="horizontalSpacing">
+             <number>20</number>
+            </property>
+            <property name="verticalSpacing">
+             <number>2</number>
+            </property>
+            <item row="1" column="1">
+             <widget class="QLabel" name="lbl_sozlesme">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>60</width>
+                <height>28</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>60</width>
+                <height>28</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Sözleşme</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="2">
+             <widget class="QComboBox" name="cmb_sozlesme">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>275</width>
+                <height>28</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>275</width>
+                <height>28</height>
+               </size>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLabel" name="lbl_musteri">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>60</width>
+                <height>28</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>60</width>
+                <height>28</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Müşteri</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="2" colspan="3">
+             <widget class="QComboBox" name="cmb_musteri">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>600</width>
+                <height>28</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>600</width>
+                <height>28</height>
+               </size>
+              </property>
+             </widget>
+            </item>
             <item row="1" column="0">
              <widget class="QLabel" name="lbl_month">
               <property name="sizePolicy">
@@ -94,28 +199,6 @@ border-color: red;
               </property>
              </widget>
             </item>
-            <item row="1" column="4">
-             <widget class="QComboBox" name="cmb_hizmet_turu">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>200</width>
-                <height>28</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>200</width>
-                <height>28</height>
-               </size>
-              </property>
-             </widget>
-            </item>
             <item row="1" column="3">
              <widget class="QLabel" name="lbl_hizmet">
               <property name="minimumSize">
@@ -138,83 +221,23 @@ border-color: red;
               </property>
              </widget>
             </item>
-            <item row="1" column="2">
-             <widget class="QComboBox" name="cmb_sozlesme">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>28</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>28</height>
-               </size>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QLabel" name="lbl_sozlesme">
-              <property name="minimumSize">
-               <size>
-                <width>80</width>
-                <height>28</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>80</width>
-                <height>28</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Sözleşme</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QLabel" name="lbl_musteri">
-              <property name="minimumSize">
-               <size>
-                <width>80</width>
-                <height>28</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>80</width>
-                <height>28</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Müşteri</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="2" colspan="3">
-             <widget class="QComboBox" name="cmb_musteri">
+            <item row="1" column="4">
+             <widget class="QComboBox" name="cmb_hizmet_turu">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
               <property name="minimumSize">
                <size>
-                <width>0</width>
+                <width>220</width>
                 <height>28</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>16777215</width>
+                <width>220</width>
                 <height>28</height>
                </size>
               </property>
@@ -251,6 +274,19 @@ border-color: red;
            </layout>
           </item>
           <item>
+           <spacer name="horizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
            <widget class="QLabel" name="lbl_ozet">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
@@ -265,7 +301,7 @@ border-color: red;
              </size>
             </property>
             <property name="frameShape">
-             <enum>QFrame::Shape::Box</enum>
+             <enum>QFrame::Shape::NoFrame</enum>
             </property>
             <property name="frameShadow">
              <enum>QFrame::Shadow::Plain</enum>
@@ -274,7 +310,10 @@ border-color: red;
              <number>2</number>
             </property>
             <property name="text">
-             <string>Toplam Sefer:                          DURUM:</string>
+             <string/>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
             </property>
            </widget>
           </item>
@@ -286,7 +325,7 @@ border-color: red;
      <item row="1" column="0">
       <widget class="QFrame" name="middle_n_frame">
        <property name="frameShape">
-        <enum>QFrame::Shape::Box</enum>
+        <enum>QFrame::Shape::NoFrame</enum>
        </property>
        <property name="frameShadow">
         <enum>QFrame::Shadow::Plain</enum>
@@ -295,6 +334,21 @@ border-color: red;
         <number>2</number>
        </property>
        <layout class="QGridLayout" name="gridLayout_6">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <property name="spacing">
+         <number>0</number>
+        </property>
         <item row="0" column="0">
          <widget class="QTabWidget" name="sekmeli_form">
           <property name="currentIndex">
@@ -309,7 +363,14 @@ border-color: red;
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_3">
             <item>
-             <widget class="QTableWidget" name="tbl_plan_takip"/>
+             <widget class="QTableWidget" name="tbl_plan_takip">
+              <attribute name="verticalHeaderMinimumSectionSize">
+               <number>20</number>
+              </attribute>
+              <attribute name="verticalHeaderDefaultSectionSize">
+               <number>20</number>
+              </attribute>
+             </widget>
             </item>
            </layout>
           </widget>
@@ -319,7 +380,20 @@ border-color: red;
            </attribute>
            <layout class="QGridLayout" name="gridLayout_5">
             <item row="0" column="0">
-             <widget class="QTableWidget" name="tbl_toplu_puantaj"/>
+             <widget class="QTableWidget" name="tbl_toplu_puantaj">
+              <property name="frameShape">
+               <enum>QFrame::Shape::NoFrame</enum>
+              </property>
+              <property name="lineWidth">
+               <number>0</number>
+              </property>
+              <attribute name="verticalHeaderMinimumSectionSize">
+               <number>20</number>
+              </attribute>
+              <attribute name="verticalHeaderDefaultSectionSize">
+               <number>20</number>
+              </attribute>
+             </widget>
             </item>
            </layout>
           </widget>
@@ -331,15 +405,30 @@ border-color: red;
      <item row="2" column="0">
       <widget class="QFrame" name="bottom_frame">
        <property name="frameShape">
-        <enum>QFrame::Shape::Box</enum>
+        <enum>QFrame::Shape::NoFrame</enum>
        </property>
        <property name="frameShadow">
         <enum>QFrame::Shadow::Plain</enum>
        </property>
        <property name="lineWidth">
-        <number>2</number>
+        <number>1</number>
        </property>
        <layout class="QGridLayout" name="gridLayout_4">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <property name="spacing">
+         <number>0</number>
+        </property>
         <item row="0" column="0">
          <layout class="QGridLayout" name="gridLayout_3">
           <property name="verticalSpacing">

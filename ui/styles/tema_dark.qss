@@ -1,0 +1,289 @@
+/* ============================================================
+   1. ANA YAPI VE MİRAS (INHERITANCE) AYARLARI
+   ============================================================ */
+#centralwidget {
+    background-color: #121212; /* Tam siyah yerine göz yormayan derin siyah */
+}
+
+/* Modüllerin şeffaf kalıp siyah zemini göstermesi */
+QStackedWidget, QStackedWidget > QWidget, 
+#main_form, #page_modules_container,
+QFrame#top_frame, QFrame#middle_n_frame, QFrame#middle_s_frame {
+    background: transparent;
+    border: none;
+}
+
+/* Giriş ekranı logosu */
+QWidget#page_main {
+    background: transparent;
+    border-image: url(:/resimler/logo.png) 0 0 0 0 stretch stretch;
+}
+
+/* ============================================================
+   2. BUTONLAR (Sol Menü ve Form Butonları Ayrımı)
+   ============================================================ */
+
+/* SOL MENÜ BUTONLARI */
+#menu_frame QPushButton {
+    background-color: #2c2c2c; /* Çok açık gri yerine koyu tonda tutuldu */
+    color: #ffffff;
+    font-family: 'DaytonaPro'; /* Yazım hatası düzeltildi: DaytonaPro */
+    font-size: 14px;
+    font-weight: bold;
+    text-align: left;
+    border-radius: 8px;
+    border: 1px solid #444444;
+    border-right: 2px solid #000; 
+    border-bottom: 3px solid #000; 
+    padding-left: 10px;
+    margin-right: 4px;
+    margin-bottom: 5px;  
+    min-width: 130px;
+}
+
+#menu_frame QPushButton:hover {
+    color: #5500ff; 
+    background-color: #3d3d3d;
+    border-right: 4px solid #5500ff;
+}
+#menu_frame QPushButton:pressed {
+    padding-top :5px;
+}
+
+/* FORM VE ÜST PANEL BUTONLARI */
+#top_frame QPushButton, #main_form QPushButton {
+    background-color: #333333;
+    color: #ffffff;
+    font-family: 'Poppins'; 
+    font-weight: bold;   
+    font-size: 13px;
+    border-radius: 6px;
+    border: 1px solid #555555;
+    min-height: 28px;
+    min-width: 120px;
+}
+
+#top_frame QPushButton:hover, #main_form QPushButton:hover {
+    background-color: #444444;
+    color: #aaff00; /* Vurgu rengi yeşil yapıldı */
+}
+#top_frame QPushButton:pressed, #main_form QPushButton:pressed {
+   padding-top: 5px;
+}
+
+/* ============================================================
+   3. GİRİŞ ALANLARI (Input, ComboBox, Date)
+   ============================================================ */
+
+/* Özel Kod Alanları (Parlak Yeşil) */
+#txt_personel_kodu, #txt_musteri_kodu, #txt_arac_kodu, #txt_sozlesme_kodu {
+    background: transparent;
+    border: none;
+    font-family: 'Courier New';
+    font-weight: bold;
+    font-size: 14pt;
+    color: #aaff00;
+}
+
+/* Genel Alanlar */
+QLineEdit, QComboBox, QDateEdit {
+    background-color: #1e1e1e;
+    border: 1px solid #444444;
+    border-radius: 6px;
+    color: #ffffff;
+    font-weight: bold;
+    padding: 4px;
+}
+
+/* Focus (Odaklanma) Durumu */
+QLineEdit:focus, QComboBox:focus, QDateEdit:focus {
+    background-color: #2d2d2d;
+    border: 1px solid #aaff00;
+    color: #aaff00;
+}
+
+/* Açılır Kutu Listesi (Önemli: Dark Mode Uyumu) */
+QComboBox QAbstractItemView {
+    background-color: #252525;
+    color: #ffffff;
+    border: 1px solid #444444;
+    selection-background-color: #5500ff;
+    selection-color: #ffffff;
+}
+
+/* ============================================================
+   4. ETİKETLER, GRUPLAR VE SEÇİCİLER (CheckBox/Radio)
+   ============================================================ */
+
+QLabel { color: #ffffff; background: transparent; }
+
+QGroupBox {
+    font-family: 'Poppins';
+    font-weight: bold;
+    color: #ffffff;
+    border: 2px solid #333333;
+    border-radius: 10px;
+    margin-top: 12px;
+    padding-top: 10px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 15px;
+    padding: 0 5px;
+    color: #aaff00;
+}
+
+/* CheckBox ve RadioButton */
+QCheckBox, QRadioButton { color: #ffffff; spacing: 8px; }
+
+QCheckBox::indicator, QRadioButton::indicator {
+    width: 18px; height: 18px;
+    border: 2px solid #555555;
+    background-color: #121212;
+}
+QRadioButton::indicator { border-radius: 10px; }
+
+QCheckBox::indicator:checked {
+    background-color: #50ff3c;
+    image: url(:/resimler/ok.png);
+}
+
+QRadioButton::indicator:checked {
+    background-color: qradialgradient(cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,
+                                      stop:0 #ffaa00, stop:0.7 #ffaa00, stop:0.8 transparent);
+}
+
+/* ============================================================
+   5. TABLO VE LİSTE GÖRÜNÜMÜ
+   ============================================================ */
+
+QTableWidget {
+    background-color: #1e1e1e; /* Tablo içi siyah/gri */
+    color: #ffffff;
+    gridline-color: #333333;
+    border: 1px solid #444444;
+    selection-background-color: #2d2d2d;
+}
+
+QHeaderView::section {
+    background-color: #162D6D;
+    color: white;
+    padding: 4px;
+    border: 1px solid #333333;
+}
+
+QListView {
+    background-color: #1e1e1e;
+    color: #ffee00;
+    border: 1px solid #444444;
+}
+
+/* Tüm form etiketleri için kontrastı artırılmış stil */
+QLabel {
+    color: #FFFFFF; 
+    font-weight: bold;
+    /* Metnin arkasına hafif bir siyah gölge ekleyerek her zeminde okunmasını sağlarız */
+    text-shadow: 1px 1px 2px #000000; 
+}
+
+/* Özellikle belirttiğiniz frame içindeki etiketler için ekstra parlaklık */
+QFrame#top_frame QLabel, QFrame#middle_n_frame QLabel, QFrame#middle_s_frame QLabel {
+    color: #FFF9C4; /* Çok açık sarı (beyaza yakın), koyu zeminde harika görünür */
+}
+/* Sekmelerin genel miras ayarı */
+QTabWidget::pane {
+    border: 1px solid #444;
+    background: transparent;
+}
+
+/* Normal Sekme Görünümü */
+QTabBar::tab {
+    background-color: #2C2C2C; /* Koyu gri */
+    color: #ffffff;
+    padding: 8px 12px;
+    border: 1px solid #444;
+    border-bottom: none;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+}
+
+/* İŞTE ÇÖZÜM: Üzerine gelince siyah olmasını engelleyen kod */
+QTabBar::tab:hover {
+    background-color: #3d3d3d; /* Siyah yerine bir tık açık gri */
+    color: #ffee00;            /* Üzerine gelince yazı sarı olsun */
+    border: 1px solid #ffee00;
+}
+
+/* Seçili olan sekme her zaman sabit kalsın */
+QTabBar::tab:selected {
+    background-color: #162D6D; /* Sizin koyu mavi tonunuz */
+    color: #ffffff;
+    border: 1px solid #5500ff;
+}
+/* 1. TÜM DİALOG VE MESAJ KUTUSU ZEMİNİ */
+QDialog, QMessageBox {
+    background-color: #121212; /* Ana siyah zemininiz */
+    border: 1px solid #444444;
+}
+
+/* 2. MESAJ KUTUSU İÇİNDEKİ METİNLER */
+QMessageBox QLabel {
+    color: #ffffff; /* Mesaj içeriği beyaz olsun */
+    font-size: 13px;
+    background: transparent;
+}
+
+/* 3. DİALOG VE MESAJ KUTUSU BUTONLARI */
+/* Mesaj kutularındaki "Tamam", "İptal" gibi butonları hedefler */
+QDialog QPushButton, QMessageBox QPushButton {
+    background-color: #2c2c2c;
+    color: #ffffff;
+    border: 1px solid #555555;
+    border-radius: 4px;
+    padding: 5px 15px;
+    min-width: 80px;
+}
+
+QDialog QPushButton:hover, QMessageBox QPushButton:hover {
+    background-color: #3d3d3d;
+    border: 1px solid #aaff00; /* Sizin yeşil/sarı vurgunuz */
+    color: #aaff00;
+}
+QDialog QPushButton:hover, QMessageBox QPushButton:hover {padding-top:5px;}
+/* 4. DİALOG İÇİNDEKİ FORM ELEMANLARI (Mirasın devamı) */
+/* Eğer Dialog içinde giriş alanları varsa onları da sağlama alalım */
+QDialog QLineEdit, QDialog QComboBox, QDialog QDateEdit {
+    background-color: #1e1e1e;
+    border: 1px solid #444444;
+    color: #FFF9C4;
+}
+/* 1. TABLONUN GENEL GÖVDESİ VE YAZI RENGİ */
+/* # işareti ile sadece bu objectName'e sahip tabloyu hedefliyoruz */
+QTableWidget#tbl_toplu_puantaj {
+    background-color: #1e1e1e; /* Tablo zeminini koyu yapıyoruz */
+    gridline-color: #333333;   /* Izgara çizgileri */
+    border: 1px solid #444444;
+    outline: none;             /* Odak çerçevesini kaldırır */
+}
+
+/* 2. SATIRLARIN (ITEM) YAZI RENGİ - GÖRÜNÜRLÜK BURADA SAĞLANIR */
+QTableWidget#tbl_toplu_puantaj::item {
+    color: #000;            /* Yazılar beyaz (Veya isterseniz #FFF9C4 sarı) */
+    padding: 5px;
+    background-color: transparent; /* Zemin rengini tablodan miras alır */
+}
+
+/* 3. SEÇİLİ SATIR (DİĞERLERİNDEN FARKLI OLABİLİR) */
+QTableWidget#tbl_toplu_puantaj::item:selected {
+    background-color: #5500ff; /* Seçince mor vurgu */
+    color: #000;            /* Seçili yazı rengi */
+}
+
+/* 4. BU TABLONUN BAŞLIKLARI (DİĞER TABLOLARDAN AYRI) */
+#tbl_toplu_puantaj QHeaderView::section {
+    background-color: #2c2c2c; /* Başlık arka planı */
+    color: #aaff00;            /* Başlık yazısı yeşil (Diğerlerinden farklı) */
+    font-weight: bold;
+    border: 1px solid #444444;
+}

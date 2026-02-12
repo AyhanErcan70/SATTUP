@@ -19,117 +19,6 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <property name="styleSheet">
-   <string notr="true">QWidget#main_form{border-image: url(:/resimler/a22.png);}
-
-QFrame#top_frame QLineEdit#txt_personel_kodu, QFrame#top_frame QLineEdit#txt_musteri_kodu, QFrame#top_frame QLineEdit#txt_arac_kodu, QFrame#top_frame QLineEdit#txt_sozlesme_kodu{
-	border: none;
-	background:none;
-	background-color:transparent;
-	font-family: &quot;&quot;Poppins&quot;&quot;;
-	font-weight: bold;
-	font-size: 12pt;
-	text-align: center;
-	color:#00ff7f;
-}
-QFrame QLineEdit, QFrame QComboBox, QFrame QateEdit {
-	background-color: #fff;
-	border-radius: 6px;
-} 
-QFrame QLineEdit:focus, QFrame QComboBox:focus, QFrame QateEdit:focus {
-	background-color: #ffff10;
-	border: 1px solid #da0000;
-	border-radius: 6px;
-} 
-
-QFrame#top_frame QLabel, QFrame#middle_n_frame QLabel, QFrame#middle_s_frame QLabel{color: rgb(202, 255, 255);font_family: &quot;Calibri&quot;;font-size: 14px;}
-QFrame#top_frame QLabel#lbl_photo{font-size: 10px;}
-
-QWidget#main_form QPushButton {
-	background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                      stop:0 #B0B0B0, stop: 0.5 #9D9D9D,
-                                      stop: 0.6 #8D8D8D, stop:1 #686868);
-    color: #162d6d;
-    font-family: 'Yu Gothic UI', sans-serif; 
-	font-weight: bold;   
-    font-size: 12px;
-    border-radius: 8px;
-	border-top: 1px solid #C0C0C0;
-    border-left: 1px solid #C0C0C0;
-    border-right: 2px solid #000; 
-    border-bottom: 3px solid #000; 
-	min-height: 28px;
-    margin-right: 4px; 
-    margin-bottom: 5px;    
-}
-QWidget#main_form QPushButton:hover {
-    color: #fff;
-   font-size:14px;
-    border-right: 4px solid #A9A9A9;
-    border-bottom: 5px solid #808080;
-}
-
-QWidget#main_form QPushButton:pressed {
-    color: #55ff00;
-    border-top: 2px solid #696969;
-    border-left: 2px solid #696969;
-    border-right: 1px solid #808080;   
-    border-bottom: 1px solid #808080;     
-    margin-top: 4px;  
-    margin-left: 0px; 
-    margin-bottom: 1px;
-    margin-right: 2px;    
-    padding-top: 10px;  
-}
-
-QFrame#top_frame QTableWidget{
-	color: #000;
-    background-color: #ffffff;
-    alternate-background-color: #cfd0d1;
-    gridline-color: #96999c;            
-    border: 1px solid #4e4e50;
-    border-radius: 4px;
-       
-    outline: 0;                        
-}
-QFrame#top_frame QHeaderView::section, QFrame#bottom_frame QHeaderView::section, QFrame#middle_n_frame QHeaderView::section, QFrame#middle_s_frame QHeaderView::section {
-    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                      stop:0 #2246AA, stop: 0.5 #1A3580,
-                                      stop: 0.6 #162d6d, stop:1 #20409c);
-    color: white;
-    padding-left: 4px;
-    border: 1px solid #6c6c6c;
-}
-
-QFrame#top_frame QTableWidget::item, QFrame#bottom_frame QTableWidget::item, QFrame#middle_n_frame QTableWidget::item, QFrame#middle_s_frame QTableWidget::item {
-    padding: 2px 6px;
-    border-bottom: 1px solid #757779;
-}
-
-QFrame#top_frame QTableWidget::item:selected, QFrame#bottom_frame QTableWidget::item:selected, QFrame#middle_n_frame QTableWidget::item:selected, QFrame#middle_s_frame QTableWidget::item:selected {
-    background-color: #e1f5fe;
-    color: #162D6D;
-    border-left: 3px solid #01c4ff;  
-}
-
-QFrame#top_frame QTableWidget QTableCornerButton::section, QFrame#bottom_frame QTableWidget QTableCornerButton::section, QFrame#middle_n_frame QTableWidget QTableCornerButton::section, QFrame#middle_s_frame QTableWidget QTableCornerButton::section {
-    background-color: #162D6D;
-    border: none;
-}
-/*QWidget#main_form QComboBox::down-arrow {
-	image: url(:/simgeler/down-arrow2.png);}
-
-QWidget#main_form QComboBox::down-arrow:on { 
-    top: 1px;
-    left: 1px;
-}*/
-
-
-
-
-
-</string>
-  </property>
   <layout class="QGridLayout" name="gridLayout_6">
    <property name="leftMargin">
     <number>0</number>
@@ -143,13 +32,10 @@ QWidget#main_form QComboBox::down-arrow:on {
    <property name="bottomMargin">
     <number>0</number>
    </property>
-   <property name="horizontalSpacing">
+   <property name="spacing">
     <number>0</number>
    </property>
-   <property name="verticalSpacing">
-    <number>6</number>
-   </property>
-   <item row="0" column="0">
+   <item row="0" column="0" alignment="Qt::AlignmentFlag::AlignTop">
     <widget class="QFrame" name="top_frame">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -172,6 +58,7 @@ QWidget#main_form QComboBox::down-arrow:on {
      <property name="font">
       <font>
        <family>Yu Gothic UI</family>
+       <pointsize>10</pointsize>
       </font>
      </property>
      <property name="frameShape">
@@ -246,7 +133,7 @@ QWidget#main_form QComboBox::down-arrow:on {
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
            </font>
@@ -282,14 +169,10 @@ QWidget#main_form QComboBox::down-arrow:on {
           <property name="font">
            <font>
             <family>Calibri</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>true</italic>
             <bold>false</bold>
            </font>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">
-image: url(:/resim/Photo.png);</string>
           </property>
           <property name="frameShape">
            <enum>QFrame::Shape::Box</enum>
@@ -439,9 +322,6 @@ image: url(:/resim/Photo.png);</string>
             <kerning>true</kerning>
            </font>
           </property>
-          <property name="styleSheet">
-           <string notr="true"/>
-          </property>
           <property name="placeholderText">
            <string/>
           </property>
@@ -470,7 +350,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
             <kerning>true</kerning>
@@ -507,7 +387,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
             <kerning>true</kerning>
@@ -544,14 +424,11 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
             <kerning>true</kerning>
            </font>
-          </property>
-          <property name="styleSheet">
-           <string notr="true"/>
           </property>
           <property name="text">
            <string>IBAN No</string>
@@ -584,7 +461,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
             <kerning>true</kerning>
@@ -726,9 +603,6 @@ image: url(:/resim/Photo.png);</string>
             <kerning>true</kerning>
            </font>
           </property>
-          <property name="styleSheet">
-           <string notr="true">image: url(:/simgeler/down-arrow2.png);</string>
-          </property>
           <property name="iconSize">
            <size>
             <width>8</width>
@@ -766,7 +640,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
             <kerning>true</kerning>
@@ -803,7 +677,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
             <kerning>true</kerning>
@@ -840,7 +714,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
             <kerning>true</kerning>
@@ -877,7 +751,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
             <kerning>true</kerning>
@@ -1056,7 +930,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
             <kerning>true</kerning>
@@ -1093,7 +967,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
             <kerning>true</kerning>
@@ -1130,7 +1004,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
             <kerning>true</kerning>
@@ -1167,7 +1041,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
             <kerning>true</kerning>
@@ -1340,14 +1214,11 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
             <kerning>true</kerning>
            </font>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">QLabel {background-color: transparent;}</string>
           </property>
           <property name="text">
            <string>Doğ.Tarihi</string>
@@ -1380,7 +1251,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
             <kerning>true</kerning>
@@ -1417,7 +1288,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
            </font>
@@ -1453,7 +1324,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
            </font>
@@ -1582,7 +1453,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
            </font>
@@ -1618,7 +1489,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
            </font>
@@ -1654,7 +1525,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
            </font>
@@ -1698,9 +1569,6 @@ image: url(:/resim/Photo.png);</string>
           <property name="focusPolicy">
            <enum>Qt::FocusPolicy::NoFocus</enum>
           </property>
-          <property name="styleSheet">
-           <string notr="true"/>
-          </property>
           <property name="alignment">
            <set>Qt::AlignmentFlag::AlignCenter</set>
           </property>
@@ -1714,7 +1582,7 @@ image: url(:/resim/Photo.png);</string>
      </layout>
     </widget>
    </item>
-   <item row="1" column="0">
+   <item row="1" column="0" alignment="Qt::AlignmentFlag::AlignTop">
     <widget class="QFrame" name="middle_n_frame">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -1763,7 +1631,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="minimumSize">
            <size>
             <width>120</width>
-            <height>37</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -1775,13 +1643,10 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <bold>true</bold>
             <kerning>false</kerning>
            </font>
-          </property>
-          <property name="styleSheet">
-           <string notr="true"/>
           </property>
           <property name="text">
            <string>KAYDET</string>
@@ -1799,7 +1664,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="minimumSize">
            <size>
             <width>120</width>
-            <height>37</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -1811,7 +1676,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <bold>true</bold>
             <kerning>false</kerning>
            </font>
@@ -1832,7 +1697,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="minimumSize">
            <size>
             <width>120</width>
-            <height>37</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -1844,7 +1709,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <bold>true</bold>
             <kerning>false</kerning>
            </font>
@@ -1865,7 +1730,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="minimumSize">
            <size>
             <width>120</width>
-            <height>37</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -1877,7 +1742,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <bold>true</bold>
             <kerning>false</kerning>
            </font>
@@ -1898,7 +1763,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="minimumSize">
            <size>
             <width>120</width>
-            <height>37</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -1910,7 +1775,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <bold>true</bold>
             <kerning>false</kerning>
            </font>
@@ -1931,7 +1796,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="minimumSize">
            <size>
             <width>120</width>
-            <height>37</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -1943,7 +1808,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <bold>true</bold>
             <kerning>false</kerning>
            </font>
@@ -1967,7 +1832,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="minimumSize">
            <size>
             <width>120</width>
-            <height>37</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -1979,7 +1844,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <bold>true</bold>
             <kerning>false</kerning>
            </font>
@@ -2026,7 +1891,7 @@ image: url(:/resim/Photo.png);</string>
      </layout>
     </widget>
    </item>
-   <item row="2" column="0">
+   <item row="2" column="0" alignment="Qt::AlignmentFlag::AlignTop">
     <widget class="QFrame" name="middle_s_frame">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -2090,7 +1955,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
            </font>
@@ -2132,7 +1997,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
            </font>
@@ -2201,13 +2066,10 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
            </font>
-          </property>
-          <property name="styleSheet">
-           <string notr="true"/>
           </property>
           <property name="text">
            <string>TCKN</string>
@@ -2285,7 +2147,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
            </font>
@@ -2321,7 +2183,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <italic>false</italic>
             <bold>true</bold>
            </font>
@@ -2375,7 +2237,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="minimumSize">
            <size>
             <width>120</width>
-            <height>37</height>
+            <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -2387,7 +2249,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="font">
            <font>
             <family>Yu Gothic UI</family>
-            <pointsize>-1</pointsize>
+            <pointsize>10</pointsize>
             <bold>true</bold>
             <kerning>false</kerning>
            </font>
@@ -2556,9 +2418,6 @@ image: url(:/resim/Photo.png);</string>
         <property name="toolTipDuration">
          <number>0</number>
         </property>
-        <property name="styleSheet">
-         <string notr="true"/>
-        </property>
         <property name="frameShape">
          <enum>QFrame::Shape::StyledPanel</enum>
         </property>
@@ -2574,6 +2433,12 @@ image: url(:/resim/Photo.png);</string>
         <property name="selectionBehavior">
          <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
         </property>
+        <attribute name="verticalHeaderMinimumSectionSize">
+         <number>20</number>
+        </attribute>
+        <attribute name="verticalHeaderDefaultSectionSize">
+         <number>20</number>
+        </attribute>
         <column>
          <property name="text">
           <string>PERSONEL KODU</string>

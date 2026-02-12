@@ -13,9 +13,7 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <property name="styleSheet">
-   <string notr="true"/>
-  </property>
+  
   <layout class="QGridLayout" name="gridLayout_8" rowstretch="0,0,0,1">
    <property name="leftMargin">
     <number>0</number>
@@ -92,10 +90,7 @@
           <height>16777215</height>
          </size>
         </property>
-        <property name="styleSheet">
-         <string notr="true">
-image: url(:/resim/Photo.png);</string>
-        </property>
+        
         <property name="frameShape">
          <enum>QFrame::Shape::Box</enum>
         </property>
@@ -333,9 +328,7 @@ image: url(:/resim/Photo.png);</string>
             <bold>false</bold>
            </font>
           </property>
-          <property name="styleSheet">
-           <string notr="true"/>
-          </property>
+          
           <property name="placeholderText">
            <string/>
           </property>
@@ -500,9 +493,7 @@ image: url(:/resim/Photo.png);</string>
           <property name="focusPolicy">
            <enum>Qt::FocusPolicy::NoFocus</enum>
           </property>
-          <property name="styleSheet">
-           <string notr="true"/>
-          </property>
+          
           <property name="readOnly">
            <bool>true</bool>
           </property>
@@ -610,9 +601,7 @@ image: url(:/resim/Photo.png);</string>
             <kerning>true</kerning>
            </font>
           </property>
-          <property name="styleSheet">
-           <string notr="true">QLabel {background-color: transparent;}</string>
-          </property>
+          
           <property name="text">
            <string>Doğ.Tarihi</string>
           </property>
@@ -1748,9 +1737,7 @@ image: url(:/resim/Photo.png);</string>
             <bold>true</bold>
            </font>
           </property>
-          <property name="styleSheet">
-           <string notr="true"/>
-          </property>
+          
           <property name="text">
            <string>KAYDET</string>
           </property>
@@ -2085,9 +2072,7 @@ image: url(:/resim/Photo.png);</string>
             <bold>true</bold>
            </font>
           </property>
-          <property name="styleSheet">
-           <string notr="true"/>
-          </property>
+          
           <property name="text">
            <string>TCKN</string>
           </property>
@@ -2398,9 +2383,7 @@ image: url(:/resim/Photo.png);</string>
         <property name="toolTipDuration">
          <number>0</number>
         </property>
-        <property name="styleSheet">
-         <string notr="true"/>
-        </property>
+        
         <property name="frameShape">
          <enum>QFrame::Shape::StyledPanel</enum>
         </property>

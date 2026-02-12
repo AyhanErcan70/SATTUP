@@ -2,6 +2,7 @@ import os
 
 import traceback
 
+from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt6.QtCore import QDate
 from PyQt6.QtWidgets import QMainWindow, QScrollArea, QSizePolicy, QGraphicsOpacityEffect, QLabel, QGraphicsColorizeEffect, QFrame, QMessageBox, QComboBox, QPushButton, QGraphicsBlurEffect
 from PyQt6.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout
@@ -151,7 +152,7 @@ class MainMenuApp(QMainWindow):
         super().__init__()
         uic.loadUi(get_ui_path("main_window.ui"), self)
         self.user_data = user_data
-
+       
         try:
             if hasattr(self, "top_frame") and self.top_frame is not None:
                 self.top_frame.setProperty("mw_header", True)
@@ -2469,7 +2470,7 @@ class MainMenuApp(QMainWindow):
             else:
                 btn.setIcon(QIcon(fallback))
             btn.setIconSize(QSize(22, 22))
-    # --- Modül Fonksiyonları (Hepsi hazır, tıklandığında çalışır) ---
+    
     def open_users(self):
     # 1. Eğer halihazırda bir modül varsa temizle (isteğe bağlı)
         for i in reversed(range(self.mainStack.count())): 

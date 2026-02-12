@@ -25,84 +25,7 @@
   <property name="windowTitle">
    <string>Oturum Açma Paneli</string>
   </property>
-  <property name="styleSheet">
-   <string notr="true">*#auth_form{
-background-color: #162D6D;
-border-radius: 10px;
-}
-
-QWidget#logo_wid{
-image: url(:/resimler/logo-w.png);}
-QPushButton {
-	background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                      stop:0 #dcdcdd, stop: 0.5 #acacac,
-                                      stop: 0.6 #959595, stop:1 #828282);
-    color: #00007f;
-	
-    font-family: '', sans-serif;
-	font: 10pt &quot;&quot;;
-	font: 900 9pt &quot;&quot;;
-	font: 9pt &quot;&quot;;
-	font: 700 10pt &quot;DaytonaPro&quot;;
-    
-    font-size: 12px;
-    border-radius: 8px;
-	border-top: 1px solid #C0C0C0;
-    border-left: 1px solid #C0C0C0;
-    border-right: 2px solid #000;  /* Sağ gölge kalınlığı */
-    border-bottom: 3px solid #000; /* Alt gölge kalınlığı */
-    
-    margin-right: 4px; /* Gölgenin kesilmemesi için alan bırakıyoruz */
-    margin-bottom: 5px;
-    
-}
-/* Üzerine gelince gölge rengini biraz açabiliriz */
-QPushButton:hover {
-	background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                      stop:0 #dcdcdd, stop: 0.5 #acacac,
-                                      stop: 0.6 #959595, stop:1 #828282);
-    border-right: 4px solid #A9A9A9;
-    border-bottom: 5px solid #808080;
-	margin-top: 2px;
-}
-QPushButton#btn_login:hover {color:#007900;}
-QPushButton#btn_cancel:hover {color:#b10000;}
-
-/* Basıldığında gölgeler küçülmeli ki buton çökmüş görünsün */
-QPushButton:pressed {
-    color: #ffaa00;
-    border: 2px solid #ffffff;  /* Sağ gölge kaybolur */      
-    margin-top: 4px;    /* Butonu fiziksel olarak aşağı kaydırır */
-    margin-left: 2px;   /* Butonu fiziksel olarak sağa kaydırır */
-    margin-bottom: 1px;
-    margin-right: 2px;
-    padding-top: 8px;  /* Metni buton içinde aşağı kaydırır */
-}
-
-/*QPushButton#btn_login {
-background-color: green;
-font: 12pt &quot;Century Gothic&quot;;
-font-weight: bold;
-}
-QPushButton#btn_cancel {
-background-color: red;
-font: 12pt &quot;Century Gothic&quot;;
-font-weight: bold;
-}*/
-
-QLineEdit {
-font: 11pt &quot;Century Gothic&quot;;
-}
-
-QLabel{
-color:#ebebeb;
-}
-
-
-
-
-</string>
-  </property>
+  
   <property name="sizeGripEnabled">
    <bool>false</bool>
   </property>
@@ -112,12 +35,7 @@ color:#ebebeb;
   <layout class="QGridLayout" name="gridLayout_4">
    <item row="0" column="0">
     <widget class="QWidget" name="logo_wid" native="true">
-     <property name="styleSheet">
-      <string notr="true">
- image: url(:/resimler/logo-w.png);
-
-</string>
-     </property>
+     
     </widget>
    </item>
    <item row="0" column="1">
@@ -197,9 +115,7 @@ color:#ebebeb;
             <height>35</height>
            </size>
           </property>
-          <property name="styleSheet">
-           <string notr="true"/>
-          </property>
+          
           <property name="text">
            <string>GİRİŞ</string>
           </property>

@@ -19,121 +19,6 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <property name="styleSheet">
-   <string notr="true">QWidget#main_form{border-image: url(:/resimler/a22.png);}
-QWidget#main_form QLabel{color: rgb(202, 255, 255);font_family: &quot;Calibri&quot;;font-size: 14px;}
-
-QFrame#top_frame, QFrame#middle_n_frame, QFrame#middle_s_frame{background: transparent;}
-
-QFrame#top_frame QLineEdit#txt_personel_kodu, QFrame#top_frame QLineEdit#txt_musteri_kodu, QFrame#top_frame QLineEdit#txt_arac_kodu, QFrame#top_frame QLineEdit#txt_sozlesme_kodu{
-	border: none;
-	background:none;
-	background-color:transparent;
-	font-family: &quot;&quot;Poppins&quot;&quot;;
-	font-weight: bold;
-	font-size: 12pt;
-	text-align: center;
-	color:#00ff7f;
-}
-
-QFrame QLineEdit, QFrame QComboBox, QFrame QateEdit {
-	
-	background-color: #fff;
-	border-radius: 6px;
-} 
-QFrame QLineEdit:focus, QFrame QComboBox:focus, QFrame QateEdit:focus {
-	background-color: #ffff10;
-	border: 1px solid #da0000;
-	border-radius: 6px;
-} 
-
-QFrame#top_frame QLabel{color: rgb(202, 255, 255);font_family: &quot;Calibri&quot;;font-size: 14px;}
-QFrame#top_frame QLabel#lbl_photo{font-size: 10px;}
-
-QWidget#main_form QPushButton {
-	background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                      stop:0 #B0B0B0, stop: 0.5 #9D9D9D,
-                                      stop: 0.6 #8D8D8D, stop:1 #686868);
-    color: #162d6d;
-    font-family: 'Yu Gothic UI', sans-serif; 
-	font-weight: bold;   
-    font-size: 12px;
-    border-radius: 8px;
-	border-top: 1px solid #C0C0C0;
-    border-left: 1px solid #C0C0C0;
-    border-right: 2px solid #000; 
-    border-bottom: 3px solid #000; 
-	min-height: 28px;
-    margin-right: 4px; 
-    margin-bottom: 5px;    
-}
-QWidget#main_form QPushButton:hover {
-    color: #fff;
-   font-size:14px;
-    border-right: 4px solid #A9A9A9;
-    border-bottom: 5px solid #808080;
-}
-
-QWidget#main_form QPushButton:pressed {
-    color: #55ff00;
-    border-top: 2px solid #696969;
-    border-left: 2px solid #696969;
-    border-right: 1px solid #808080;   
-    border-bottom: 1px solid #808080;     
-    margin-top: 4px;  
-    margin-left: 0px; 
-    margin-bottom: 1px;
-    margin-right: 2px;    
-    padding-top: 10px;  
-}
-
-QFrame#top_frame QTableWidget{
-	color: #000;
-    background-color: #ffffff;
-    alternate-background-color: #cfd0d1;
-    gridline-color: #96999c;            
-    border: 1px solid #4e4e50;
-    border-radius: 4px;
-       
-    outline: 0;                        
-}
-QFrame#top_frame QHeaderView::section, QFrame#bottom_frame QHeaderView::section, QFrame#middle_n_frame QHeaderView::section, QFrame#middle_s_frame QHeaderView::section {
-    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                      stop:0 #2246AA, stop: 0.5 #1A3580,
-                                      stop: 0.6 #162d6d, stop:1 #20409c);
-    color: white;
-    padding-left: 4px;
-    border: 1px solid #6c6c6c;
-}
-
-QFrame#top_frame QTableWidget::item, QFrame#bottom_frame QTableWidget::item, QFrame#middle_n_frame QTableWidget::item, QFrame#middle_s_frame QTableWidget::item {
-    padding: 2px 6px;
-    border-bottom: 1px solid #757779;
-}
-
-QFrame#top_frame QTableWidget::item:selected, QFrame#bottom_frame QTableWidget::item:selected, QFrame#middle_n_frame QTableWidget::item:selected, QFrame#middle_s_frame QTableWidget::item:selected {
-    background-color: #e1f5fe;
-    color: #162D6D;
-    border-left: 3px solid #01c4ff;  
-}
-
-QFrame#top_frame QTableWidget QTableCornerButton::section, QFrame#bottom_frame QTableWidget QTableCornerButton::section, QFrame#middle_n_frame QTableWidget QTableCornerButton::section, QFrame#middle_s_frame QTableWidget QTableCornerButton::section {
-    background-color: #162D6D;
-    border: none;
-}
-/*QWidget#main_form QComboBox::down-arrow {
-	image: url(:/simgeler/down-arrow2.png);}
-
-QWidget#main_form QComboBox::down-arrow:on { 
-    top: 1px;
-    left: 1px;
-}*/
-
-
-
-
-</string>
-  </property>
   <layout class="QGridLayout" name="gridLayout_4">
    <property name="leftMargin">
     <number>0</number>
@@ -779,9 +664,6 @@ QWidget#main_form QComboBox::down-arrow:on {
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="styleSheet">
-      <string notr="true"/>
-     </property>
      <property name="frameShape">
       <enum>QFrame::Shape::NoFrame</enum>
      </property>
@@ -805,7 +687,14 @@ QWidget#main_form QComboBox::down-arrow:on {
        <number>0</number>
       </property>
       <item row="0" column="0">
-       <widget class="QTableWidget" name="table_bakim"/>
+       <widget class="QTableWidget" name="table_bakim">
+        <attribute name="verticalHeaderMinimumSectionSize">
+         <number>20</number>
+        </attribute>
+        <attribute name="verticalHeaderDefaultSectionSize">
+         <number>20</number>
+        </attribute>
+       </widget>
       </item>
      </layout>
     </widget>

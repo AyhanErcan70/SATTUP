@@ -19,9 +19,6 @@
   <property name="windowTitle">
    <string>SABİT BİLGİLER</string>
   </property>
-  <property name="styleSheet">
-   <string notr="true"/>
-  </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0">
     <spacer name="verticalSpacer_7">
@@ -41,9 +38,6 @@
    </item>
    <item row="1" column="0">
     <widget class="QFrame" name="top_frame">
-     <property name="styleSheet">
-      <string notr="true"/>
-     </property>
      <property name="frameShape">
       <enum>QFrame::Shape::Box</enum>
      </property>
@@ -65,9 +59,6 @@
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
-      <property name="styleSheet">
-       <string notr="true"/>
-      </property>
       <property name="tabPosition">
        <enum>QTabWidget::TabPosition::North</enum>
       </property>
@@ -75,7 +66,7 @@
        <enum>QTabWidget::TabShape::Triangular</enum>
       </property>
       <property name="currentIndex">
-       <number>4</number>
+       <number>5</number>
       </property>
       <property name="documentMode">
        <bool>false</bool>
@@ -87,9 +78,6 @@
        <bool>false</bool>
       </property>
       <widget class="QWidget" name="tab_personel_sabitleri">
-       <property name="styleSheet">
-        <string notr="true"/>
-       </property>
        <attribute name="title">
         <string>Personeller</string>
        </attribute>
@@ -111,9 +99,6 @@
              <property name="autoFillBackground">
               <bool>false</bool>
              </property>
-             <property name="styleSheet">
-              <string notr="true"/>
-             </property>
             </widget>
            </item>
            <item>
@@ -128,9 +113,6 @@
                  <width>0</width>
                  <height>0</height>
                 </size>
-               </property>
-               <property name="styleSheet">
-                <string notr="true">image:url(:/simgeler/ekle.ico)</string>
                </property>
                <property name="text">
                 <string/>
@@ -189,18 +171,7 @@
           </property>
           <layout class="QHBoxLayout" name="horizontalLayout_3">
            <item>
-            <widget class="QListWidget" name="list_gorev">
-             <property name="styleSheet">
-              <string notr="true">QListWidget {
-    outline: 0; /* Seçim çerçevesini kaldırır */
-    border: 1px solid #bcbcbc; /* Dış çerçeve */
-}
-
-QListWidget::item {
-    border-bottom: 1px solid #d1d1d1; /* İŞTE BU: Satırları bölen belirgin çizgi */
-}</string>
-             </property>
-            </widget>
+            <widget class="QListWidget" name="list_gorev"/>
            </item>
            <item>
             <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -272,18 +243,7 @@ QListWidget::item {
           </property>
           <layout class="QHBoxLayout" name="horizontalLayout_4">
            <item>
-            <widget class="QListWidget" name="list_banka">
-             <property name="styleSheet">
-              <string notr="true">QListWidget {
-    outline: 0; /* Seçim çerçevesini kaldırır */
-    border: 1px solid #bcbcbc; /* Dış çerçeve */
-}
-
-QListWidget::item {
-    border-bottom: 1px solid #d1d1d1; /* İŞTE BU: Satırları bölen belirgin çizgi */
-}</string>
-             </property>
-            </widget>
+            <widget class="QListWidget" name="list_banka"/>
            </item>
            <item>
             <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -355,18 +315,7 @@ QListWidget::item {
           </property>
           <layout class="QHBoxLayout" name="horizontalLayout_5">
            <item>
-            <widget class="QListWidget" name="list_kan">
-             <property name="styleSheet">
-              <string notr="true">QListWidget {
-    outline: 0; /* Seçim çerçevesini kaldırır */
-    border: 1px solid #bcbcbc; /* Dış çerçeve */
-}
-
-QListWidget::item {
-    border-bottom: 1px solid #d1d1d1; /* İŞTE BU: Satırları bölen belirgin çizgi */
-}</string>
-             </property>
-            </widget>
+            <widget class="QListWidget" name="list_kan"/>
            </item>
            <item>
             <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -454,19 +403,7 @@ QListWidget::item {
             <number>0</number>
            </property>
            <item>
-            <widget class="QListWidget" name="list_iller">
-             <property name="styleSheet">
-              <string notr="true">
-QListWidget {
-    outline: 0; /* Seçim çerçevesini kaldırır */
-    border: 1px solid #bcbcbc; /* Dış çerçeve */
-}
-
-QListWidget::item {
-    border-bottom: 1px solid #d1d1d1; /* İŞTE BU: Satırları bölen belirgin çizgi */
-}</string>
-             </property>
-            </widget>
+            <widget class="QListWidget" name="list_iller"/>
            </item>
            <item>
             <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -515,9 +452,6 @@ QListWidget::item {
         </item>
         <item row="0" column="3">
          <widget class="QGroupBox" name="grp_ilceler">
-          <property name="styleSheet">
-           <string notr="true"/>
-          </property>
           <property name="title">
            <string>İLÇELER</string>
           </property>
@@ -538,18 +472,7 @@ QListWidget::item {
             <number>0</number>
            </property>
            <item>
-            <widget class="QListWidget" name="list_ilceler">
-             <property name="styleSheet">
-              <string notr="true">QListWidget {
-    outline: 0; /* Seçim çerçevesini kaldırır */
-    border: 1px solid #bcbcbc; /* Dış çerçeve */
-}
-
-QListWidget::item {
-    border-bottom: 1px solid #d1d1d1; /* İŞTE BU: Satırları bölen belirgin çizgi */
-}</string>
-             </property>
-            </widget>
+            <widget class="QListWidget" name="list_ilceler"/>
            </item>
            <item>
             <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -726,9 +649,6 @@ QListWidget::item {
                 <height>0</height>
                </size>
               </property>
-              <property name="styleSheet">
-               <string notr="true">image:url(:/simgeler/ekle.ico)</string>
-              </property>
               <property name="text">
                <string/>
               </property>
@@ -774,9 +694,6 @@ QListWidget::item {
                 <width>0</width>
                 <height>0</height>
                </size>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">image:url(:/simgeler/ekle.ico)</string>
               </property>
               <property name="text">
                <string/>
@@ -876,9 +793,6 @@ QListWidget::item {
               <height>0</height>
              </size>
             </property>
-            <property name="styleSheet">
-             <string notr="true">image:url(:/simgeler/ekle.ico)</string>
-            </property>
             <property name="text">
              <string/>
             </property>
@@ -924,9 +838,6 @@ QListWidget::item {
               <width>0</width>
               <height>0</height>
              </size>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">image:url(:/simgeler/ekle.ico)</string>
             </property>
             <property name="text">
              <string/>
@@ -996,9 +907,6 @@ QListWidget::item {
               <width>0</width>
               <height>0</height>
              </size>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">image:url(:/simgeler/ekle.ico)</string>
             </property>
             <property name="text">
              <string/>
@@ -1680,6 +1588,12 @@ QListWidget::item {
         </item>
         <item row="3" column="0">
          <widget class="QTableWidget" name="table_belge_tanimlari">
+          <attribute name="verticalHeaderMinimumSectionSize">
+           <number>20</number>
+          </attribute>
+          <attribute name="verticalHeaderDefaultSectionSize">
+           <number>20</number>
+          </attribute>
           <column>
            <property name="text">
             <string>ID</string>

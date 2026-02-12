@@ -1,0 +1,117 @@
+/* ============================================================
+   1. ANA YAPI (Koyu Füme Zemin)
+   ============================================================ */
+#centralwidget {
+    background-color: #232526; /* Koyu antrasit/füme zemin */
+}
+
+/* Sayfaların zemin rengini sızdırması için şeffaflık */
+QStackedWidget, #page_modules_container, #main_form {
+    background: transparent;
+}
+
+/* ============================================================
+   2. BUTONLAR (Canlı Turuncu Vurgular)
+   ============================================================ */
+QPushButton {
+    background-color: #333333;
+    color: #FFFFFF;
+    border: 1px solid #444444;
+    border-radius: 4px;
+    padding: 6px;
+    font-weight: bold;
+	min-width:100 px;
+	min-height: 25px;
+	max-height:25px;
+}
+
+/* Ana menü butonları veya vurgulanmış butonlar için turuncu gradyan */
+#menu_frame QPushButton {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #FF8C00, stop:1 #E65100);
+    color: white;
+    border: none;
+	text-align: left;
+}
+
+#menu_frame QPushButton:hover {
+    background-color: #FF9800; /* Daha parlak bir turuncu */
+    color: #000000;
+}
+#menu_frame QPushButton:pressed {
+    background-color: #FF9800; /* Daha parlak bir turuncu */
+    color: #000000;
+	padding-top: 15px;
+}
+
+/* ============================================================
+   3. GİRİŞ ALANLARI (Turuncu Çerçeveli)
+   ============================================================ */
+QLineEdit, QComboBox, QDateEdit {
+    background-color: #2D2D2D;
+    border: 1px solid #555555;
+    border-radius: 4px;
+    color: #FFB74D; /* Açık turuncu metin */
+    padding: 4px;
+}
+
+QLineEdit:focus {
+    border: 2px solid #FF8C00; /* Odaklanınca yanan turuncu çerçeve */
+    background-color: #333333;
+}
+
+/* ============================================================
+   4. TABLOLAR (Sıcak Tonlar)
+   ============================================================ */
+QTableWidget {
+    background-color: #232526;
+    color: #FFFFFF;
+    gridline-color: #3D3D3D;
+    selection-background-color: rgba(255, 140, 0, 100); /* Şeffaf turuncu seçim */
+}
+
+QHeaderView::section {
+    background-color: #1A1A1B;
+    color: #FF8C00; /* Başlık metinleri turuncu */
+    padding: 5px;
+    border: 1px solid #333333;
+    font-weight: bold;
+}
+
+/* ============================================================
+   5. SEKMELER (TABWIDGET)
+   ============================================================ */
+QTabBar::tab {
+    background-color: #333333;
+    color: #B0B0B0;
+    padding: 8px 15px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+}
+
+QTabBar::tab:selected {
+    background-color: #FF8C00;
+    color: #000000;
+    font-weight: bold;
+}
+
+/* ============================================================
+   6. GROUPBOX VE DİĞERLERİ
+   ============================================================ */
+QGroupBox {
+    border: 2px solid #FF8C00;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+
+QGroupBox::title {
+    color: #FF8C00;
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 5px;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #FF8C00;
+    border: 1px solid #E65100;
+}

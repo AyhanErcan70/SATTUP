@@ -76,20 +76,7 @@
                  <bold>true</bold>
                 </font>
                </property>
-               <property name="styleSheet">
-                <string notr="true">QCheckBox::indicator {
-    width: 18px;
-    height: 18px;
-    border: 1px solid #162D6D;
-    border-radius: 4px;
-    background-color: white;
-}
-
-QCheckBox::indicator:checked {
-    background-color: #162D6D; /* Seçilince lacivert olsun */
-    image: url(:/resim/check_icon.png); /* Varsa bir check ikonu */
-}</string>
-               </property>
+               
                <property name="text">
                 <string>VARDİYA-1 SEFER</string>
                </property>
@@ -165,10 +152,7 @@ QCheckBox::indicator:checked {
                  <property name="toolTipDuration">
                   <number>-1</number>
                  </property>
-                 <property name="styleSheet">
-                  <string notr="true">QComboBox::drop-down {border: none; width: 0px;}
-</string>
-                 </property>
+                 
                  <property name="editable">
                   <bool>true</bool>
                  </property>
@@ -245,9 +229,7 @@ QCheckBox::indicator:checked {
                    <height>28</height>
                   </size>
                  </property>
-                 <property name="styleSheet">
-                  <string notr="true">QComboBox::drop-down {border: none; width: 0px;}</string>
-                 </property>
+                 
                  <property name="editable">
                   <bool>true</bool>
                  </property>
@@ -297,20 +279,7 @@ QCheckBox::indicator:checked {
                  <bold>true</bold>
                 </font>
                </property>
-               <property name="styleSheet">
-                <string notr="true">QCheckBox::indicator {
-    width: 18px;
-    height: 18px;
-    border: 1px solid #162D6D;
-    border-radius: 4px;
-    background-color: white;
-}
-
-QCheckBox::indicator:checked {
-    background-color: #162D6D; /* Seçilince lacivert olsun */
-    image: url(:/resim/check_icon.png); /* Varsa bir check ikonu */
-}</string>
-               </property>
+               
                <property name="text">
                 <string>VARDİYA-2 SEFER</string>
                </property>
@@ -386,10 +355,7 @@ QCheckBox::indicator:checked {
                  <property name="toolTipDuration">
                   <number>-1</number>
                  </property>
-                 <property name="styleSheet">
-                  <string notr="true">QComboBox::drop-down {border: none; width: 0px;}
-</string>
-                 </property>
+                 
                  <property name="editable">
                   <bool>true</bool>
                  </property>
@@ -466,9 +432,7 @@ QCheckBox::indicator:checked {
                    <height>28</height>
                   </size>
                  </property>
-                 <property name="styleSheet">
-                  <string notr="true">QComboBox::drop-down {border: none; width: 0px;}</string>
-                 </property>
+                 
                  <property name="editable">
                   <bool>true</bool>
                  </property>
@@ -518,20 +482,7 @@ QCheckBox::indicator:checked {
                  <bold>true</bold>
                 </font>
                </property>
-               <property name="styleSheet">
-                <string notr="true">QCheckBox::indicator {
-    width: 18px;
-    height: 18px;
-    border: 1px solid #162D6D;
-    border-radius: 4px;
-    background-color: white;
-}
-
-QCheckBox::indicator:checked {
-    background-color: #162D6D; /* Seçilince lacivert olsun */
-    image: url(:/resim/check_icon.png); /* Varsa bir check ikonu */
-}</string>
-               </property>
+               
                <property name="text">
                 <string>VARDİYA-3 SEFER</string>
                </property>
@@ -607,10 +558,7 @@ QCheckBox::indicator:checked {
                  <property name="toolTipDuration">
                   <number>-1</number>
                  </property>
-                 <property name="styleSheet">
-                  <string notr="true">QComboBox::drop-down {border: none; width: 0px;}
-</string>
-                 </property>
+                 
                  <property name="editable">
                   <bool>true</bool>
                  </property>
@@ -687,9 +635,7 @@ QCheckBox::indicator:checked {
                    <height>28</height>
                   </size>
                  </property>
-                 <property name="styleSheet">
-                  <string notr="true">QComboBox::drop-down {border: none; width: 0px;}</string>
-                 </property>
+                 
                  <property name="editable">
                   <bool>true</bool>
                  </property>
@@ -771,20 +717,7 @@ QCheckBox::indicator:checked {
                    <bold>true</bold>
                   </font>
                  </property>
-                 <property name="styleSheet">
-                  <string notr="true">QCheckBox::indicator {
-    width: 18px;
-    height: 18px;
-    border: 1px solid #162D6D;
-    border-radius: 4px;
-    background-color: white;
-}
-
-QCheckBox::indicator:checked {
-    background-color: #162D6D; /* Seçilince lacivert olsun */
-    image: url(:/resim/check_icon.png); /* Varsa bir check ikonu */
-}</string>
-                 </property>
+                 
                  <property name="text">
                   <string>SABAH AKŞAM</string>
                  </property>
@@ -860,10 +793,7 @@ QCheckBox::indicator:checked {
                    <property name="toolTipDuration">
                     <number>-1</number>
                    </property>
-                   <property name="styleSheet">
-                    <string notr="true">QComboBox::drop-down {border: none; width: 0px;}
-</string>
-                   </property>
+                   
                    <property name="editable">
                     <bool>true</bool>
                    </property>
@@ -940,9 +870,7 @@ QCheckBox::indicator:checked {
                      <height>28</height>
                     </size>
                    </property>
-                   <property name="styleSheet">
-                    <string notr="true">QComboBox::drop-down {border: none; width: 0px;}</string>
-                   </property>
+                   
                    <property name="editable">
                     <bool>true</bool>
                    </property>
@@ -992,20 +920,7 @@ QCheckBox::indicator:checked {
                    <bold>true</bold>
                   </font>
                  </property>
-                 <property name="styleSheet">
-                  <string notr="true">QCheckBox::indicator {
-    width: 18px;
-    height: 18px;
-    border: 1px solid #162D6D;
-    border-radius: 4px;
-    background-color: white;
-}
-
-QCheckBox::indicator:checked {
-    background-color: #162D6D; /* Seçilince lacivert olsun */
-    image: url(:/resim/check_icon.png); /* Varsa bir check ikonu */
-}</string>
-                 </property>
+                 
                  <property name="text">
                   <string>MESAİ SEFER</string>
                  </property>
@@ -1081,10 +996,7 @@ QCheckBox::indicator:checked {
                    <property name="toolTipDuration">
                     <number>-1</number>
                    </property>
-                   <property name="styleSheet">
-                    <string notr="true">QComboBox::drop-down {border: none; width: 0px;}
-</string>
-                   </property>
+                   
                    <property name="editable">
                     <bool>true</bool>
                    </property>
@@ -1161,9 +1073,7 @@ QCheckBox::indicator:checked {
                      <height>28</height>
                     </size>
                    </property>
-                   <property name="styleSheet">
-                    <string notr="true">QComboBox::drop-down {border: none; width: 0px;}</string>
-                   </property>
+                   
                    <property name="editable">
                     <bool>true</bool>
                    </property>
@@ -1243,20 +1153,7 @@ QCheckBox::indicator:checked {
                    <bold>true</bold>
                   </font>
                  </property>
-                 <property name="styleSheet">
-                  <string notr="true">QCheckBox::indicator {
-    width: 18px;
-    height: 18px;
-    border: 1px solid #162D6D;
-    border-radius: 4px;
-    background-color: white;
-}
-
-QCheckBox::indicator:checked {
-    background-color: #162D6D; /* Seçilince lacivert olsun */
-    image: url(:/resim/check_icon.png); /* Varsa bir check ikonu */
-}</string>
-                 </property>
+                 
                  <property name="text">
                   <string>EK / ÖZEL SEFER</string>
                  </property>
@@ -1332,10 +1229,7 @@ QCheckBox::indicator:checked {
                    <property name="toolTipDuration">
                     <number>-1</number>
                    </property>
-                   <property name="styleSheet">
-                    <string notr="true">QComboBox::drop-down {border: none; width: 0px;}
-</string>
-                   </property>
+                   
                    <property name="editable">
                     <bool>true</bool>
                    </property>
@@ -1412,9 +1306,7 @@ QCheckBox::indicator:checked {
                      <height>28</height>
                     </size>
                    </property>
-                   <property name="styleSheet">
-                    <string notr="true">QComboBox::drop-down {border: none; width: 0px;}</string>
-                   </property>
+                   
                    <property name="editable">
                     <bool>true</bool>
                    </property>

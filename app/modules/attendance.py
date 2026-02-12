@@ -770,7 +770,7 @@ class AttendanceApp(QWidget):
     def _export_excel(self):
         ctx = self._current_context()
         if ctx is None:
-            QMessageBox.warning(self, "Uyarı", "Müşteri / Sözleşme / Hizmet seçiniz.")
+            QMessageBox.warning(self, "Uyarı", "   Müşteri / Sözleşme / Hizmet seçiniz.")
             return
 
         tab_name = "Puantaj"

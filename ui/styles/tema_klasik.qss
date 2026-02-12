@@ -1,0 +1,129 @@
+/* ============================================================
+   1. ANA YAPI (Açık Gri / Beyaz Zemin)
+   ============================================================ */
+#centralwidget {
+    background-color: #F0F0F0; /* Klasik Windows açık gri zemin */
+}
+
+/* Katmanları şeffaf bırakıyoruz ki gri zemin yukarı sızsın */
+QStackedWidget, QStackedWidget > QWidget, #main_form, #page_modules_container {
+    background: transparent;
+}
+#menu_frame QPushButton {background-color: #E1E1E1;
+    color: #000000;
+	font-family: 'Verdana';
+	font-size: 14px;
+    border-radius: 8px; 
+	min-width: 110px;
+	max-widht:110px;
+	min-height: 30px;
+	max-height: 30px;
+	text-align: left;
+	padding-left: 10px;
+}
+QPushButton#btn_session_toggle {font-family: 'Yu Gothic UI'; font-size: 12px; font-weight: bold; min-width: 90px; min-height: 25px;border-radius: 8px;}
+#menu_frame QPushButton:hover, QMainWindow QPushButton:hover {background-color: #E5F1FB; border: 1px solid #0078D7;}
+#menu_frame QPushButton:pressed, QMainWindow QPushButton:pressed {background-color: #CCE4F7;border: 1px solid #0078D7;}
+
+
+/* ============================================================
+   2. BUTONLAR (Geleneksel Ofis Görünümü)
+   ============================================================ */
+QPushButton {
+    background-color: #E1E1E1;
+    color: #000000;
+    border: 1px solid #ADADAD;
+    border-radius: 2px; /* Keskin köşeler klasiktir */
+    padding: 5px 10px;
+    font-family: 'Segoe UI', Tahoma;
+    font-size: 12px;
+}
+
+QPushButton:hover {
+    background-color: #E5F1FB; /* Açık mavi vurgu */
+    border: 1px solid #0078D7;
+}
+
+QPushButton:pressed {
+    background-color: #CCE4F7;
+    border: 1px solid #005499;
+}
+
+/* ============================================================
+   3. GİRİŞ ALANLARI (Beyaz Zemin, Siyah Yazı)
+   ============================================================ */
+QLineEdit, QComboBox, QDateEdit {
+    background-color: #FFFFFF;
+    border: 1px solid #7A7A7A;
+    border-radius: 0px; /* Klasik kutu yapısı */
+    color: #000000;
+    padding: 3px;
+}
+
+QLineEdit:focus {
+    border: 1px solid #0078D7;
+}
+#txt_personel_kodu, #txt_musteri_kodu, #txt_arac_kodu, #txt_sozlesme_kodu {
+    background: transparent;
+    border: none;
+    font-family: 'Courier New';
+    font-weight: bold;
+    font-size: 14pt;
+    color: #e7891d;
+}
+/* ============================================================
+   4. TABLOLAR VE LİSTELER (Yüksek Okunabilirlik)
+   ============================================================ */
+QTableWidget {
+    background-color: #FFFFFF;
+    color: #000000;
+    gridline-color: #D0D0D0;
+    border: 1px solid #828790;
+    selection-background-color: #0078D7; /* Klasik Windows seçili satır mavisi */
+    selection-color: #FFFFFF;
+}
+
+QHeaderView::section {
+    background-color: #F0F0F0; /* Başlıklar gri */
+    color: #000000;
+    padding: 4px;
+    border: 1px solid #D0D0D0;
+    font-weight: normal;
+}
+
+/* ============================================================
+   5. LABELLER VE GROUPBOX
+   ============================================================ */
+QLabel {
+    color: #000000;
+    background: transparent;
+}
+QLabel#lbl_photo, QLabel#lbl_arac_foto{border: 4px solid gray;}
+QGroupBox {
+    border: 1px solid #C0C0C0;
+    margin-top: 10px;
+    font-weight: bold;
+    color: #000000;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 3px;
+}
+
+/* ============================================================
+   6. SEKMELER (TABWIDGET)
+   ============================================================ */
+QTabBar::tab {
+    background-color: #E1E1E1;
+    border: 1px solid #ADADAD;
+    border-bottom: none;
+    padding: 6px 12px;
+    color: #000000;
+}
+
+QTabBar::tab:selected {
+    background-color: #FFFFFF; /* Seçili sekme beyaz (kağıt gibi) */
+    border-bottom: 1px solid #FFFFFF;
+}

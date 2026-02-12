@@ -13,25 +13,6 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <property name="styleSheet">
-   <string notr="true">QWidget#main_form QPushButton, QLineEdit, QComboBox{
-
-border :1px solid black;
-border-radius: 6px;
-}
-QWidget#main_form QPushButton{
-background-color: #b0b0b0;
-}
-QWidget#main_form QPushButton:hover{
-border:2px solid black;
-padding-top: 4px;
-font-weight: bold;
-}
-QWidget#main_form QPushButton:pressed{
-background-color: #7e7e7e;
-border-color: red;
-}</string>
-  </property>
   <layout class="QGridLayout" name="gridLayout_4">
    <property name="leftMargin">
     <number>0</number>
@@ -834,7 +815,7 @@ border-color: red;
       <item row="0" column="0">
        <widget class="QTabWidget" name="tab_contracts">
         <property name="currentIndex">
-         <number>0</number>
+         <number>1</number>
         </property>
         <widget class="QWidget" name="tab_list">
          <attribute name="title">
@@ -858,11 +839,20 @@ border-color: red;
             <property name="sizeAdjustPolicy">
              <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustIgnored</enum>
             </property>
+            <property name="selectionMode">
+             <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>
+            </property>
+            <property name="selectionBehavior">
+             <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+            </property>
             <attribute name="horizontalHeaderDefaultSectionSize">
              <number>110</number>
             </attribute>
             <attribute name="verticalHeaderMinimumSectionSize">
-             <number>40</number>
+             <number>20</number>
+            </attribute>
+            <attribute name="verticalHeaderDefaultSectionSize">
+             <number>20</number>
             </attribute>
             <column>
              <property name="text">
@@ -905,6 +895,12 @@ border-color: red;
          <layout class="QGridLayout" name="gridLayout_tab_tarife">
           <item row="0" column="0">
            <layout class="QGridLayout" name="gridLayout_tarife_filters">
+            <property name="horizontalSpacing">
+             <number>10</number>
+            </property>
+            <property name="verticalSpacing">
+             <number>0</number>
+            </property>
             <item row="0" column="0">
              <widget class="QLabel" name="lbl_tarife_period">
               <property name="text">
@@ -913,7 +909,26 @@ border-color: red;
              </widget>
             </item>
             <item row="0" column="1">
-             <widget class="QComboBox" name="cmb_tarife_period"/>
+             <widget class="QComboBox" name="cmb_tarife_period">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>90</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>90</width>
+                <height>16777215</height>
+               </size>
+              </property>
+             </widget>
             </item>
             <item row="0" column="2">
              <widget class="QLabel" name="lbl_tarife_service_type">
@@ -923,7 +938,26 @@ border-color: red;
              </widget>
             </item>
             <item row="0" column="3">
-             <widget class="QComboBox" name="cmb_tarife_service_type"/>
+             <widget class="QComboBox" name="cmb_tarife_service_type">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>150</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>150</width>
+                <height>16777215</height>
+               </size>
+              </property>
+             </widget>
             </item>
             <item row="0" column="4">
              <widget class="QLabel" name="lbl_tarife_effective_from">
@@ -933,7 +967,26 @@ border-color: red;
              </widget>
             </item>
             <item row="0" column="5">
-             <widget class="QDateEdit" name="date_tarife_effective_from"/>
+             <widget class="QDateEdit" name="date_tarife_effective_from">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>100</width>
+                <height>16777215</height>
+               </size>
+              </property>
+             </widget>
             </item>
             <item row="0" column="6">
              <widget class="QLabel" name="lbl_tarife_pricing_model">
@@ -944,6 +997,24 @@ border-color: red;
             </item>
             <item row="0" column="7">
              <widget class="QLineEdit" name="txt_tarife_pricing_model">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>90</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>90</width>
+                <height>16777215</height>
+               </size>
+              </property>
               <property name="readOnly">
                <bool>true</bool>
               </property>

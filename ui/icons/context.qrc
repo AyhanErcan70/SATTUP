@@ -1,10 +1,14 @@
 <RCC>
   <qresource prefix="resimler">
+    <file>ocean.jpg</file>
+    <file>ok.png</file>
+    <file>ocean-2.jpg</file>
+    <file>3b_karo.jpg</file>
     <file>logo_faded2.png</file>
     <file>logo_faded480.png</file>
     <file>logo_faded720.png</file>
-    <file>a22.jpg</file>
     <file>a22.png</file>
+    <file>a22.jpg</file>
     <file>logo.png</file>
     <file>logo_faded.png</file>
     <file>logo-w.png</file>

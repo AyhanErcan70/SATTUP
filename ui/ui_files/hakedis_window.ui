@@ -876,6 +876,12 @@
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
+            <attribute name="verticalHeaderMinimumSectionSize">
+             <number>20</number>
+            </attribute>
+            <attribute name="verticalHeaderDefaultSectionSize">
+             <number>20</number>
+            </attribute>
             <column>
              <property name="text">
               <string>TÜR</string>
@@ -1125,6 +1131,12 @@
            <property name="columnCount">
             <number>10</number>
            </property>
+           <attribute name="verticalHeaderMinimumSectionSize">
+            <number>20</number>
+           </attribute>
+           <attribute name="verticalHeaderDefaultSectionSize">
+            <number>20</number>
+           </attribute>
            <column>
             <property name="text">
              <string>ID</string>

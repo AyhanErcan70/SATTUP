@@ -25,25 +25,7 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <property name="styleSheet">
-   <string notr="true">QWidget#Form{
-background-color: #8cdea1;
-}
-QDateEdit, QComboBox,QTableWidget
-{
-background-color:#ffffff;
-selection-background-color: rgb(255, 255, 127);
-}
-QPushButton{
-background-color: rgb(149, 168, 255);
-border-radius: 8px solid#00007f;
-}
-QLabel{
-background-color:#ffffa1;
-color: red;
-font-weight: bold;
-}</string>
-  </property>
+  
   <widget class="QComboBox" name="cmb_musteri_sec">
    <property name="geometry">
     <rect>

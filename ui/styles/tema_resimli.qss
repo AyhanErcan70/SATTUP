@@ -1,0 +1,103 @@
+#centralwidget {border-image: url(:/resimler/ocean-2.jpg) 0 0 0 0 stretch stretch;}
+
+QStackedWidget, QStackedWidget > QWidget, #main_form, #page_modules_container {
+    background: transparent;
+    border: none;}
+
+QWidget#page_main {background: transparent; image: url(:/resimler/logo_faded480.png) 0 0 0 0 stretch stretch;}
+
+#menu_frame QPushButton {background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0.2 #0ee1e5, stop: 0.6 #3aa7b3, stop: 0.6 #163682, stop: 0.8 #2a2f6f);
+    color: #fff;
+    font-family: 'DatonaPro'; font-size: 14px; font-weight: bold; text-align: left;
+    border-radius: 8px; border-top: 1px solid #C0C0C0; border-left: 1px solid #C0C0C0; border-right: 2px solid #000; 
+	border-bottom: 3px solid #000; 
+    padding-left : 8px;
+    margin-right: 4px;  margin-bottom: 5px;  
+    min-width: 130px;}
+
+#menu_frame QPushButton:hover {color: #ffff00; border-right: 4px solid #A9A9A9; border-bottom: 5px solid #808080;}
+#menu_frame QPushButton:pressed {color: #ffaa00; border-top: 2px solid #696969; border-left: 2px solid #696969;
+    border-right: 1px solid #808080; border-bottom: 1px solid #808080;     
+    margin-top: 4px; margin-left: 2px; 
+    padding-top: 10px;}
+
+
+QFrame#top_frame QPushButton, #main_form QPushButton {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0.5 #d3cfd9, stop: 0.2 #a1a4aa,
+                                      stop: 1.8 #848283, stop: 1 #fffcff);
+    color: #162d6d;
+    font-family: 'Yu Gothic UI'; 
+    font-weight: bold;   
+    font-size: 12px;
+    border-radius: 8px;
+    border-top: 1px solid #C0C0C0;
+    border-left: 1px solid #C0C0C0;
+    border-right: 2px solid #000; 
+    border-bottom: 3px solid #000; 
+    min-height: 24px;
+    margin-right: 4px; 
+    margin-bottom: 5px; 
+	min-width: 130px;   
+}
+QFrame#top_frame QPushButton:hover, #main_form QPushButton:hover {
+    color: #fff;
+    font-size: 14px;
+    border-right: 4px solid #A9A9A9;
+    border-bottom: 5px solid #808080;
+}
+QFrame#top_frame QPushButton:pressed, #main_form QPushButton:pressed {
+    color: #ff7e0e;
+    border-top: 2px solid #696969;
+    border-left: 2px solid #696969;
+    margin-top: 4px;  
+    padding-top: 10px;  
+}
+
+/* 5. ÖZEL GİRİŞ ALANLARI VE METİNLER (Yeşil kod alanları vb.) */
+#txt_personel_kodu, #txt_musteri_kodu, #txt_arac_kodu, #txt_sozlesme_kodu {
+    border: none;
+   
+    font-family: 'Courier New';
+    font-weight: bold;
+    font-size: 14pt;
+    color: red;}
+
+/* 6. GENEL FORM ELEMANLARI (QLineEdit, QComboBox, QDateEdit) */
+QLineEdit, QComboBox, QDateEdit {
+    background-color: transparent;
+    border-radius: 6px;
+    border: 1px solid #D4D4D4;
+    color: #162D6D;
+	font-weight: bold;
+}
+QLineEdit:focus, QComboBox:focus, QDateEdit:focus {
+    background-color: #EEEEEE;
+    border: 1px solid #da0000;
+    color: #000;
+}
+
+/* 7. ETİKETLER VE TABLOLAR */
+QFrame#top_frame QLabel, QFrame#middle_n_frame QLabel, QFrame#middle_s_frame QLabel {
+background:none;    
+
+}
+
+QTableWidget {
+    background-color:#E5E5E5;
+    color: #000;
+	gridline-color: #96999c;
+    border: 1px solid #4e4e50;
+    selection-background-color: #e1f5fe; /* Yedek seçim rengi */
+}
+
+QHeaderView::section, QHeaderView::section:checked {background-color:#162D6D;
+    /*background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #999A9, stop: 1 #9c9a9a);*/
+    color: white;
+	border: 1px solid #6c6c6c;
+}
+/* Seçili Satır */
+QTableWidget::item:selected {
+    background-color: #e1f5fe;
+    color: #162D6D;}

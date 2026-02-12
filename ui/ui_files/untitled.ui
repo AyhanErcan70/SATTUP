@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>main_form</class>
+ <widget class="QWidget" name="main_form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>690</width>
+    <height>404</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">#main_form{background-color: rgb(0, 0, 0);}
+QGroupBox {
+    font-family: 'Poppins';
+    font-weight: bold;
+    font-size: 13px;
+    border: 2px solid #565656; /* Çerçeve rengi */
+    border-radius: 10px;       /* Köşeleri yuvarlatma */
+    margin-top: 1.5em;         /* Başlık için üstten boşluk */
+    background-color: rgba(255, 255, 255, 10); /* Hafif şeffaf arka plan */
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left; /* Başlığı sol üste alır */
+    left: 10px;                    /* Soldan boşluk */
+    padding: 0 5px;                /* Yazı etrafına boşluk */
+    color: #00ff7f;                /* Sizin kullandığınız yeşil tonu */
+}
+
+QCheckBox, QRadioButton {color: #fff; font-size: 12px; spacing: 8px;}
+QCheckBox::indicator, QRadioButton::indicator {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #bababa;
+    border-radius: 0px;
+    background-color: #e6feff;
+}
+QRadioButton::indicator {border-radius: 11px; }
+
+QCheckBox::indicator:hover,QRadioButton::indicator:hover {border: 2px solid #162d6d;}
+
+QCheckBox::indicator:checked {
+    background-color: #50ff3c;
+    border: 2px solid #162d6d;
+  	image: url(:/resimler/ok.png);
+}
+QRadioButton::indicator:checked {background-color: #333333; border: 2px solid #ffaa00;}
+QRadioButton::indicator:checked {
+    background-color: qradialgradient(cx:0.5, cy:0.5, radius:0.5,
+                                      fx:0.5, fy:0.5,
+                                      stop:0 #ffaa00, stop:0.6 #ffaa00,
+                                      stop:0.7 transparent);
+}
+QComboBox {
+    background-color: transparent;
+    border-radius: 6px;
+    border: 0.5px solid #9d9d9d;
+    color: #fff;
+	font-weight: bold;
+}
+
+
+QComboBox:focus {
+    background-color: #c7c7c7;
+    /*border: 1px solid #f9e800;*/
+    color: #000;
+}
+QComboBox QAbstractItemView{
+background-color: #333333; /* Listenin arka planı */
+    color: #fff;            /* Listenin yazı rengi */
+    border: 1px solid #6c6c6c;
+    selection-background-color: #00ff7f; /* Listede üzerine gelinen satırın rengi */
+    selection-color: #000;}
+QListView::item:selected{background-color: #e1f5fe; color: #162D6D;}</string>
+  </property>
+  <widget class="QGroupBox" name="groupBox">
+   <property name="geometry">
+    <rect>
+     <x>50</x>
+     <y>10</y>
+     <width>331</width>
+     <height>211</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>GroupBox</string>
+   </property>
+   <widget class="QRadioButton" name="radioButton">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>40</y>
+      <width>98</width>
+      <height>24</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>RadioButton</string>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="radioButton_2">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>90</y>
+      <width>98</width>
+      <height>24</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>RadioButton</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBox">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>130</y>
+      <width>84</width>
+      <height>24</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>CheckBox</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QCheckBox" name="checkBox_2">
+   <property name="geometry">
+    <rect>
+     <x>480</x>
+     <y>100</y>
+     <width>84</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>CheckBox</string>
+   </property>
+  </widget>
+  <widget class="QRadioButton" name="radioButton_3">
+   <property name="geometry">
+    <rect>
+     <x>500</x>
+     <y>200</y>
+     <width>98</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>RadioButton</string>
+   </property>
+  </widget>
+  <widget class="QRadioButton" name="radioButton_4">
+   <property name="geometry">
+    <rect>
+     <x>500</x>
+     <y>250</y>
+     <width>98</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>RadioButton</string>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="comboBox">
+   <property name="geometry">
+    <rect>
+     <x>120</x>
+     <y>270</y>
+     <width>171</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <item>
+    <property name="text">
+     <string>REHBER</string>
+    </property>
+   </item>
+   <item>
+    <property name="text">
+     <string>FALANCI</string>
+    </property>
+   </item>
+   <item>
+    <property name="text">
+     <string>FİLANCI</string>
+    </property>
+   </item>
+  </widget>
+ </widget>
+ <resources>
+  <include location="../icons/context.qrc"/>
+ </resources>
+ <connections/>
+</ui>
