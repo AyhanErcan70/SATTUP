@@ -664,8 +664,10 @@ class TripsGridApp(QWidget):
             _pair("chk_vardiya1", "cmb_vardiya1_g", "cmb_vardiya1_c"),
             _pair("chk_vardiya2", "cmb_vardiya2_g", "cmb_vardiya2_c"),
             _pair("chk_vardiya3", "cmb_vardiya3_g", "cmb_vardiya3_c"),
+            _pair("chk_vardiya4", "cmb_vardiya4_g", "cmb_vardiya4_c"),
             _pair("chk_mesai1", "cmb_mesai1_g", "cmb_mesai1_c"),
             _pair("chk_mesai2", "cmb_mesai2_g", "cmb_mesai2_c"),
+            _pair("chk_sabah_aksam", "cmb_sabah_aksam_g", "cmb_sabah_aksam_c"),
             _pair("chk_ek_sefer", "cmb_ek_sefer_g", "cmb_ek_sefer_c"),
         ]
 

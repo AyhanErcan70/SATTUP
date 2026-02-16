@@ -35,6 +35,8 @@ class ContractsApp(QWidget):
         self._assign_next_number()
         self.load_table()
 
+        self._update_tarife_enabled_state()
+
     def _get_price_table(self):
         if hasattr(self, "table_fiyatlar"):
             return getattr(self, "table_fiyatlar")
@@ -116,7 +118,7 @@ class ContractsApp(QWidget):
         if hasattr(self, "cmb_ucret_tipi"):
             if self.cmb_ucret_tipi.count() == 0:
                 self.cmb_ucret_tipi.addItem("Seçiniz...")
-                self.cmb_ucret_tipi.addItems(["AYLIK", "GÜNLÜK", "SEFER BAŞI"])
+                self.cmb_ucret_tipi.addItems(["AYLIK ÜCRET", "GÜNLÜK ÜCRET", "SEFER BAŞI ÜCRET"])
         if hasattr(self, "cmb_musteri"):
             self.cmb_musteri.clear()
             self.cmb_musteri.addItem("Seçiniz...")
@@ -203,6 +205,73 @@ class ContractsApp(QWidget):
             except Exception:
                 pass
 
+        if hasattr(self, "cmb_ucret_tipi"):
+            try:
+                self.cmb_ucret_tipi.currentIndexChanged.connect(self._on_ucret_tipi_changed)
+            except Exception:
+                pass
+
+    def _is_sefer_basi_ucret(self) -> bool:
+        if not hasattr(self, "cmb_ucret_tipi"):
+            return False
+        try:
+            txt = (self.cmb_ucret_tipi.currentText() or "").strip().upper()
+        except Exception:
+            txt = ""
+        # tolerate legacy/variant labels like "SEFER BAŞI" vs "SEFER BAŞI ÜCRET"
+        return "SEFER" in txt
+
+    def _update_tarife_enabled_state(self):
+        enabled = self._is_sefer_basi_ucret()
+        for name in [
+            "cmb_tarife_period",
+            "cmb_tarife_service_type",
+            "date_tarife_effective_from",
+            "tbl_tarife_prices",
+            "btn_tarife_save",
+            "tbl_special_items",
+            "btn_special_add",
+            "btn_special_delete",
+            "btn_special_save",
+        ]:
+            w = getattr(self, name, None)
+            if w is None:
+                continue
+            try:
+                w.setEnabled(bool(enabled))
+            except Exception:
+                pass
+
+        if not enabled:
+            tbl = getattr(self, "tbl_tarife_prices", None)
+            if tbl is not None:
+                try:
+                    tbl.blockSignals(True)
+                    tbl.setRowCount(0)
+                except Exception:
+                    pass
+                finally:
+                    try:
+                        tbl.blockSignals(False)
+                    except Exception:
+                        pass
+
+            st = getattr(self, "tbl_special_items", None)
+            if st is not None:
+                try:
+                    st.blockSignals(True)
+                    st.setRowCount(0)
+                except Exception:
+                    pass
+                finally:
+                    try:
+                        st.blockSignals(False)
+                    except Exception:
+                        pass
+
+    def _on_ucret_tipi_changed(self, *_args):
+        self._update_tarife_enabled_state()
+
     def _tarife_effective_from_iso(self) -> str | None:
         if not hasattr(self, "date_tarife_effective_from"):
             return None
@@ -212,42 +281,25 @@ class ContractsApp(QWidget):
         except Exception:
             return None
 
-    def _tarife_setup_price_table(self, pricing_model: str):
+    def _tarife_setup_price_table(self):
         tbl = getattr(self, "tbl_tarife_prices", None)
         if tbl is None:
             return
 
-        pm = str(pricing_model or "").strip().upper()
-        if pm not in ("VARDIYALI", "VARDIYASIZ"):
-            pm = "VARDIYALI"
-
-        if pm == "VARDIYALI":
-            # categories shown in this order; CIFT is computed
-            self._tarife_price_categories = ["TEK_SERVIS", "PAKET_SERVIS", "MESAI"]
-            headers = [
-                "GÜZERGAH",
-                "HAREKET TÜRÜ",
-                "KM",
-                "TEK",
-                "PAKET",
-                "MESAI",
-                "A.Y.TEK",
-                "A.Y.PAKET",
-                "A.Y.MESAI",
-            ]
-        else:
-            self._tarife_price_categories = ["TEK_SERVIS", "CIFT_SERVIS", "MESAI"]
-            headers = [
-                "GÜZERGAH",
-                "HAREKET TÜRÜ",
-                "KM",
-                "TEK",
-                "ÇİFT",
-                "MESAI",
-                "A.Y.TEK",
-                "A.Y.ÇİFT",
-                "A.Y.MESAI",
-            ]
+        self._tarife_price_categories = ["TEK_SERVIS", "CIFT_SERVIS", "PAKET_SERVIS", "MESAI"]
+        headers = [
+            "GÜZERGAH",
+            "HAREKET TÜRÜ",
+            "KM",
+            "TEK",
+            "ÇİFT",
+            "PAKET",
+            "MESAI",
+            "A.Y.TEK",
+            "A.Y.ÇİFT",
+            "A.Y.PAKET",
+            "A.Y.MESAI",
+        ]
 
         try:
             tbl.setColumnCount(len(headers))
@@ -278,6 +330,10 @@ class ContractsApp(QWidget):
         if tbl is None:
             return
 
+        if not self._is_sefer_basi_ucret():
+            tbl.setRowCount(0)
+            return
+
         contract_id, _period, service_type = self._tarife_context()
         if not contract_id or not service_type:
             tbl.setRowCount(0)
@@ -288,17 +344,12 @@ class ContractsApp(QWidget):
             tbl.setRowCount(0)
             return
 
-        pm = "VARDIYALI"
-        try:
-            pm = self.db.get_pricing_model_for_date(int(contract_id), str(eff))
-        except Exception:
-            pm = "VARDIYALI"
         if hasattr(self, "txt_tarife_pricing_model"):
             try:
-                self.txt_tarife_pricing_model.setText(str(pm))
+                self.txt_tarife_pricing_model.setText("")
             except Exception:
                 pass
-        self._tarife_setup_price_table(str(pm))
+        self._tarife_setup_price_table()
 
         # Route list
         route_rows = []
@@ -318,27 +369,6 @@ class ContractsApp(QWidget):
                     pass
         except Exception:
             pass
-
-        # If nothing found for selected date, auto-switch to last saved effective_from (better UX on re-entry)
-        if not tmap:
-            try:
-                dates = self.db.list_trip_tariff_effective_from_dates(int(contract_id), str(service_type))
-                if dates:
-                    last_eff = str(dates[0] or "").strip()
-                    if last_eff and last_eff != str(eff):
-                        try:
-                            dt = datetime.strptime(last_eff, "%Y-%m-%d")
-                            self._tarife_loading = True
-                            self.date_tarife_effective_from.setDate(QDate(dt.year, dt.month, dt.day))
-                        except Exception:
-                            pass
-                        finally:
-                            self._tarife_loading = False
-                        # Reload will be triggered by dateChanged; stop here
-                        tbl.setRowCount(0)
-                        return
-            except Exception:
-                pass
 
         tbl.blockSignals(True)
         tbl.setRowCount(0)
@@ -388,6 +418,10 @@ class ContractsApp(QWidget):
         if tbl is None:
             return
 
+        if not self._is_sefer_basi_ucret():
+            QMessageBox.warning(self, "Uyarı", "Tarife tanımı sadece 'SEFER BAŞI ÜCRET' seçili sözleşmelerde yapılır.")
+            return
+
         contract_id, _period, service_type = self._tarife_context()
         if not contract_id:
             QMessageBox.warning(self, "Uyarı", "Önce bir sözleşme seçiniz.")
@@ -399,12 +433,6 @@ class ContractsApp(QWidget):
         if not eff:
             QMessageBox.warning(self, "Uyarı", "Geçerlilik tarihi seçiniz.")
             return
-
-        pm = "VARDIYALI"
-        try:
-            pm = self.db.get_pricing_model_for_date(int(contract_id), str(eff))
-        except Exception:
-            pm = "VARDIYALI"
 
         categories = list(getattr(self, "_tarife_price_categories", []) or [])
         # col mapping: 0 route,1 mv,2 km, 3.. prices, then 3+len(categories) .. subcontractor prices
@@ -434,7 +462,7 @@ class ContractsApp(QWidget):
                 rid = int(rid)
             except Exception:
                 continue
-            # save each category; VARDIYALI: no CIFT in DB, will be computed later
+            # save each category
             for i, pc in enumerate(categories):
                 price = _parse_money(tbl.item(r, 3 + i).text() if tbl.item(r, 3 + i) else "")
                 sub_price = _parse_money(tbl.item(r, sub_base + i).text() if tbl.item(r, sub_base + i) else "")
@@ -523,7 +551,7 @@ class ContractsApp(QWidget):
             except Exception:
                 pass
 
-        self._tarife_setup_price_table("VARDIYALI")
+        self._tarife_setup_price_table()
 
     def _tarife_on_price_cell_changed(self, row: int, col: int):
         tbl = getattr(self, "tbl_tarife_prices", None)
@@ -603,8 +631,13 @@ class ContractsApp(QWidget):
     def _tarife_reload(self, *_args):
         if self._tarife_loading:
             return
+        self._update_tarife_enabled_state()
+        if not self._is_sefer_basi_ucret():
+            return
         self._tarife_load_price_rows()
         self._load_tarife_special_items()
+
+        self._update_tarife_enabled_state()
 
     def _load_tarife_periods(self, contract_id: int):
         if not hasattr(self, "cmb_tarife_period"):
@@ -1195,6 +1228,9 @@ class ContractsApp(QWidget):
         if hasattr(self, "cmb_ucret_tipi") and details.get("ucret_tipi") is not None:
             self.cmb_ucret_tipi.setCurrentText(str(details.get("ucret_tipi") or ""))
 
+        # Ücret tipine göre tarife alanlarını hemen enable/disable et
+        self._update_tarife_enabled_state()
+
         if hasattr(self, "txt_isin_tanimi") and details.get("isin_tanimi") is not None:
             self.txt_isin_tanimi.setText(str(details.get("isin_tanimi") or ""))
 
@@ -1216,6 +1252,22 @@ class ContractsApp(QWidget):
         # Tarihler
         self._set_date_from_iso("date_baslangic", str(details.get("start_date") or ""))
         self._set_date_from_iso("date_bitis", str(details.get("end_date") or ""))
+
+        # Tarife geçerlilik tarihi varsayılanı: sözleşme başlangıç tarihi
+        if hasattr(self, "date_tarife_effective_from"):
+            try:
+                sd_iso = str(details.get("start_date") or "").strip()
+                if sd_iso:
+                    dt = datetime.strptime(sd_iso, "%Y-%m-%d")
+                    self._tarife_loading = True
+                    self.date_tarife_effective_from.setDate(QDate(dt.year, dt.month, dt.day))
+            except Exception:
+                pass
+            finally:
+                try:
+                    self._tarife_loading = False
+                except Exception:
+                    pass
 
         # Diğer alanlar
         if hasattr(self, "txt_arac_adedi"):
@@ -1422,6 +1474,10 @@ class ContractsApp(QWidget):
         data = self._collect_form_data()
         if not data.get("customer_id"):
             QMessageBox.warning(self, "Uyarı", "Müşteri seçimi gerekir.")
+            return
+        ucret_tipi = str(data.get("ucret_tipi") or "").strip()
+        if not ucret_tipi or ucret_tipi.lower().startswith("seç"):
+            QMessageBox.warning(self, "Uyarı", "Ücret tipi seçimi gerekir.")
             return
         if not data.get("contract_number"):
             self._assign_next_number()

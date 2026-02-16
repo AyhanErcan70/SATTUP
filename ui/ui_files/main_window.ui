@@ -20,135 +20,111 @@
    <string>MainWindow</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">/* ============================================================
-   1. ANA YAPI (Açık Gri / Beyaz Zemin)
-   ============================================================ */
-#centralwidget {
-    background-color: #F0F0F0; /* Klasik Windows açık gri zemin */
-}
+   <string notr="true">#centralwidget {border-image: url(:/resimler/ocean-2.jpg) 0 0 0 0 stretch stretch;}
 
-/* Katmanları şeffaf bırakıyoruz ki gri zemin yukarı sızsın */
 QStackedWidget, QStackedWidget &gt; QWidget, #main_form, #page_modules_container {
     background: transparent;
-}
-#menu_frame QPushButton {background-color: #E1E1E1;
-    color: #000000;
-	font-family: 'Verdana';
-	font-size: 14px;
-    border-radius: 8px; 
-	min-width: 110px;
-	max-widht:110px;
-	min-height: 30px;
-	max-height: 30px;
-	text-align: left;
-	padding-left: 10px;
-}
-QPushButton#btn_session_toggle {font-family: 'Yu Gothic UI'; font-size: 12px; font-weight: bold; min-width: 90px; min-height: 25px;border-radius: 8px;}
-#menu_frame QPushButton:hover, QMainWindow QPushButton:hover {background-color: #E5F1FB; border: 1px solid #0078D7;}
-#menu_frame QPushButton:pressed, QMainWindow QPushButton:pressed {background-color: #CCE4F7;border: 1px solid #0078D7;}
+    border: none;}
+
+QWidget#page_main {background: transparent; image: url(:/resimler/logo_faded480.png) 0 0 0 0 stretch stretch;}
+
+#menu_frame QPushButton {background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0.2 #0ee1e5, stop: 0.6 #3aa7b3, stop: 0.6 #163682, stop: 0.8 #2a2f6f);
+    color: #fff;
+    font-family: 'DatonaPro'; font-size: 14px; font-weight: bold; text-align: left;
+    border-radius: 8px; border-top: 1px solid #C0C0C0; border-left: 1px solid #C0C0C0; border-right: 2px solid #000; 
+	border-bottom: 3px solid #000; 
+    padding-left : 8px;
+    margin-right: 4px;  margin-bottom: 5px;  
+    min-width: 130px;
+	min-height: 30px;}
+
+#menu_frame QPushButton:hover {color: #ffff00; border-right: 4px solid #A9A9A9; border-bottom: 5px solid #808080;}
+#menu_frame QPushButton:pressed {color: #ffaa00; border-top: 2px solid #696969; border-left: 2px solid #696969;
+    border-right: 1px solid #808080; border-bottom: 1px solid #808080;     
+    margin-top: 4px; margin-left: 2px; 
+    padding-top: 10px;}
 
 
-/* ============================================================
-   2. BUTONLAR (Geleneksel Ofis Görünümü)
-   ============================================================ */
-QPushButton {
-    background-color: #E1E1E1;
-    color: #000000;
-    border: 1px solid #ADADAD;
-    border-radius: 2px; /* Keskin köşeler klasiktir */
-    padding: 5px 10px;
-    font-family: 'Segoe UI', Tahoma;
+QFrame#top_frame QPushButton, #main_form QPushButton {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0.5 #d3cfd9, stop: 0.2 #a1a4aa,
+                                      stop: 1.8 #848283, stop: 1 #fffcff);
+    color: #162d6d;
+    font-family: 'Yu Gothic UI'; 
+    font-weight: bold;   
     font-size: 12px;
+    border-radius: 8px;
+    border-top: 1px solid #C0C0C0;
+    border-left: 1px solid #C0C0C0;
+    border-right: 2px solid #000; 
+    border-bottom: 3px solid #000; 
+    min-height: 24px;
+    margin-right: 4px; 
+    margin-bottom: 5px; 
+	min-width: 130px;   
+}
+QFrame#top_frame QPushButton:hover, #main_form QPushButton:hover {
+    color: #fff;
+    font-size: 14px;
+    border-right: 4px solid #A9A9A9;
+    border-bottom: 5px solid #808080;
+}
+QFrame#top_frame QPushButton:pressed, #main_form QPushButton:pressed {
+    color: #ff7e0e;
+    border-top: 2px solid #696969;
+    border-left: 2px solid #696969;
+    margin-top: 4px;  
+    padding-top: 10px;  
 }
 
-QPushButton:hover {
-    background-color: #E5F1FB; /* Açık mavi vurgu */
-    border: 1px solid #0078D7;
-}
-
-QPushButton:pressed {
-    background-color: #CCE4F7;
-    border: 1px solid #005499;
-}
-
-/* ============================================================
-   3. GİRİŞ ALANLARI (Beyaz Zemin, Siyah Yazı)
-   ============================================================ */
-QLineEdit, QComboBox, QDateEdit {
-    background-color: #FFFFFF;
-    border: 1px solid #7A7A7A;
-    border-radius: 0px; /* Klasik kutu yapısı */
-    color: #000000;
-    padding: 3px;
-}
-
-QLineEdit:focus {
-    border: 1px solid #0078D7;
-}
+/* 5. ÖZEL GİRİŞ ALANLARI VE METİNLER (Yeşil kod alanları vb.) */
 #txt_personel_kodu, #txt_musteri_kodu, #txt_arac_kodu, #txt_sozlesme_kodu {
-    background: transparent;
     border: none;
+   
     font-family: 'Courier New';
     font-weight: bold;
     font-size: 14pt;
-    color: #e7891d;
+    color: red;}
+
+/* 6. GENEL FORM ELEMANLARI (QLineEdit, QComboBox, QDateEdit) */
+QLineEdit, QComboBox, QDateEdit {
+    background-color: transparent;
+    border-radius: 6px;
+    border: 1px solid #D4D4D4;
+    color: #162D6D;
+	font-weight: bold;
 }
-/* ============================================================
-   4. TABLOLAR VE LİSTELER (Yüksek Okunabilirlik)
-   ============================================================ */
+QLineEdit:focus, QComboBox:focus, QDateEdit:focus {
+    background-color: #EEEEEE;
+    border: 1px solid #da0000;
+    color: #000;
+}
+
+/* 7. ETİKETLER VE TABLOLAR */
+QFrame#top_frame QLabel, QFrame#middle_n_frame QLabel, QFrame#middle_s_frame QLabel {
+background:none;    
+
+}
+
 QTableWidget {
-    background-color: #FFFFFF;
-    color: #000000;
-    gridline-color: #D0D0D0;
-    border: 1px solid #828790;
-    selection-background-color: #0078D7; /* Klasik Windows seçili satır mavisi */
-    selection-color: #FFFFFF;
+    background-color:#E5E5E5;
+    color: #000;
+	gridline-color: #96999c;
+    border: 1px solid #4e4e50;
+    selection-background-color: #e1f5fe; /* Yedek seçim rengi */
 }
 
-QHeaderView::section {
-    background-color: #F0F0F0; /* Başlıklar gri */
-    color: #000000;
-    padding: 4px;
-    border: 1px solid #D0D0D0;
-    font-weight: normal;
+QHeaderView::section, QHeaderView::section:checked {background-color:#162D6D;
+    /*background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #999A9, stop: 1 #9c9a9a);*/
+    color: white;
+	border: 1px solid #6c6c6c;
 }
-
-/* ============================================================
-   5. LABELLER VE GROUPBOX
-   ============================================================ */
-QLabel {
-    color: #000000;
-    background: transparent;
-}
-QLabel#lbl_photo, QLabel#lbl_arac_foto{border: 4px solid gray;}
-QGroupBox {
-    border: 1px solid #C0C0C0;
-    margin-top: 10px;
-    font-weight: bold;
-    color: #000000;
-}
-
-QGroupBox::title {
-    subcontrol-origin: margin;
-    left: 10px;
-    padding: 0 3px;
-}
-
-/* ============================================================
-   6. SEKMELER (TABWIDGET)
-   ============================================================ */
-QTabBar::tab {
-    background-color: #E1E1E1;
-    border: 1px solid #ADADAD;
-    border-bottom: none;
-    padding: 6px 12px;
-    color: #000000;
-}
-
-QTabBar::tab:selected {
-    background-color: #FFFFFF; /* Seçili sekme beyaz (kağıt gibi) */
-    border-bottom: 1px solid #FFFFFF;
-}</string>
+/* Seçili Satır */
+QTableWidget::item:selected {
+    background-color: #e1f5fe;
+    color: #162D6D;}
+QListView#list_kalemler {background-color:#d1d1d1;}</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -204,8 +180,8 @@ QTabBar::tab:selected {
              </property>
              <property name="minimumSize">
               <size>
-               <width>112</width>
-               <height>37</height>
+               <width>137</width>
+               <height>33</height>
               </size>
              </property>
              <property name="font">
@@ -345,14 +321,14 @@ QTabBar::tab:selected {
           <widget class="QPushButton" name="btn_menu_toggle">
            <property name="minimumSize">
             <size>
-             <width>132</width>
-             <height>42</height>
+             <width>145</width>
+             <height>39</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>42</height>
+             <height>16777215</height>
             </size>
            </property>
            <property name="text">
@@ -368,117 +344,6 @@ QTabBar::tab:selected {
            <property name="spacing">
             <number>0</number>
            </property>
-           <item row="0" column="0">
-            <widget class="QPushButton" name="btn_users">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>132</width>
-               <height>42</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>42</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <family>Verdana</family>
-               <pointsize>-1</pointsize>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="cursor">
-              <cursorShape>ClosedHandCursor</cursorShape>
-             </property>
-             <property name="toolTipDuration">
-              <number>0</number>
-             </property>
-             <property name="text">
-              <string>KULLANICILAR</string>
-             </property>
-             <property name="flat">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QPushButton" name="btn_employees">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>132</width>
-               <height>42</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>42</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <family>Verdana</family>
-               <pointsize>-1</pointsize>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="toolTipDuration">
-              <number>0</number>
-             </property>
-             <property name="text">
-              <string>PERSONELLER</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QPushButton" name="btn_customers">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>132</width>
-               <height>42</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>42</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <family>Verdana</family>
-               <pointsize>-1</pointsize>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="toolTipDuration">
-              <number>0</number>
-             </property>
-             <property name="text">
-              <string>MÜŞTERİLER</string>
-             </property>
-            </widget>
-           </item>
            <item row="3" column="0">
             <widget class="QPushButton" name="btn_vehicles">
              <property name="sizePolicy">
@@ -489,19 +354,19 @@ QTabBar::tab:selected {
              </property>
              <property name="minimumSize">
               <size>
-               <width>132</width>
-               <height>42</height>
+               <width>145</width>
+               <height>39</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
                <width>16777215</width>
-               <height>42</height>
+               <height>16777215</height>
               </size>
              </property>
              <property name="font">
               <font>
-               <family>Verdana</family>
+               <family>DatonaPro</family>
                <pointsize>-1</pointsize>
                <bold>true</bold>
               </font>
@@ -514,8 +379,8 @@ QTabBar::tab:selected {
              </property>
             </widget>
            </item>
-           <item row="4" column="0">
-            <widget class="QPushButton" name="btn_drivers">
+           <item row="13" column="0">
+            <widget class="QPushButton" name="btn_reports">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                <horstretch>0</horstretch>
@@ -524,19 +389,19 @@ QTabBar::tab:selected {
              </property>
              <property name="minimumSize">
               <size>
-               <width>132</width>
-               <height>42</height>
+               <width>145</width>
+               <height>39</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
                <width>16777215</width>
-               <height>42</height>
+               <height>16777215</height>
               </size>
              </property>
              <property name="font">
               <font>
-               <family>Verdana</family>
+               <family>DatonaPro</family>
                <pointsize>-1</pointsize>
                <bold>true</bold>
               </font>
@@ -545,112 +410,7 @@ QTabBar::tab:selected {
               <number>0</number>
              </property>
              <property name="text">
-              <string>ŞOFÖRLER</string>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="0">
-            <widget class="QPushButton" name="btn_repairs">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>132</width>
-               <height>42</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>42</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <family>Verdana</family>
-               <pointsize>-1</pointsize>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="toolTipDuration">
-              <number>0</number>
-             </property>
-             <property name="text">
-              <string>ARAÇ BAKIM</string>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="0">
-            <widget class="QPushButton" name="btn_contracts">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>132</width>
-               <height>42</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>42</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <family>Verdana</family>
-               <pointsize>-1</pointsize>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="toolTipDuration">
-              <number>0</number>
-             </property>
-             <property name="text">
-              <string>SÖZLEŞMELER</string>
-             </property>
-            </widget>
-           </item>
-           <item row="7" column="0">
-            <widget class="QPushButton" name="btn_routes">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>132</width>
-               <height>42</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>42</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <family>Verdana</family>
-               <pointsize>-1</pointsize>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="toolTipDuration">
-              <number>0</number>
-             </property>
-             <property name="text">
-              <string>ROTA PLANLAMA</string>
+              <string>RAPORLAR</string>
              </property>
             </widget>
            </item>
@@ -664,19 +424,19 @@ QTabBar::tab:selected {
              </property>
              <property name="minimumSize">
               <size>
-               <width>132</width>
-               <height>42</height>
+               <width>145</width>
+               <height>39</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
                <width>16777215</width>
-               <height>42</height>
+               <height>16777215</height>
               </size>
              </property>
              <property name="font">
               <font>
-               <family>Verdana</family>
+               <family>DatonaPro</family>
                <pointsize>-1</pointsize>
                <bold>true</bold>
               </font>
@@ -686,6 +446,181 @@ QTabBar::tab:selected {
              </property>
              <property name="text">
               <string>SEFERLER</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QPushButton" name="btn_drivers">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>145</width>
+               <height>39</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <family>DatonaPro</family>
+               <pointsize>-1</pointsize>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="toolTipDuration">
+              <number>0</number>
+             </property>
+             <property name="text">
+              <string>ŞOFÖRLER</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QPushButton" name="btn_employees">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>145</width>
+               <height>39</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <family>DatonaPro</family>
+               <pointsize>-1</pointsize>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="toolTipDuration">
+              <number>0</number>
+             </property>
+             <property name="text">
+              <string>PERSONELLER</string>
+             </property>
+            </widget>
+           </item>
+           <item row="12" column="0">
+            <widget class="QPushButton" name="btn_constants">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>145</width>
+               <height>39</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <family>DatonaPro</family>
+               <pointsize>-1</pointsize>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="toolTipDuration">
+              <number>0</number>
+             </property>
+             <property name="text">
+              <string>SABİTLER</string>
+             </property>
+            </widget>
+           </item>
+           <item row="14" column="0">
+            <widget class="QPushButton" name="btn_settings">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>145</width>
+               <height>39</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <family>DatonaPro</family>
+               <pointsize>-1</pointsize>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="toolTipDuration">
+              <number>0</number>
+             </property>
+             <property name="text">
+              <string>AYARLAR</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="0">
+            <widget class="QPushButton" name="btn_contracts">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>145</width>
+               <height>39</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <family>DatonaPro</family>
+               <pointsize>-1</pointsize>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="toolTipDuration">
+              <number>0</number>
+             </property>
+             <property name="text">
+              <string>SÖZLEŞMELER</string>
              </property>
             </widget>
            </item>
@@ -699,19 +634,19 @@ QTabBar::tab:selected {
              </property>
              <property name="minimumSize">
               <size>
-               <width>132</width>
-               <height>42</height>
+               <width>145</width>
+               <height>39</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
                <width>16777215</width>
-               <height>42</height>
+               <height>16777215</height>
               </size>
              </property>
              <property name="font">
               <font>
-               <family>Verdana</family>
+               <family>DatonaPro</family>
                <pointsize>-1</pointsize>
                <bold>true</bold>
               </font>
@@ -721,6 +656,41 @@ QTabBar::tab:selected {
              </property>
              <property name="text">
               <string>PUANTAJLAR</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0">
+            <widget class="QPushButton" name="btn_repairs">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>145</width>
+               <height>39</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <family>DatonaPro</family>
+               <pointsize>-1</pointsize>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="toolTipDuration">
+              <number>0</number>
+             </property>
+             <property name="text">
+              <string>ARAÇ BAKIM</string>
              </property>
             </widget>
            </item>
@@ -734,19 +704,19 @@ QTabBar::tab:selected {
              </property>
              <property name="minimumSize">
               <size>
-               <width>132</width>
-               <height>42</height>
+               <width>145</width>
+               <height>39</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
                <width>16777215</width>
-               <height>42</height>
+               <height>16777215</height>
               </size>
              </property>
              <property name="font">
               <font>
-               <family>Verdana</family>
+               <family>DatonaPro</family>
                <pointsize>-1</pointsize>
                <bold>true</bold>
               </font>
@@ -769,19 +739,19 @@ QTabBar::tab:selected {
              </property>
              <property name="minimumSize">
               <size>
-               <width>132</width>
-               <height>42</height>
+               <width>145</width>
+               <height>39</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
                <width>16777215</width>
-               <height>42</height>
+               <height>16777215</height>
               </size>
              </property>
              <property name="font">
               <font>
-               <family>Verdana</family>
+               <family>DatonaPro</family>
                <pointsize>-1</pointsize>
                <bold>true</bold>
               </font>
@@ -794,8 +764,8 @@ QTabBar::tab:selected {
              </property>
             </widget>
            </item>
-           <item row="12" column="0">
-            <widget class="QPushButton" name="btn_constants">
+           <item row="2" column="0">
+            <widget class="QPushButton" name="btn_customers">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                <horstretch>0</horstretch>
@@ -804,19 +774,19 @@ QTabBar::tab:selected {
              </property>
              <property name="minimumSize">
               <size>
-               <width>132</width>
-               <height>42</height>
+               <width>145</width>
+               <height>39</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
                <width>16777215</width>
-               <height>42</height>
+               <height>16777215</height>
               </size>
              </property>
              <property name="font">
               <font>
-               <family>Verdana</family>
+               <family>DatonaPro</family>
                <pointsize>-1</pointsize>
                <bold>true</bold>
               </font>
@@ -825,12 +795,12 @@ QTabBar::tab:selected {
               <number>0</number>
              </property>
              <property name="text">
-              <string>SABİTLER</string>
+              <string>MÜŞTERİLER</string>
              </property>
             </widget>
            </item>
-           <item row="13" column="0">
-            <widget class="QPushButton" name="btn_reports">
+           <item row="0" column="0">
+            <widget class="QPushButton" name="btn_users">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                <horstretch>0</horstretch>
@@ -839,33 +809,39 @@ QTabBar::tab:selected {
              </property>
              <property name="minimumSize">
               <size>
-               <width>132</width>
-               <height>42</height>
+               <width>145</width>
+               <height>39</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
                <width>16777215</width>
-               <height>42</height>
+               <height>16777215</height>
               </size>
              </property>
              <property name="font">
               <font>
-               <family>Verdana</family>
+               <family>DatonaPro</family>
                <pointsize>-1</pointsize>
                <bold>true</bold>
               </font>
+             </property>
+             <property name="cursor">
+              <cursorShape>ClosedHandCursor</cursorShape>
              </property>
              <property name="toolTipDuration">
               <number>0</number>
              </property>
              <property name="text">
-              <string>RAPORLAR</string>
+              <string>KULLANICILAR</string>
+             </property>
+             <property name="flat">
+              <bool>false</bool>
              </property>
             </widget>
            </item>
-           <item row="14" column="0">
-            <widget class="QPushButton" name="btn_settings">
+           <item row="7" column="0">
+            <widget class="QPushButton" name="btn_routes">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                <horstretch>0</horstretch>
@@ -874,19 +850,19 @@ QTabBar::tab:selected {
              </property>
              <property name="minimumSize">
               <size>
-               <width>132</width>
-               <height>42</height>
+               <width>145</width>
+               <height>39</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
                <width>16777215</width>
-               <height>42</height>
+               <height>16777215</height>
               </size>
              </property>
              <property name="font">
               <font>
-               <family>Verdana</family>
+               <family>DatonaPro</family>
                <pointsize>-1</pointsize>
                <bold>true</bold>
               </font>
@@ -895,9 +871,22 @@ QTabBar::tab:selected {
               <number>0</number>
              </property>
              <property name="text">
-              <string>AYARLAR</string>
+              <string>ROTA PLANLAMA</string>
              </property>
             </widget>
+           </item>
+           <item row="15" column="0">
+            <spacer name="verticalSpacer">
+             <property name="orientation">
+              <enum>Qt::Orientation::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
            </item>
           </layout>
          </item>

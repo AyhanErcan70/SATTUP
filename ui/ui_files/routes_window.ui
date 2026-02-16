@@ -88,6 +88,11 @@
             <height>28</height>
            </size>
           </property>
+          <item>
+           <property name="text">
+            <string>zzz</string>
+           </property>
+          </item>
          </widget>
         </item>
         <item>
@@ -193,6 +198,9 @@
             <width>300</width>
             <height>16777215</height>
            </size>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">background-color: rgb(208, 208, 208);</string>
           </property>
           <property name="frameShape">
            <enum>QFrame::Shape::Box</enum>

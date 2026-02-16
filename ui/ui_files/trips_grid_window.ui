@@ -272,6 +272,9 @@
         <property name="autoFillBackground">
          <bool>false</bool>
         </property>
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(221, 221, 221);</string>
+        </property>
         <property name="frameShape">
          <enum>QFrame::Shape::Panel</enum>
         </property>
