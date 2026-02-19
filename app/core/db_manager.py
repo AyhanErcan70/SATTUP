@@ -14,6 +14,7 @@ class DatabaseManager:
         self.migrate_trip_period_lock_table()
         self.create_trip_entries_tables()
         self._ensure_trip_prices_table()
+        self._ensure_bulk_puantaj_manual_rows_table()
         self.create_hakedis_tables()
         self.create_customers_table()
         self.create_vehicles_table()
@@ -31,6 +32,125 @@ class DatabaseManager:
         except Exception as e:
             print(f"Database connection error: {e}")
             return None
+
+    def _ensure_bulk_puantaj_manual_rows_table(self):
+        conn = self.connect()
+        if not conn:
+            return
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS bulk_puantaj_manual_rows (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    contract_id INTEGER NOT NULL,
+                    month TEXT NOT NULL,
+                    service_type TEXT NOT NULL,
+                    sort_order INTEGER NOT NULL DEFAULT 0,
+                    guzergah TEXT,
+                    vehicle_id TEXT,
+                    driver_id TEXT,
+                    movement_type TEXT,
+                    time_text TEXT,
+                    unit_price REAL DEFAULT 0,
+                    day_qty_json TEXT,
+                    created_at TEXT,
+                    updated_at TEXT
+                )
+                """
+            )
+            cur.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_bulk_puantaj_manual_rows_ctx
+                ON bulk_puantaj_manual_rows(contract_id, month, service_type)
+                """
+            )
+            conn.commit()
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    def get_bulk_puantaj_manual_rows(self, contract_id: int, month: str, service_type: str):
+        self._ensure_bulk_puantaj_manual_rows_table()
+        conn = self.connect()
+        if not conn:
+            return []
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT sort_order, guzergah, vehicle_id, driver_id, movement_type, time_text, unit_price, day_qty_json
+                FROM bulk_puantaj_manual_rows
+                WHERE contract_id=? AND month=? AND service_type=?
+                ORDER BY sort_order ASC, id ASC
+                """,
+                (int(contract_id), str(month), str(service_type)),
+            )
+            return cur.fetchall() or []
+        finally:
+            conn.close()
+
+    def replace_bulk_puantaj_manual_rows(
+        self,
+        contract_id: int,
+        month: str,
+        service_type: str,
+        rows: list[dict],
+    ) -> bool:
+        self._ensure_bulk_puantaj_manual_rows_table()
+        conn = self.connect()
+        if not conn:
+            return False
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "DELETE FROM bulk_puantaj_manual_rows WHERE contract_id=? AND month=? AND service_type=?",
+                (int(contract_id), str(month), str(service_type)),
+            )
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            for i, rec in enumerate(rows or []):
+                if not isinstance(rec, dict):
+                    continue
+                cur.execute(
+                    """
+                    INSERT INTO bulk_puantaj_manual_rows (
+                        contract_id, month, service_type, sort_order,
+                        guzergah, vehicle_id, driver_id, movement_type, time_text,
+                        unit_price, day_qty_json, created_at, updated_at
+                    )
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    """,
+                    (
+                        int(contract_id),
+                        str(month),
+                        str(service_type),
+                        int(rec.get("sort_order") if rec.get("sort_order") is not None else i),
+                        str(rec.get("guzergah") or ""),
+                        (None if rec.get("vehicle_id") is None else str(rec.get("vehicle_id"))),
+                        (None if rec.get("driver_id") is None else str(rec.get("driver_id"))),
+                        str(rec.get("movement_type") or ""),
+                        str(rec.get("time_text") or ""),
+                        float(rec.get("unit_price") or 0.0),
+                        str(rec.get("day_qty_json") or ""),
+                        now,
+                        now,
+                    ),
+                )
+            conn.commit()
+            return True
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return False
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
     def create_tables(self):
         conn = self.connect()

@@ -980,11 +980,15 @@ class AttendanceApp(QWidget):
             return True
 
         missing = []
+        conn2 = None
         try:
             conn2 = self.db.connect()
+            if conn2 is None:
+                return True
             cur2 = conn2.cursor()
             st_values = self._service_type_values(ctx.service_type) or [str(ctx.service_type)]
             placeholders = ",".join(["?"] * len(st_values))
+
             for rid, tb in plan_rows:
                 rid_i = int(rid or 0)
                 tb_s = str(tb or "")
@@ -1015,18 +1019,15 @@ class AttendanceApp(QWidget):
                 for day in range(1, days_in_month + 1):
                     d = QDate(year, month, day).toString("yyyy-MM-dd")
                     if d not in existing_dates:
-                        missing.append((rid_i, tb_s, d))
-                        if len(missing) >= 20:
-                            break
-                if len(missing) >= 20:
-                    break
-            conn2.close()
+                        missing.append((int(rid_i), str(tb_s), str(d)))
         except Exception:
+            missing = []
+        finally:
             try:
-                conn2.close()
+                if conn2 is not None:
+                    conn2.close()
             except Exception:
                 pass
-            return True
 
         if not missing:
             return True
@@ -1455,6 +1456,294 @@ class BulkAttendanceDialog(QDialog):
         except Exception:
             return "0,00"
 
+    def _manual_row_indexes(self) -> list[int]:
+        out: list[int] = []
+        try:
+            for r in range(self.table.rowCount()):
+                meta = self._row_meta[r] if r < len(self._row_meta) else None
+                try:
+                    rid_i = int((meta or {}).get("route_params_id") or 0)
+                except Exception:
+                    rid_i = 0
+                if int(rid_i or 0) <= 0:
+                    out.append(int(r))
+        except Exception:
+            return []
+        return out
+
+    def _init_manual_row(self, row: int):
+        try:
+            self.table.setRowHeight(int(row), 25)
+        except Exception:
+            pass
+
+        sno = QTableWidgetItem("")
+        sno.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+        sno.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.table.setItem(int(row), 0, sno)
+
+        r_item = QTableWidgetItem("")
+        r_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
+        r_item.setData(Qt.ItemDataRole.UserRole, None)
+        self.table.setItem(int(row), 1, r_item)
+
+        s_item = QTableWidgetItem("")
+        s_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+        self.table.setItem(int(row), int(self._col_stops), s_item)
+
+        v_item = QTableWidgetItem("")
+        v_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
+        v_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        v_item.setData(Qt.ItemDataRole.UserRole, None)
+        self.table.setItem(int(row), int(self._col_vehicle), v_item)
+
+        d_item = QTableWidgetItem("")
+        d_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
+        d_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        d_item.setData(Qt.ItemDataRole.UserRole, None)
+        self.table.setItem(int(row), int(self._col_driver), d_item)
+
+        mt_item = QTableWidgetItem("")
+        mt_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
+        mt_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.table.setItem(int(row), int(self._col_movement), mt_item)
+
+        t_item = QTableWidgetItem("")
+        t_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
+        t_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.table.setItem(int(row), int(self._col_time_text), t_item)
+
+        for day in range(1, int(self.max_days) + 1):
+            col = int(self._day_start) + (int(day) - 1)
+            it_day = QTableWidgetItem("")
+            it_day.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            it_day.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
+            self.table.setItem(int(row), int(col), it_day)
+            if int(day) <= int(self.days_in_month):
+                try:
+                    self._apply_day_cell_style(int(row), int(col))
+                except Exception:
+                    pass
+
+        total_item = QTableWidgetItem("0")
+        total_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+        total_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        total_item.setBackground(QColor("#dfe6e9"))
+        self.table.setItem(int(row), int(self._col_total_qty), total_item)
+
+        price_item = QTableWidgetItem("0")
+        price_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
+        price_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        try:
+            price_item.setData(Qt.ItemDataRole.UserRole, float(0.0))
+        except Exception:
+            pass
+        self.table.setItem(int(row), int(self._col_price), price_item)
+
+        total_price_item = QTableWidgetItem("0")
+        total_price_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+        total_price_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        total_price_item.setBackground(QColor("#dfe6e9"))
+        self.table.setItem(int(row), int(self._col_total_price), total_price_item)
+
+        # meta
+        while int(row) >= len(self._row_meta):
+            self._row_meta.append({})
+        self._row_meta[int(row)] = {
+            "route_params_id": 0,
+            "sub_index": 0,
+            "line_no": 0,
+            "time_block": "MANUAL",
+            "plan_time_block": "",
+            "is_manual": True,
+        }
+
+    def _add_manual_row(self):
+        try:
+            cur = len(self._manual_row_indexes())
+        except Exception:
+            cur = 0
+        if int(cur) >= int(getattr(self, "_max_manual_rows", 5)):
+            QMessageBox.information(self, "Bilgi", f"En fazla {int(self._max_manual_rows)} manuel satır ekleyebilirsiniz.")
+            return
+
+        try:
+            self.table.blockSignals(True)
+        except Exception:
+            pass
+        try:
+            row = int(self.table.rowCount())
+            self.table.insertRow(int(row))
+            self._init_manual_row(int(row))
+        finally:
+            try:
+                self.table.blockSignals(False)
+            except Exception:
+                pass
+        self._apply_route_group_spans()
+
+    def _delete_selected_manual_row(self):
+        r = -1
+        try:
+            it = self.table.currentItem()
+            if it is not None:
+                r = int(it.row())
+        except Exception:
+            r = -1
+        if r < 0 or r >= self.table.rowCount():
+            return
+
+        meta = self._row_meta[r] if r < len(self._row_meta) else None
+        try:
+            rid_i = int((meta or {}).get("route_params_id") or 0)
+        except Exception:
+            rid_i = 0
+        if int(rid_i or 0) > 0:
+            QMessageBox.information(self, "Bilgi", "Sadece manuel satırlar silinebilir.")
+            return
+
+        soru = QMessageBox.question(
+            self,
+            "Onay",
+            "Seçili manuel satır silinsin mi?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if soru != QMessageBox.StandardButton.Yes:
+            return
+
+        try:
+            self.table.blockSignals(True)
+        except Exception:
+            pass
+        try:
+            self.table.removeRow(int(r))
+            if int(r) < len(self._row_meta):
+                try:
+                    self._row_meta.pop(int(r))
+                except Exception:
+                    pass
+        finally:
+            try:
+                self.table.blockSignals(False)
+            except Exception:
+                pass
+        self._apply_route_group_spans()
+
+    def _load_manual_rows(self):
+        try:
+            rows = self.db.get_bulk_puantaj_manual_rows(int(self.contract_id), str(self.month_key), str(self.service_type))
+        except Exception:
+            rows = []
+
+        if not rows:
+            return
+
+        try:
+            self.table.blockSignals(True)
+        except Exception:
+            pass
+        try:
+            for sort_order, guz, vehicle_id, driver_id, movement_type, time_text, unit_price, day_qty_json in rows or []:
+                row = int(self.table.rowCount())
+                self.table.insertRow(int(row))
+                self._init_manual_row(int(row))
+
+                it_route = self.table.item(int(row), 1)
+                if it_route is not None:
+                    it_route.setText(str(guz or ""))
+                    it_route.setData(Qt.ItemDataRole.UserRole, None)
+
+                it_mt = self.table.item(int(row), int(self._col_movement))
+                if it_mt is not None:
+                    it_mt.setText(str(movement_type or "").strip().upper())
+
+                it_tt = self.table.item(int(row), int(self._col_time_text))
+                if it_tt is not None:
+                    it_tt.setText(str(time_text or ""))
+
+                # vehicle/driver labels (if known id) otherwise raw text
+                itv = self.table.item(int(row), int(self._col_vehicle))
+                if itv is not None and vehicle_id is not None and str(vehicle_id).strip():
+                    rec = (self._vehicle_map or {}).get(str(vehicle_id))
+                    if rec is not None:
+                        try:
+                            plate, cap = rec
+                        except Exception:
+                            plate, cap = str(rec), 0
+                        label_v = f"{plate} ({int(cap)})" if int(cap or 0) > 0 else str(plate)
+                        itv.setText(str(label_v))
+                        itv.setData(Qt.ItemDataRole.UserRole, str(vehicle_id))
+                    else:
+                        itv.setText(str(vehicle_id))
+                        itv.setData(Qt.ItemDataRole.UserRole, None)
+
+                itd = self.table.item(int(row), int(self._col_driver))
+                if itd is not None and driver_id is not None and str(driver_id).strip():
+                    nm = (self._driver_map or {}).get(str(driver_id))
+                    if nm is not None:
+                        itd.setText(str(nm))
+                        itd.setData(Qt.ItemDataRole.UserRole, str(driver_id))
+                    else:
+                        itd.setText(str(driver_id))
+                        itd.setData(Qt.ItemDataRole.UserRole, None)
+
+                # day qty
+                day_map = {}
+                try:
+                    day_map = json.loads(day_qty_json) if str(day_qty_json or "").strip() else {}
+                except Exception:
+                    day_map = {}
+                if not isinstance(day_map, dict):
+                    day_map = {}
+                for k, v in (day_map or {}).items():
+                    try:
+                        day = int(k)
+                        qty = int(v)
+                    except Exception:
+                        continue
+                    if day < 1 or day > int(self.days_in_month):
+                        continue
+                    col = int(self._day_start) + (day - 1)
+                    it_day = self.table.item(int(row), int(col))
+                    if it_day is not None:
+                        it_day.setText(str(qty) if int(qty) > 0 else "")
+                        try:
+                            self._apply_day_cell_style(int(row), int(col))
+                        except Exception:
+                            pass
+
+                # price
+                itp = self.table.item(int(row), int(self._col_price))
+                if itp is not None:
+                    try:
+                        pf = float(unit_price or 0.0)
+                    except Exception:
+                        pf = 0.0
+                    itp.setText(self._format_tr_currency(pf))
+                    try:
+                        itp.setData(Qt.ItemDataRole.UserRole, float(pf))
+                    except Exception:
+                        pass
+
+                # totals
+                try:
+                    total = int(self._row_day_qty_sum(int(row)))
+                    t_item = self.table.item(int(row), int(self._col_total_qty))
+                    if t_item is not None:
+                        t_item.setText(str(total))
+                except Exception:
+                    pass
+                try:
+                    self._recalc_price_total_for_row(int(row))
+                except Exception:
+                    pass
+        finally:
+            try:
+                self.table.blockSignals(False)
+            except Exception:
+                pass
+
+
     def _apply_route_group_spans(self):
         def _route_info(rid: int) -> tuple[str, str]:
             try:
@@ -1487,6 +1776,23 @@ class BulkAttendanceDialog(QDialog):
                 rid0 = int((meta0 or {}).get("route_params_id") or 0)
             except Exception:
                 rid0 = 0
+
+            # Manual rows (route_params_id <= 0) should never be merged/spanned.
+            # Treat them as a one-line group.
+            if int(rid0 or 0) <= 0:
+                group_no += 1
+                try:
+                    it_sno = self.table.item(r, 0)
+                    if it_sno is None:
+                        it_sno = QTableWidgetItem("")
+                        self.table.setItem(r, 0, it_sno)
+                    it_sno.setText(str(group_no))
+                    it_sno.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+                    it_sno.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                except Exception:
+                    pass
+                r += 1
+                continue
 
             route_txt, stops_txt = _route_info(rid0)
 
@@ -2129,6 +2435,8 @@ class BulkAttendanceDialog(QDialog):
 
         self._official_holidays = self._official_holiday_set(int(self.year))
 
+        self._max_manual_rows = 5
+
         try:
             for d in range(1, int(self.days_in_month) + 1):
                 col = int(self._day_start) + (int(d) - 1)
@@ -2536,6 +2844,12 @@ class BulkAttendanceDialog(QDialog):
         self.btn_save = QPushButton("KAYDET", self)
         self.btn_save.clicked.connect(self._save)
 
+        self.btn_add_manual = QPushButton("MANUEL SATIR EKLE", self)
+        self.btn_add_manual.clicked.connect(self._add_manual_row)
+
+        self.btn_del_manual = QPushButton("MANUEL SATIR SİL", self)
+        self.btn_del_manual.clicked.connect(self._delete_selected_manual_row)
+
         try:
             self.btn_save.setFixedSize(140, 30)
         except Exception:
@@ -2546,12 +2860,19 @@ class BulkAttendanceDialog(QDialog):
 
         btn_row = QHBoxLayout()
         btn_row.addStretch(1)
+        btn_row.addWidget(self.btn_add_manual)
+        btn_row.addWidget(self.btn_del_manual)
         btn_row.addWidget(self.btn_save)
         btn_row.addStretch(1)
         lay.addLayout(btn_row)
         self.setLayout(lay)
 
         self._load_existing_entries()
+
+        try:
+            self._load_manual_rows()
+        except Exception:
+            pass
 
         self._apply_route_group_spans()
 
@@ -2751,6 +3072,36 @@ class BulkAttendanceDialog(QDialog):
                 self._split_row(r)
             elif act == act_merge:
                 self._merge_row(r)
+            return
+
+        if c == self._col_movement:
+            menu = QMenu(self)
+            act_clear = menu.addAction("Hareket Türü Temizle")
+            menu.addSeparator()
+            act_tek = menu.addAction("TEK")
+            act_cift = menu.addAction("ÇİFT")
+            act_paket = menu.addAction("PAKET")
+            act_mesai = menu.addAction("MESAİ")
+            chosen = menu.exec(self.table.viewport().mapToGlobal(pos))
+            if chosen is None:
+                return
+            itx = self.table.item(r, self._col_movement)
+            if itx is None:
+                itx = QTableWidgetItem("")
+                itx.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                itx.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
+                self.table.setItem(r, self._col_movement, itx)
+            if chosen == act_clear:
+                itx.setText("")
+                return
+            if chosen == act_tek:
+                itx.setText("TEK")
+            elif chosen == act_cift:
+                itx.setText("ÇİFT")
+            elif chosen == act_paket:
+                itx.setText("PAKET")
+            elif chosen == act_mesai:
+                itx.setText("MESAİ")
             return
 
         if c in (self._col_vehicle, self._col_driver):
@@ -3181,6 +3532,27 @@ class BulkAttendanceDialog(QDialog):
             if c in (0, 1, self._col_vehicle, self._col_driver, self._col_time_text, self._col_total_qty, self._col_total_price):
                 return
 
+            if c == self._col_movement:
+                # Normalize movement type to the allowed set if user typed it manually.
+                try:
+                    txtm = (item.text() or "").strip().upper()
+                except Exception:
+                    txtm = ""
+                allowed = {"TEK", "ÇİFT", "PAKET", "MESAİ"}
+                if txtm and txtm not in allowed:
+                    try:
+                        with QSignalBlocker(self.table):
+                            item.setText("")
+                    except Exception:
+                        item.setText("")
+                else:
+                    try:
+                        with QSignalBlocker(self.table):
+                            item.setText(txtm)
+                    except Exception:
+                        item.setText(txtm)
+                return
+
             if c == self._col_price:
                 try:
                     txtp = (item.text() or "").strip()
@@ -3402,6 +3774,13 @@ class BulkAttendanceDialog(QDialog):
                         t_item.setText("0")
                 except Exception:
                     pass
+
+                try:
+                    tp_item = self.table.item(r, self._col_total_price)
+                    if tp_item is not None:
+                        tp_item.setText("0")
+                except Exception:
+                    pass
         finally:
             try:
                 self.table.blockSignals(False)
@@ -3410,6 +3789,16 @@ class BulkAttendanceDialog(QDialog):
 
         try:
             self._load_existing_entries()
+        except Exception:
+            pass
+
+        try:
+            self._load_manual_rows()
+        except Exception:
+            pass
+
+        try:
+            self._apply_route_group_spans()
         except Exception:
             pass
 
@@ -4359,6 +4748,7 @@ class BulkAttendanceDialog(QDialog):
         price_write_map: dict[tuple[int, str], float] = {}
         entry_rows = []
         alloc_rows = []
+        manual_payload: list[dict] = []
         empty_split_groups: list[tuple[int, str, int]] = []
         empty_hidden_groups: list[tuple[int, str, int]] = []
 
@@ -4414,6 +4804,71 @@ class BulkAttendanceDialog(QDialog):
                 except Exception:
                     rid = 0
             if not rid:
+                # Manual row (no route_params_id) -> persist to bulk_puantaj_manual_rows only.
+                try:
+                    guz_txt = (it_route.text() or "").strip() if it_route is not None else ""
+                except Exception:
+                    guz_txt = ""
+                itv = self.table.item(r, self._col_vehicle)
+                itd = self.table.item(r, self._col_driver)
+                vehicle_id = itv.data(Qt.ItemDataRole.UserRole) if itv is not None else None
+                driver_id = itd.data(Qt.ItemDataRole.UserRole) if itd is not None else None
+                if vehicle_id is None or (isinstance(vehicle_id, str) and not str(vehicle_id).strip()):
+                    try:
+                        vehicle_id = (itv.text() or "").strip() if itv is not None else None
+                    except Exception:
+                        vehicle_id = None
+                if driver_id is None or (isinstance(driver_id, str) and not str(driver_id).strip()):
+                    try:
+                        driver_id = (itd.text() or "").strip() if itd is not None else None
+                    except Exception:
+                        driver_id = None
+                mt_item = self.table.item(r, self._col_movement)
+                mt_txt = (mt_item.text() or "").strip().upper() if mt_item is not None else ""
+                tt_item = self.table.item(r, self._col_time_text)
+                tt_txt = (tt_item.text() or "").strip() if tt_item is not None else ""
+                p_item = self.table.item(r, self._col_price)
+                p_txt = ((p_item.text() if p_item else "") or "").strip()
+                try:
+                    p_full = None
+                    try:
+                        if p_item is not None:
+                            p_full = p_item.data(Qt.ItemDataRole.UserRole)
+                    except Exception:
+                        p_full = None
+                    if p_full is None or (isinstance(p_full, str) and not str(p_full).strip()):
+                        unit_price = float(self._parse_tr_float(p_txt))
+                    else:
+                        unit_price = float(p_full or 0.0)
+                except Exception:
+                    unit_price = 0.0
+
+                day_map: dict[str, int] = {}
+                try:
+                    for day in range(1, int(self.days_in_month) + 1):
+                        col = int(self._day_start) + (int(day) - 1)
+                        itx = self.table.item(int(r), int(col))
+                        v = (itx.text() or "").strip() if itx is not None else ""
+                        if v.isdigit() and int(v) > 0:
+                            day_map[str(int(day))] = int(v)
+                except Exception:
+                    day_map = {}
+
+                has_any = bool(guz_txt or mt_txt or tt_txt or (str(vehicle_id or "").strip()) or (str(driver_id or "").strip()))
+                has_any = bool(has_any or (float(unit_price or 0.0) > 0.0) or bool(day_map))
+                if has_any:
+                    manual_payload.append(
+                        {
+                            "sort_order": int(len(manual_payload)),
+                            "guzergah": str(guz_txt),
+                            "vehicle_id": (None if vehicle_id is None or not str(vehicle_id).strip() else str(vehicle_id)),
+                            "driver_id": (None if driver_id is None or not str(driver_id).strip() else str(driver_id)),
+                            "movement_type": str(mt_txt),
+                            "time_text": str(tt_txt),
+                            "unit_price": float(unit_price or 0.0),
+                            "day_qty_json": json.dumps(day_map, ensure_ascii=False),
+                        }
+                    )
                 continue
 
             time_block = str((meta or {}).get("time_block") or "GUN")
@@ -4876,6 +5331,21 @@ class BulkAttendanceDialog(QDialog):
 
             conn.commit()
             conn.close()
+
+            try:
+                ok_manual = self.db.replace_bulk_puantaj_manual_rows(
+                    int(self.contract_id),
+                    str(self.month_key),
+                    str(self.service_type),
+                    list(manual_payload or []),
+                )
+                if not bool(ok_manual):
+                    QMessageBox.warning(self, "Uyarı", "Manuel satırlar kaydedilemedi.")
+            except Exception:
+                try:
+                    QMessageBox.warning(self, "Uyarı", "Manuel satırlar kaydedilemedi.")
+                except Exception:
+                    pass
         except Exception:
             try:
                 conn.rollback()
