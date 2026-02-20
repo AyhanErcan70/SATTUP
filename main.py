@@ -34,13 +34,23 @@ def get_hwid():
     except:
         return "default_hwid_12345"
 
+def get_license_path():
+    """Lisans dosyasının AppData altındaki gizli yolunu oluşturur."""
+    app_data = os.getenv('APPDATA') # C:\Users\Kullanıcı\AppData\Roaming
+    target_dir = os.path.join(app_data, "SATTUP")
+    
+    # Eğer klasör yoksa (ilk çalıştırmada) otomatik oluşturur
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+        
+    return os.path.join(target_dir, ".sys_config.bin")
+
+# Kullanırken:
 def is_licensed():
-    """Lisans dosyasını ve HWID eşleşmesini kontrol eder."""
-    # Dosyayı gizli bir isimle BASE_DIR içinde tutuyoruz
-    lic_path = os.path.join(BASE_DIR, ".sys_config.bin")
+    lic_path = get_license_path()
     if not os.path.exists(lic_path):
         return False
-    
+
     try:
         with open(lic_path, "r") as f:
             saved_key = f.read().strip()
