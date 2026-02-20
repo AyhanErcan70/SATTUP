@@ -1,6 +1,9 @@
 import sys
 import os
+import hashlib
+import subprocess
 import config
+
 # 1. Bytecode (.pycache) oluşumunu engelle
 sys.dont_write_bytecode = True
 
@@ -8,24 +11,67 @@ sys.dont_write_bytecode = True
 sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
 
 from config import BASE_DIR
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QDialog
 from app.core.db_manager import DatabaseManager
 from app.modules.main_menu import MainMenuApp
 
-# Register Qt resources early so Designer stylesheets using ":/..." paths always work.
+# Lisans ekranını içe aktar (Dosya adın farklıysa 'licence_ui' kısmını değiştir)
+from app.modules.licence_manager import SattupLicence 
+
+# Register Qt resources early
 import ui.icons.context_rc
 
+# --- LİSANS YARDIMCI FONKSİYONLARI ---
+
+def get_hwid():
+    """Bilgisayarın benzersiz donanım kimliğini (UUID) döndürür."""
+    try:
+        # Windows UUID alma komutu
+        cmd = 'wmic csproduct get uuid'
+        uuid = str(subprocess.check_output(cmd, shell=True))
+        # Güvenlik için hash'liyoruz
+        return hashlib.sha256(uuid.encode()).hexdigest()[:16]
+    except:
+        return "default_hwid_12345"
+
+def is_licensed():
+    """Lisans dosyasını ve HWID eşleşmesini kontrol eder."""
+    # Dosyayı gizli bir isimle BASE_DIR içinde tutuyoruz
+    lic_path = os.path.join(BASE_DIR, ".sys_config.bin")
+    if not os.path.exists(lic_path):
+        return False
+    
+    try:
+        with open(lic_path, "r") as f:
+            saved_key = f.read().strip()
+        return saved_key == get_hwid()
+    except:
+        return False
+
+# --- ANA PROGRAM ---
 
 def main():
     db = DatabaseManager()
-
     app = QApplication(sys.argv)
 
+    # --- LİSANS BEKÇİSİ ---
+    if not is_licensed():
+        lic_dialog = SattupLicence()
+        # Eğer kullanıcı doğru şifreyi girip 'AKTİVE ET' (accept) dediyse:
+        if lic_dialog.exec() == QDialog.DialogCode.Accepted:
+            # HWID'yi dosyaya yaz ve kalıcı lisans oluştur
+            lic_path = os.path.join(BASE_DIR, ".sys_config.bin")
+            with open(lic_path, "w") as f:
+                f.write(get_hwid())
+        else:
+            # Lisans ekranı kapatıldı veya iptal edildi, programdan çık
+            return 
+
+    # --- ANA PENCERE BAŞLATMA ---
     user_data = {}
     main_window = MainMenuApp(user_data=user_data, start_passive=True, offline_timeout_ms=120000)
     main_window.showMaximized()
     sys.exit(app.exec())
-
 
 if __name__ == "__main__":
     main()

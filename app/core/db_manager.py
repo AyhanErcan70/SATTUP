@@ -1,7 +1,7 @@
 import sqlite3
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 from config import DB_PATH, BASE_DIR
 
@@ -2544,6 +2544,689 @@ class DatabaseManager:
             return cursor.fetchall()
         finally:
             conn.close()
+
+    def _pricing_category_from_movement_type(self, movement_type: str | None) -> str:
+        mt = str(movement_type or "").strip().upper()
+        if not mt:
+            return "TEK_SERVIS"
+
+        # NOTE: business rule from user: GRŞ/ÇKŞ (dolu/dolu) corresponds to ÇİFT.
+        mt2 = (
+            mt.replace("Ş", "S")
+            .replace("İ", "I")
+            .replace("Ğ", "G")
+            .replace("Ü", "U")
+            .replace("Ö", "O")
+            .replace("Ç", "C")
+        )
+
+        if "MESA" in mt2:
+            return "MESAI"
+        if "PAKET" in mt2 or ("SABAH" in mt2 and "AKSAM" in mt2):
+            return "PAKET_SERVIS"
+        if "GRS" in mt2 or "GIRIS" in mt2 or "CIKIS" in mt2 or "CIFT" in mt2:
+            return "CIFT_SERVIS"
+        if "TEK" in mt2:
+            return "TEK_SERVIS"
+        return "TEK_SERVIS"
+
+    def get_hakedis_tab1_yuklenici_araclari_rows(
+        self,
+        contract_id: int,
+        period: str,
+        service_type: str,
+        customer_id: int | None = None,
+        require_locked: bool = True,
+    ):
+        """Return Tablo-1 rows (YÜKLENİCİ ARAÇLARI) for a given month.
+
+        Output columns (in order):
+        - FİRMA, GÜZERGAH, ŞAHIS(arac_sahibi), HAREKET(movement_type), GÜN TEK(qty sum),
+          TUTAR(unit subcontractor price), TOPLAM, KDV, ARA TOP, TEVKIFAT, G TOPLAM
+
+        Rules:
+        - Only subcontractor vehicles (vehicles.arac_turu contains 'TAŞERON ARACI' variants)
+        - Only locked/onaylı periods when require_locked=True (trip_period_lock.locked=1)
+        - movement_type is taken from route_params.movement_type
+        - pricing_category is derived from movement_type and used to resolve trip_prices.subcontractor_price
+        - KDV = TOPLAM * 0.20
+        - TEVKIFAT = KDV * 0.50
+        - G TOPLAM = (TOPLAM + KDV) - TEVKIFAT
+        """
+
+        if not contract_id or not period or not service_type:
+            return []
+
+        month = str(period).strip()[:7]
+        if len(month) != 7 or month[4] != "-":
+            return []
+
+        if require_locked:
+            st = self.get_trip_period_lock(int(contract_id), str(month), str(service_type)) or {}
+            if not bool(st.get("locked")):
+                return []
+
+        # month date range: YYYY-MM-01 .. last day
+        try:
+            d0 = datetime.strptime(month + "-01", "%Y-%m-%d")
+        except Exception:
+            return []
+        if d0.month == 12:
+            d1 = datetime(d0.year + 1, 1, 1)
+        else:
+            d1 = datetime(d0.year, d0.month + 1, 1)
+        start_date = d0.strftime("%Y-%m-%d")
+        end_date = (d1 - timedelta(days=1)).strftime("%Y-%m-%d")
+
+        conn = self.connect()
+        if not conn:
+            return []
+        try:
+            cur = conn.cursor()
+            params: list[object] = [int(contract_id), str(service_type), str(start_date), str(end_date)]
+            customer_filter_sql = ""
+            if customer_id is not None:
+                customer_filter_sql = " AND cu.id = ? "
+                params.append(int(customer_id))
+
+            # subcontractor vehicle filter: accept common variations
+            # We use ascii-normalized LIKE checks.
+            cur.execute(
+                f"""
+                SELECT
+                    COALESCE(cu.title, '') AS firma,
+                    COALESCE(rp.route_name, '') AS guzergah,
+                    COALESCE(v.arac_sahibi, '') AS sahis,
+                    COALESCE(rp.movement_type, '') AS hareket,
+                    SUM(COALESCE(ta.qty, 0)) AS qty_sum,
+                    MAX(COALESCE(ta.trip_date, '')) AS last_trip_date,
+                    rp.id AS route_params_id
+                FROM trip_allocations ta
+                LEFT JOIN route_params rp ON rp.id = ta.route_params_id
+                LEFT JOIN vehicles v ON v.id = ta.vehicle_id
+                LEFT JOIN contracts co ON co.id = ta.contract_id
+                LEFT JOIN customers cu ON cu.id = co.customer_id
+                WHERE ta.contract_id = ?
+                  AND ta.service_type = ?
+                  AND ta.trip_date BETWEEN ? AND ?
+                  AND (
+                        REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TASERON%'
+                        AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ARAC%'
+                  )
+                  AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(rp.movement_type,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') NOT LIKE '%CENAZE%'
+                  {customer_filter_sql}
+                GROUP BY
+                    COALESCE(cu.title, ''),
+                    COALESCE(rp.route_name, ''),
+                    COALESCE(v.arac_sahibi, ''),
+                    COALESCE(rp.movement_type, ''),
+                    rp.id
+                ORDER BY firma, sahis, guzergah
+                """,
+                tuple(params),
+            )
+            grouped = cur.fetchall() or []
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+        out_rows = []
+        # price cache: (route_params_id, pricing_category, trip_date) -> subcontractor_price
+        price_cache: dict[tuple[int, str, str], float] = {}
+
+        for firma, guzergah, sahis, hareket, qty_sum, last_trip_date, route_params_id in grouped:
+            try:
+                rid = int(route_params_id or 0)
+            except Exception:
+                rid = 0
+            if rid <= 0:
+                continue
+
+            try:
+                qty_f = float(qty_sum or 0.0)
+            except Exception:
+                qty_f = 0.0
+            if qty_f <= 0:
+                continue
+
+            pc = self._pricing_category_from_movement_type(str(hareket or ""))
+            d_for_price = str(last_trip_date or "").strip() or str(end_date)
+            key = (rid, pc, d_for_price)
+            if key in price_cache:
+                unit_price = float(price_cache.get(key) or 0.0)
+            else:
+                unit_price = 0.0
+                try:
+                    pr = self.get_trip_price_for_date(
+                        contract_id=int(contract_id),
+                        service_type=str(service_type),
+                        route_params_id=int(rid),
+                        pricing_category=str(pc),
+                        trip_date=str(d_for_price),
+                    )
+                    if pr:
+                        unit_price = float(pr[1] or 0.0)
+                except Exception:
+                    unit_price = 0.0
+                price_cache[key] = float(unit_price or 0.0)
+
+            total = float(qty_f * float(unit_price or 0.0))
+            kdv = float(total * 0.20)
+            ara_top = float(total + kdv)
+            tevkifat = float(kdv * 0.50)
+            g_toplam = float(ara_top - tevkifat)
+
+            out_rows.append(
+                (
+                    str(firma or ""),
+                    str(guzergah or ""),
+                    str(sahis or ""),
+                    str(hareket or ""),
+                    qty_f,
+                    float(unit_price or 0.0),
+                    total,
+                    kdv,
+                    ara_top,
+                    tevkifat,
+                    g_toplam,
+                )
+            )
+
+        return out_rows
+
+    def get_hakedis_tab1_yuklenici_araclari_rows_all(
+        self,
+        period: str,
+        customer_id: int | None = None,
+    ):
+        """Return Tablo-1 rows (YÜKLENİCİ ARAÇLARI) across ALL contracts for a given month.
+
+        Output columns (in order):
+        - FİRMA, GÜZERGAH, ŞAHIS(arac_sahibi), HAREKET(movement_type), GÜN TOP(qty sum),
+          TUTAR(unit subcontractor price), TOPLAM, KDV, ARA TOP, TEVKIFAT, G TOPLAM
+        """
+
+        month = str(period).strip()[:7]
+        if len(month) != 7 or month[4] != "-":
+            return []
+
+        try:
+            d0 = datetime.strptime(month + "-01", "%Y-%m-%d")
+        except Exception:
+            return []
+        if d0.month == 12:
+            d1 = datetime(d0.year + 1, 1, 1)
+        else:
+            d1 = datetime(d0.year, d0.month + 1, 1)
+        start_date = d0.strftime("%Y-%m-%d")
+        end_date = (d1 - timedelta(days=1)).strftime("%Y-%m-%d")
+
+        conn = self.connect()
+        if not conn:
+            return []
+        try:
+            cur = conn.cursor()
+            params: list[object] = [str(start_date), str(end_date)]
+            customer_filter_sql = ""
+            if customer_id is not None:
+                customer_filter_sql = " AND cu.id = ? "
+                params.append(int(customer_id))
+
+            cur.execute(
+                f"""
+                SELECT
+                    COALESCE(cu.title, '') AS firma,
+                    COALESCE(rp.route_name, '') AS guzergah,
+                    COALESCE(v.arac_sahibi, '') AS sahis,
+                    COALESCE(rp.movement_type, '') AS hareket,
+                    SUM(COALESCE(ta.qty, 0)) AS qty_sum,
+                    MAX(COALESCE(ta.trip_date, '')) AS last_trip_date,
+                    rp.id AS route_params_id,
+                    ta.contract_id AS contract_id,
+                    COALESCE(ta.service_type,'') AS service_type
+                FROM trip_allocations ta
+                LEFT JOIN route_params rp ON rp.id = ta.route_params_id
+                LEFT JOIN vehicles v ON v.id = ta.vehicle_id
+                LEFT JOIN contracts co ON co.id = ta.contract_id
+                LEFT JOIN customers cu ON cu.id = co.customer_id
+                WHERE ta.trip_date BETWEEN ? AND ?
+                  AND (
+                        REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TASERON%'
+                        AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ARAC%'
+                  )
+                  AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(rp.movement_type,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') NOT LIKE '%CENAZE%'
+                  {customer_filter_sql}
+                GROUP BY
+                    COALESCE(cu.title, ''),
+                    COALESCE(rp.route_name, ''),
+                    COALESCE(v.arac_sahibi, ''),
+                    COALESCE(rp.movement_type, ''),
+                    rp.id,
+                    ta.contract_id,
+                    COALESCE(ta.service_type,'')
+                ORDER BY firma, sahis, guzergah
+                """,
+                tuple(params),
+            )
+            grouped = cur.fetchall() or []
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+        out_rows = []
+        price_cache: dict[tuple[int, str, str, int, str], float] = {}
+
+        for (
+            firma,
+            guzergah,
+            sahis,
+            hareket,
+            qty_sum,
+            last_trip_date,
+            route_params_id,
+            contract_id,
+            service_type,
+        ) in grouped:
+            try:
+                rid = int(route_params_id or 0)
+            except Exception:
+                rid = 0
+            if rid <= 0:
+                continue
+
+            try:
+                cid = int(contract_id or 0)
+            except Exception:
+                cid = 0
+            if cid <= 0:
+                continue
+
+            st = str(service_type or "").strip()
+            if not st:
+                continue
+
+            try:
+                qty_f = float(qty_sum or 0.0)
+            except Exception:
+                qty_f = 0.0
+            if qty_f <= 0:
+                continue
+
+            pc = self._pricing_category_from_movement_type(str(hareket or ""))
+            d_for_price = str(last_trip_date or "").strip() or str(end_date)
+            key = (rid, pc, d_for_price, cid, st)
+            if key in price_cache:
+                unit_price = float(price_cache.get(key) or 0.0)
+            else:
+                unit_price = 0.0
+                try:
+                    pr = self.get_trip_price_for_date(
+                        contract_id=int(cid),
+                        service_type=str(st),
+                        route_params_id=int(rid),
+                        pricing_category=str(pc),
+                        trip_date=str(d_for_price),
+                    )
+                    if pr:
+                        unit_price = float(pr[1] or 0.0)
+                except Exception:
+                    unit_price = 0.0
+                price_cache[key] = float(unit_price or 0.0)
+
+            total = float(qty_f * float(unit_price or 0.0))
+            kdv = float(total * 0.20)
+            ara_top = float(total + kdv)
+            tevkifat = float(kdv * 0.50)
+            g_toplam = float(ara_top - tevkifat)
+
+            out_rows.append(
+                (
+                    str(firma or ""),
+                    str(guzergah or ""),
+                    str(sahis or ""),
+                    str(hareket or ""),
+                    qty_f,
+                    float(unit_price or 0.0),
+                    total,
+                    kdv,
+                    ara_top,
+                    tevkifat,
+                    g_toplam,
+                )
+            )
+
+        return out_rows
+
+    def get_hakedis_tab2_sirket_araclari_rows_all(
+        self,
+        period: str,
+        customer_id: int | None = None,
+    ):
+        """Return Tablo-2 rows (ŞİRKET ARAÇLARI) across ALL contracts for a given month.
+
+        Output columns (in order):
+        - GÜZERGAH, ŞAHIS(arac_sahibi), PLAKA, HAREKET(movement_type), GÜN TOP(qty sum),
+          TUTAR(unit price), TOPLAM, KDV, ARA TOP, TEVKIFAT, G TOPLAM
+        """
+
+        month = str(period).strip()[:7]
+        if len(month) != 7 or month[4] != "-":
+            return []
+
+        try:
+            d0 = datetime.strptime(month + "-01", "%Y-%m-%d")
+        except Exception:
+            return []
+        if d0.month == 12:
+            d1 = datetime(d0.year + 1, 1, 1)
+        else:
+            d1 = datetime(d0.year, d0.month + 1, 1)
+        start_date = d0.strftime("%Y-%m-%d")
+        end_date = (d1 - timedelta(days=1)).strftime("%Y-%m-%d")
+
+        conn = self.connect()
+        if not conn:
+            return []
+        try:
+            cur = conn.cursor()
+            params: list[object] = [str(start_date), str(end_date)]
+            customer_filter_sql = ""
+            if customer_id is not None:
+                customer_filter_sql = " AND cu.id = ? "
+                params.append(int(customer_id))
+
+            cur.execute(
+                f"""
+                SELECT
+                    COALESCE(rp.route_name, '') AS guzergah,
+                    COALESCE(v.arac_sahibi, '') AS sahis,
+                    COALESCE(v.plate_number, '') AS plaka,
+                    COALESCE(rp.movement_type, '') AS hareket,
+                    SUM(COALESCE(ta.qty, 0)) AS qty_sum,
+                    MAX(COALESCE(ta.trip_date, '')) AS last_trip_date,
+                    rp.id AS route_params_id,
+                    ta.contract_id AS contract_id,
+                    COALESCE(ta.service_type,'') AS service_type
+                FROM trip_allocations ta
+                LEFT JOIN route_params rp ON rp.id = ta.route_params_id
+                LEFT JOIN vehicles v ON v.id = ta.vehicle_id
+                LEFT JOIN contracts co ON co.id = ta.contract_id
+                LEFT JOIN customers cu ON cu.id = co.customer_id
+                WHERE ta.trip_date BETWEEN ? AND ?
+                  AND NOT (
+                        REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TASERON%'
+                        AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ARAC%'
+                  )
+                  AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(rp.movement_type,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') NOT LIKE '%CENAZE%'
+                  {customer_filter_sql}
+                GROUP BY
+                    COALESCE(rp.route_name, ''),
+                    COALESCE(v.arac_sahibi, ''),
+                    COALESCE(v.plate_number, ''),
+                    COALESCE(rp.movement_type, ''),
+                    rp.id,
+                    ta.contract_id,
+                    COALESCE(ta.service_type,'')
+                ORDER BY guzergah, plaka
+                """,
+                tuple(params),
+            )
+            grouped = cur.fetchall() or []
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+        out_rows = []
+        price_cache: dict[tuple[int, str, str, int, str], float] = {}
+
+        for (
+            guzergah,
+            sahis,
+            plaka,
+            hareket,
+            qty_sum,
+            last_trip_date,
+            route_params_id,
+            contract_id,
+            service_type,
+        ) in grouped:
+            try:
+                rid = int(route_params_id or 0)
+            except Exception:
+                rid = 0
+            if rid <= 0:
+                continue
+
+            try:
+                cid = int(contract_id or 0)
+            except Exception:
+                cid = 0
+            if cid <= 0:
+                continue
+
+            st = str(service_type or "").strip()
+            if not st:
+                continue
+
+            try:
+                qty_f = float(qty_sum or 0.0)
+            except Exception:
+                qty_f = 0.0
+            if qty_f <= 0:
+                continue
+
+            pc = self._pricing_category_from_movement_type(str(hareket or ""))
+            d_for_price = str(last_trip_date or "").strip() or str(end_date)
+            key = (rid, pc, d_for_price, cid, st)
+            if key in price_cache:
+                unit_price = float(price_cache.get(key) or 0.0)
+            else:
+                unit_price = 0.0
+                try:
+                    pr = self.get_trip_price_for_date(
+                        contract_id=int(cid),
+                        service_type=str(st),
+                        route_params_id=int(rid),
+                        pricing_category=str(pc),
+                        trip_date=str(d_for_price),
+                    )
+                    if pr:
+                        unit_price = float(pr[1] or 0.0)
+                except Exception:
+                    unit_price = 0.0
+                price_cache[key] = float(unit_price or 0.0)
+
+            total = float(qty_f * float(unit_price or 0.0))
+            kdv = float(total * 0.20)
+            ara_top = float(total + kdv)
+            tevkifat = float(kdv * 0.50)
+            g_toplam = float(ara_top - tevkifat)
+
+            out_rows.append(
+                (
+                    str(guzergah or ""),
+                    str(sahis or ""),
+                    str(plaka or ""),
+                    str(hareket or ""),
+                    qty_f,
+                    float(unit_price or 0.0),
+                    total,
+                    kdv,
+                    ara_top,
+                    tevkifat,
+                    g_toplam,
+                )
+            )
+
+        return out_rows
+
+    def get_hakedis_tab2_sirket_araclari_rows(
+        self,
+        contract_id: int,
+        period: str,
+        service_type: str,
+        customer_id: int | None = None,
+        require_locked: bool = True,
+    ):
+        """Return Tablo-2 rows (ŞİRKET ARAÇLARI) for a given month.
+
+        Output columns (in order):
+        - GÜZERGAH, ŞAHIS(arac_sahibi), PLAKA, HAREKET(movement_type), GÜN(qty sum),
+          TUTAR(unit price), TOPLAM, KDV, ARA TOP, TEVKIFAT, G TOPLAM
+
+        Rules:
+        - Only company vehicles (NOT 'TAŞERON ARACI' variations)
+        - Only locked/onaylı periods when require_locked=True (trip_period_lock.locked=1)
+        - movement_type is taken from route_params.movement_type
+        - pricing_category is derived from movement_type and used to resolve trip_prices.price
+        - KDV = TOPLAM * 0.20
+        - TEVKIFAT = KDV * 0.50
+        - G TOPLAM = (TOPLAM + KDV) - TEVKIFAT
+        """
+
+        if not contract_id or not period or not service_type:
+            return []
+
+        month = str(period).strip()[:7]
+        if len(month) != 7 or month[4] != "-":
+            return []
+
+        if require_locked:
+            st = self.get_trip_period_lock(int(contract_id), str(month), str(service_type)) or {}
+            if not bool(st.get("locked")):
+                return []
+
+        try:
+            d0 = datetime.strptime(month + "-01", "%Y-%m-%d")
+        except Exception:
+            return []
+        if d0.month == 12:
+            d1 = datetime(d0.year + 1, 1, 1)
+        else:
+            d1 = datetime(d0.year, d0.month + 1, 1)
+        start_date = d0.strftime("%Y-%m-%d")
+        end_date = (d1 - timedelta(days=1)).strftime("%Y-%m-%d")
+
+        conn = self.connect()
+        if not conn:
+            return []
+        try:
+            cur = conn.cursor()
+            params: list[object] = [int(contract_id), str(service_type), str(start_date), str(end_date)]
+            customer_filter_sql = ""
+            if customer_id is not None:
+                customer_filter_sql = " AND cu.id = ? "
+                params.append(int(customer_id))
+
+            cur.execute(
+                f"""
+                SELECT
+                    COALESCE(rp.route_name, '') AS guzergah,
+                    COALESCE(v.arac_sahibi, '') AS sahis,
+                    COALESCE(v.plate_number, '') AS plaka,
+                    COALESCE(rp.movement_type, '') AS hareket,
+                    SUM(COALESCE(ta.qty, 0)) AS qty_sum,
+                    MAX(COALESCE(ta.trip_date, '')) AS last_trip_date,
+                    rp.id AS route_params_id
+                FROM trip_allocations ta
+                LEFT JOIN route_params rp ON rp.id = ta.route_params_id
+                LEFT JOIN vehicles v ON v.id = ta.vehicle_id
+                LEFT JOIN contracts co ON co.id = ta.contract_id
+                LEFT JOIN customers cu ON cu.id = co.customer_id
+                WHERE ta.contract_id = ?
+                  AND ta.service_type = ?
+                  AND ta.trip_date BETWEEN ? AND ?
+                  AND NOT (
+                        REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TASERON%'
+                        AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ARAC%'
+                  )
+                  AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(rp.movement_type,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') NOT LIKE '%CENAZE%'
+                  {customer_filter_sql}
+                GROUP BY
+                    COALESCE(rp.route_name, ''),
+                    COALESCE(v.arac_sahibi, ''),
+                    COALESCE(v.plate_number, ''),
+                    COALESCE(rp.movement_type, ''),
+                    rp.id
+                ORDER BY guzergah, plaka
+                """,
+                tuple(params),
+            )
+            grouped = cur.fetchall() or []
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+        out_rows = []
+        price_cache: dict[tuple[int, str, str], float] = {}
+
+        for guzergah, sahis, plaka, hareket, qty_sum, last_trip_date, route_params_id in grouped:
+            try:
+                rid = int(route_params_id or 0)
+            except Exception:
+                rid = 0
+            if rid <= 0:
+                continue
+
+            try:
+                qty_f = float(qty_sum or 0.0)
+            except Exception:
+                qty_f = 0.0
+            if qty_f <= 0:
+                continue
+
+            pc = self._pricing_category_from_movement_type(str(hareket or ""))
+            d_for_price = str(last_trip_date or "").strip() or str(end_date)
+            key = (rid, pc, d_for_price)
+            if key in price_cache:
+                unit_price = float(price_cache.get(key) or 0.0)
+            else:
+                unit_price = 0.0
+                try:
+                    pr = self.get_trip_price_for_date(
+                        contract_id=int(contract_id),
+                        service_type=str(service_type),
+                        route_params_id=int(rid),
+                        pricing_category=str(pc),
+                        trip_date=str(d_for_price),
+                    )
+                    if pr:
+                        unit_price = float(pr[1] or 0.0)
+                except Exception:
+                    unit_price = 0.0
+                price_cache[key] = float(unit_price or 0.0)
+
+            total = float(qty_f * float(unit_price or 0.0))
+            kdv = float(total * 0.20)
+            ara_top = float(total + kdv)
+            tevkifat = float(kdv * 0.50)
+            g_toplam = float(ara_top - tevkifat)
+
+            out_rows.append(
+                (
+                    str(guzergah or ""),
+                    str(sahis or ""),
+                    str(plaka or ""),
+                    str(hareket or ""),
+                    qty_f,
+                    float(unit_price or 0.0),
+                    total,
+                    kdv,
+                    ara_top,
+                    tevkifat,
+                    g_toplam,
+                )
+            )
+
+        return out_rows
 
     def get_vehicle_subcontract_meta(self, vehicle_id: int):
         """Return (arac_turu, supplier_customer_id) for given vehicles.id."""

@@ -1,0 +1,747 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>main_dialog</class>
+ <widget class="QDialog" name="main_dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>387</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Dialog</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_7">
+   <item row="0" column="0">
+    <widget class="QFrame" name="top_frame">
+     <property name="frameShape">
+      <enum>QFrame::Shape::Box</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Shadow::Plain</enum>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <layout class="QGridLayout" name="gridLayout">
+        <item row="1" column="4">
+         <widget class="QLabel" name="lbl_rakamlar_5">
+          <property name="font">
+           <font>
+            <family>Courier New</family>
+            <pointsize>16</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::Shape::Box</enum>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="5">
+         <widget class="QLabel" name="lbl_rakamlar_6">
+          <property name="font">
+           <font>
+            <family>Courier New</family>
+            <pointsize>16</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::Shape::Box</enum>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QLabel" name="lbl_rakamlar_8">
+          <property name="font">
+           <font>
+            <family>Courier New</family>
+            <pointsize>16</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::Shape::Box</enum>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="lbl_rakamlar_7">
+          <property name="font">
+           <font>
+            <family>Courier New</family>
+            <pointsize>16</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::Shape::Box</enum>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="5">
+         <widget class="QLabel" name="lbl_rakamlar_12">
+          <property name="font">
+           <font>
+            <family>Courier New</family>
+            <pointsize>16</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::Shape::Box</enum>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="3">
+         <widget class="QLabel" name="lbl_rakamlar_4">
+          <property name="font">
+           <font>
+            <family>Courier New</family>
+            <pointsize>16</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::Shape::Box</enum>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="3">
+         <widget class="QLabel" name="lbl_rakamlar_10">
+          <property name="font">
+           <font>
+            <family>Courier New</family>
+            <pointsize>16</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::Shape::Box</enum>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLabel" name="lbl_rakamlar_2">
+          <property name="font">
+           <font>
+            <family>Courier New</family>
+            <pointsize>16</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::Shape::Box</enum>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="4">
+         <widget class="QLabel" name="lbl_rakamlar_11">
+          <property name="font">
+           <font>
+            <family>Courier New</family>
+            <pointsize>16</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::Shape::Box</enum>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="lbl_rakamlar_1">
+          <property name="font">
+           <font>
+            <family>Courier New</family>
+            <pointsize>16</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::Shape::Box</enum>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <widget class="QLabel" name="lbl_rakamlar_3">
+          <property name="font">
+           <font>
+            <family>Courier New</family>
+            <pointsize>16</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::Shape::Box</enum>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="2">
+         <widget class="QLabel" name="lbl_rakamlar_9">
+          <property name="font">
+           <font>
+            <family>Courier New</family>
+            <pointsize>16</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::Shape::Box</enum>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0" colspan="6">
+         <widget class="QLabel" name="lbl_text_1">
+          <property name="text">
+           <string>Lütfen Aşağıda Yazılı rakamları sırasıyla karşı tarafa bildiriniz..!</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QFrame" name="middle_frame">
+     <property name="frameShape">
+      <enum>QFrame::Shape::Box</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Shadow::Plain</enum>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_3">
+      <item row="0" column="0">
+       <layout class="QGridLayout" name="gridLayout_4">
+        <item row="1" column="5">
+         <widget class="QLineEdit" name="txt_rakamlar_5">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maxLength">
+           <number>2</number>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="4">
+         <widget class="QLineEdit" name="txt_rakamlar_4">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maxLength">
+           <number>2</number>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QLineEdit" name="txt_rakamlar_7">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maxLength">
+           <number>2</number>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <widget class="QLineEdit" name="txt_rakamlar_2">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maxLength">
+           <number>2</number>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLineEdit" name="txt_rakamlar_1">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maxLength">
+           <number>2</number>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="3">
+         <widget class="QLineEdit" name="txt_rakamlar_3">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maxLength">
+           <number>2</number>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="6">
+         <widget class="QLineEdit" name="txt_rakamlar_6">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maxLength">
+           <number>2</number>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="2">
+         <widget class="QLineEdit" name="txt_rakamlar_8">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maxLength">
+           <number>2</number>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="3">
+         <widget class="QLineEdit" name="txt_rakamlar_9">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maxLength">
+           <number>2</number>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="4">
+         <widget class="QLineEdit" name="txt_rakamlar_10">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maxLength">
+           <number>2</number>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="5">
+         <widget class="QLineEdit" name="txt_rakamlar_11">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maxLength">
+           <number>2</number>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="6">
+         <widget class="QLineEdit" name="txt_rakamlar_12">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>50</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maxLength">
+           <number>2</number>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1" colspan="6">
+         <widget class="QLabel" name="lbl_text_2">
+          <property name="text">
+           <string>Karşılık gelen rakamları sırasıyla yazıp &quot;Tamam&quot; butonuna basın!</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QFrame" name="bottom_frame">
+     <property name="frameShape">
+      <enum>QFrame::Shape::Box</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Shadow::Plain</enum>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_6">
+      <item row="0" column="0">
+       <layout class="QGridLayout" name="gridLayout_5">
+        <item row="0" column="0">
+         <widget class="QPushButton" name="btn_active_et">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>120</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>AKTİVE ET</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QPushButton" name="btn_cancel">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>120</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>VAZGEÇ/İPTAL</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QPushButton" name="btn_clear">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>120</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>FORMU TEMİZLE</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QPushButton" name="btn_exit">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>120</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>ÇIKIŞ</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <tabstops>
+  <tabstop>txt_rakamlar_1</tabstop>
+  <tabstop>txt_rakamlar_2</tabstop>
+  <tabstop>txt_rakamlar_3</tabstop>
+  <tabstop>txt_rakamlar_4</tabstop>
+  <tabstop>txt_rakamlar_5</tabstop>
+  <tabstop>txt_rakamlar_6</tabstop>
+  <tabstop>txt_rakamlar_7</tabstop>
+  <tabstop>txt_rakamlar_8</tabstop>
+  <tabstop>txt_rakamlar_9</tabstop>
+  <tabstop>txt_rakamlar_10</tabstop>
+  <tabstop>txt_rakamlar_11</tabstop>
+  <tabstop>txt_rakamlar_12</tabstop>
+  <tabstop>btn_active_et</tabstop>
+  <tabstop>btn_clear</tabstop>
+  <tabstop>btn_cancel</tabstop>
+  <tabstop>btn_exit</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>
