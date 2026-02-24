@@ -173,6 +173,10 @@ class ContractsApp(QWidget):
                 self.cmb_tarife_period.currentIndexChanged.connect(self._tarife_reload)
             except Exception:
                 pass
+            try:
+                self.cmb_tarife_period.currentIndexChanged.connect(self._tarife_sync_effective_from_with_period)
+            except Exception:
+                pass
         if hasattr(self, "cmb_tarife_service_type"):
             try:
                 self.cmb_tarife_service_type.currentIndexChanged.connect(self._tarife_reload)
@@ -280,6 +284,55 @@ class ContractsApp(QWidget):
             return qd.toString("yyyy-MM-dd")
         except Exception:
             return None
+
+    def _tarife_sync_effective_from_with_period(self, *_args):
+        if not hasattr(self, "date_tarife_effective_from"):
+            return
+        if not hasattr(self, "cmb_tarife_period"):
+            return
+
+        period = None
+        try:
+            period = self.cmb_tarife_period.currentData()
+            if period is None or str(period).strip() == "":
+                txt = (self.cmb_tarife_period.currentText() or "").strip()
+                period = txt if txt and not txt.lower().startswith("seç") else None
+        except Exception:
+            period = None
+
+        period = (str(period).strip() if period is not None else "")
+        if not period or "-" not in period:
+            return
+
+        # Tarife satırları effective_from'a göre yüklendiği için, dönem seçilince
+        # effective_from'u o dönemin 1. günü yaparak aynı kayıtların tekrar görünmesini sağlıyoruz.
+        try:
+            y_str, m_str = period.split("-", 1)
+            y = int(y_str)
+            m = int(m_str)
+        except Exception:
+            return
+
+        try:
+            cur = self.date_tarife_effective_from.date()
+            if int(cur.year()) == int(y) and int(cur.month()) == int(m):
+                return
+        except Exception:
+            pass
+
+        try:
+            self.date_tarife_effective_from.blockSignals(True)
+        except Exception:
+            pass
+        try:
+            self.date_tarife_effective_from.setDate(QDate(int(y), int(m), 1))
+        except Exception:
+            pass
+        finally:
+            try:
+                self.date_tarife_effective_from.blockSignals(False)
+            except Exception:
+                pass
 
     def _tarife_setup_price_table(self):
         tbl = getattr(self, "tbl_tarife_prices", None)
@@ -422,9 +475,12 @@ class ContractsApp(QWidget):
             QMessageBox.warning(self, "Uyarı", "Tarife tanımı sadece 'SEFER BAŞI ÜCRET' seçili sözleşmelerde yapılır.")
             return
 
-        contract_id, _period, service_type = self._tarife_context()
+        contract_id, period, service_type = self._tarife_context()
         if not contract_id:
             QMessageBox.warning(self, "Uyarı", "Önce bir sözleşme seçiniz.")
+            return
+        if not period:
+            QMessageBox.warning(self, "Uyarı", "Dönem seçiniz.")
             return
         if not service_type:
             QMessageBox.warning(self, "Uyarı", "Hizmet Tipi seçiniz.")
@@ -433,6 +489,15 @@ class ContractsApp(QWidget):
         if not eff:
             QMessageBox.warning(self, "Uyarı", "Geçerlilik tarihi seçiniz.")
             return
+
+        # Kullanıcı farklı ayda bir tarih seçtiyse, kayıtlar 'kaybolmuş' gibi görünür.
+        # Bu yüzden effective_from ayı ile dönem ayı uyumlu olmalı.
+        try:
+            if str(eff)[:7] != str(period)[:7]:
+                QMessageBox.warning(self, "Uyarı", "Seçilen geçerlilik tarihi, seçilen dönem ile aynı ayda olmalıdır.")
+                return
+        except Exception:
+            pass
 
         categories = list(getattr(self, "_tarife_price_categories", []) or [])
         # col mapping: 0 route,1 mv,2 km, 3.. prices, then 3+len(categories) .. subcontractor prices
@@ -697,6 +762,11 @@ class ContractsApp(QWidget):
                 idx = self.cmb_tarife_period.findData(ym)
                 if idx >= 0:
                     self.cmb_tarife_period.setCurrentIndex(idx)
+
+            try:
+                self._tarife_sync_effective_from_with_period()
+            except Exception:
+                pass
         except Exception:
             pass
         finally:
@@ -1303,6 +1373,11 @@ class ContractsApp(QWidget):
             pass
         finally:
             self._tarife_loading = False
+
+        try:
+            self._tarife_sync_effective_from_with_period()
+        except Exception:
+            pass
         self._tarife_load_price_rows()
         self._load_tarife_special_items()
 

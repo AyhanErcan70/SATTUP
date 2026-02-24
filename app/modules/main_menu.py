@@ -4,6 +4,7 @@ import traceback
 
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt6.QtCore import QDate
+from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import QMainWindow, QScrollArea, QSizePolicy, QGraphicsOpacityEffect, QLabel, QGraphicsColorizeEffect, QFrame, QMessageBox, QComboBox, QPushButton, QGraphicsBlurEffect
 from PyQt6.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout
 from PyQt6.QtGui import QPixmap, QIcon, QColor, QFontMetrics
@@ -152,6 +153,13 @@ class MainMenuApp(QMainWindow):
         super().__init__()
         uic.loadUi(get_ui_path("main_window.ui"), self)
         self.user_data = user_data
+
+        # active_month uygulama genelinde kalıcı olmalı; kullanıcı bir kere seçince
+        # 'Ay/Dönem Kapat' yapılana kadar tekrar sormayacağız.
+        try:
+            self._restore_active_month_from_settings()
+        except Exception:
+            pass
        
         try:
             if hasattr(self, "top_frame") and self.top_frame is not None:
@@ -271,6 +279,84 @@ class MainMenuApp(QMainWindow):
             QTimer.singleShot(120, lambda: self._animate_title_type_in(self._default_title_text))
         except Exception:
             pass
+
+    def _settings(self) -> QSettings:
+        return QSettings("SATTUP", "SATTUP")
+
+    def _get_active_month(self) -> str:
+        try:
+            return str((self.user_data or {}).get("active_month") or "").strip()
+        except Exception:
+            return ""
+
+    def _set_active_month(self, month_key: str) -> None:
+        try:
+            if self.user_data is None or not isinstance(self.user_data, dict):
+                self.user_data = {}
+            self.user_data["active_month"] = str(month_key)
+        except Exception:
+            pass
+
+        try:
+            s = self._settings()
+            s.setValue("active_month", str(month_key))
+        except Exception:
+            pass
+
+    def _restore_active_month_from_settings(self) -> None:
+        # Eğer user_data zaten dolu geldiyse ona dokunma.
+        if self._get_active_month():
+            return
+        try:
+            s = self._settings()
+            v = str(s.value("active_month", "") or "").strip()
+            if v and "-" in v:
+                self._set_active_month(v)
+        except Exception:
+            return
+
+    def _active_month_is_closed(self, month_key: str) -> bool:
+        try:
+            from app.core.db_manager import DatabaseManager
+
+            db = DatabaseManager()
+            st = db.get_period_close(str(month_key)) or {}
+            return bool(int((st or {}).get("closed") or 0))
+        except Exception:
+            return False
+
+    def _ensure_active_month_selected(self) -> bool:
+        # Kullanıcı bir kere seçtiyse tekrar sorma; ama ay kapatıldıysa yeni ay seçtirme.
+        current = self._get_active_month()
+        if current and self._active_month_is_closed(current):
+            try:
+                self._settings().setValue("active_month", "")
+            except Exception:
+                pass
+            try:
+                if isinstance(self.user_data, dict):
+                    self.user_data["active_month"] = ""
+            except Exception:
+                pass
+            current = ""
+
+        if current:
+            return True
+
+        dlg = PeriodSelectDialog(parent=self, initial_month=None)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return False
+        selected_month = str(dlg.selected_month() or "").strip()
+        if not selected_month:
+            return False
+
+        # Seçilen ay kapalı ise tekrar seçtir.
+        if self._active_month_is_closed(selected_month):
+            QMessageBox.warning(self, "Uyarı", f"Seçilen dönem kapalı: {selected_month}\nLütfen açık bir dönem seçiniz.")
+            return self._ensure_active_month_selected()
+
+        self._set_active_month(selected_month)
+        return True
 
     def _setup_session_toggle(self):
         btn = None
@@ -2778,19 +2864,8 @@ class MainMenuApp(QMainWindow):
         QTimer.singleShot(50, self._force_maximized)
 
     def open_trips(self):
-        initial_month = str((self.user_data or {}).get("active_month") or "").strip() or None
-        dlg = PeriodSelectDialog(parent=self, initial_month=initial_month)
-        if dlg.exec() != QDialog.DialogCode.Accepted:
+        if not self._ensure_active_month_selected():
             return
-        selected_month = str(dlg.selected_month() or "").strip()
-        if not selected_month:
-            return
-        try:
-            if self.user_data is None:
-                self.user_data = {}
-            self.user_data["active_month"] = str(selected_month)
-        except Exception:
-            pass
 
         # 1. Eski modülleri güvenli bir şekilde temizle (Ana sayfa hariç)
         for i in reversed(range(self.mainStack.count())):
@@ -2834,10 +2909,9 @@ class MainMenuApp(QMainWindow):
 
     def open_attendance(self):
         initial_month = str((self.user_data or {}).get("active_month") or "").strip() or None
-        dlg = PeriodSelectDialog(parent=self, initial_month=initial_month)
-        if dlg.exec() != QDialog.DialogCode.Accepted:
+        if not self._ensure_active_month_selected():
             return
-        selected_month = str(dlg.selected_month() or "").strip()
+        selected_month = str((self.user_data or {}).get("active_month") or "").strip()
         if not selected_month:
             return
 

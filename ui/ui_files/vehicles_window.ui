@@ -1710,6 +1710,39 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>txt_arac_plaka</tabstop>
+  <tabstop>cmb_arac_turu</tabstop>
+  <tabstop>cmb_hizmet_turu</tabstop>
+  <tabstop>txt_arac_sahibi</tabstop>
+  <tabstop>cmb_alt_yuklenici</tabstop>
+  <tabstop>cmb_kategori</tabstop>
+  <tabstop>cmb_marka</tabstop>
+  <tabstop>cmb_model</tabstop>
+  <tabstop>txt_yil</tabstop>
+  <tabstop>txt_kapasite</tabstop>
+  <tabstop>date_muayene</tabstop>
+  <tabstop>date_sigorta</tabstop>
+  <tabstop>date_koltuk</tabstop>
+  <tabstop>date_kasko</tabstop>
+  <tabstop>date_calisma_ruhsati</tabstop>
+  <tabstop>date_guzergah_izin</tabstop>
+  <tabstop>chk_arac_takip</tabstop>
+  <tabstop>chk_arac_cam</tabstop>
+  <tabstop>lbl_arac_foto</tabstop>
+  <tabstop>btn_kaydet</tabstop>
+  <tabstop>btn_yeni</tabstop>
+  <tabstop>btn_pdfye_aktar</tabstop>
+  <tabstop>btn_excele_aktar</tabstop>
+  <tabstop>btn_excel_yukle</tabstop>
+  <tabstop>btn_aktifpasif</tabstop>
+  <tabstop>btn_sil</tabstop>
+  <tabstop>cmb_arac_turu_f</tabstop>
+  <tabstop>cmb_hizmet_turu_f</tabstop>
+  <tabstop>cmb_marka_f</tabstop>
+  <tabstop>txt_plaka_f</tabstop>
+  <tabstop>btn_temizle_f</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

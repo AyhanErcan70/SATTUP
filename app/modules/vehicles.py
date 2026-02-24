@@ -228,6 +228,17 @@ class VehiclesApp(QWidget):
         self.tableView.setHorizontalHeaderLabels(headers)
         self.tableView.verticalHeader().setDefaultSectionSize(20)
         self.tableView.verticalHeader().setVisible(False)
+        self.tableView.setColumnWidth(0,130)
+        self.tableView.setColumnWidth(1,130)
+        self.tableView.setColumnWidth(2,130)
+        self.tableView.setColumnWidth(3,130)
+        self.tableView.setColumnWidth(4,220)
+        self.tableView.setColumnWidth(5,110)
+        self.tableView.setColumnWidth(6,110)
+        self.tableView.setColumnWidth(7,110)
+        self.tableView.setColumnWidth(8,50)
+        self.tableView.setColumnWidth(9,50)
+        self.tableView.setColumnWidth(10,90)
         header = self.tableView.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
@@ -257,6 +268,7 @@ class VehiclesApp(QWidget):
                     if c == 10 and int(value or 0) == 0:
                         item.setForeground(Qt.GlobalColor.red)
                     self.tableView.setItem(r, c, item)
+                
         except Exception as e:
             print(f"Araç yükleme hatası: {e}")
 

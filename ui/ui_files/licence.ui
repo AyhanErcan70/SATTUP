@@ -13,6 +13,48 @@
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">#main_dialog{background-color: #4764c3;}
+QLabel{
+background-color: none;
+color:#fcff5d;
+font: 'Grenada';
+font-size: 14px;
+}
+QLabel#lbl_text_1, #lbl_text_2{
+background-color: none;
+color:#fcff5d;
+font: 'Yu Gothic UI';
+font-size: 12px;}
+QPushButton {background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0.2 #0ee1e5, stop: 0.6 #3aa7b3, stop: 0.6 #163682, stop: 0.8 #2a2f6f);
+    color: #fff;
+    font-family: 'DatonaPro'; font-size: 14px; font-weight: bold; text-align: center;
+    border-radius: 8px; border-top: 1px solid #C0C0C0; border-left: 1px solid #C0C0C0; border-right: 2px solid #000; 
+	border-bottom: 3px solid #000; 
+    padding-left : 8px;
+    margin-right: 4px;  margin-bottom: 5px;  
+    min-width: 130px;
+	min-height: 30px;}
+QPushButton:hover {
+color:#d9cc37;
+}
+QPushButton:pressed {
+color:red;
+padding-top: 5px;
+}
+QLineEdit{
+border: none;
+color:#ffaa00;
+background-color: transparent;
+font: 'Grenada';
+font-size: 14px;
+}
+QLineEdit:focus{
+color: black;
+background-color:#fff89b;
+border-radius: 4px solid #000;
+}</string>
+  </property>
   <layout class="QGridLayout" name="gridLayout_7">
    <item row="0" column="0">
     <widget class="QFrame" name="top_frame">
@@ -30,8 +72,9 @@
           <property name="font">
            <font>
             <family>Courier New</family>
-            <pointsize>16</pointsize>
-            <bold>true</bold>
+            <pointsize>-1</pointsize>
+            <italic>false</italic>
+            <bold>false</bold>
            </font>
           </property>
           <property name="frameShape">
@@ -50,8 +93,9 @@
           <property name="font">
            <font>
             <family>Courier New</family>
-            <pointsize>16</pointsize>
-            <bold>true</bold>
+            <pointsize>-1</pointsize>
+            <italic>false</italic>
+            <bold>false</bold>
            </font>
           </property>
           <property name="frameShape">
@@ -70,8 +114,9 @@
           <property name="font">
            <font>
             <family>Courier New</family>
-            <pointsize>16</pointsize>
-            <bold>true</bold>
+            <pointsize>-1</pointsize>
+            <italic>false</italic>
+            <bold>false</bold>
            </font>
           </property>
           <property name="frameShape">
@@ -90,8 +135,9 @@
           <property name="font">
            <font>
             <family>Courier New</family>
-            <pointsize>16</pointsize>
-            <bold>true</bold>
+            <pointsize>-1</pointsize>
+            <italic>false</italic>
+            <bold>false</bold>
            </font>
           </property>
           <property name="frameShape">
@@ -110,8 +156,9 @@
           <property name="font">
            <font>
             <family>Courier New</family>
-            <pointsize>16</pointsize>
-            <bold>true</bold>
+            <pointsize>-1</pointsize>
+            <italic>false</italic>
+            <bold>false</bold>
            </font>
           </property>
           <property name="frameShape">
@@ -130,8 +177,9 @@
           <property name="font">
            <font>
             <family>Courier New</family>
-            <pointsize>16</pointsize>
-            <bold>true</bold>
+            <pointsize>-1</pointsize>
+            <italic>false</italic>
+            <bold>false</bold>
            </font>
           </property>
           <property name="frameShape">
@@ -150,8 +198,9 @@
           <property name="font">
            <font>
             <family>Courier New</family>
-            <pointsize>16</pointsize>
-            <bold>true</bold>
+            <pointsize>-1</pointsize>
+            <italic>false</italic>
+            <bold>false</bold>
            </font>
           </property>
           <property name="frameShape">
@@ -170,8 +219,9 @@
           <property name="font">
            <font>
             <family>Courier New</family>
-            <pointsize>16</pointsize>
-            <bold>true</bold>
+            <pointsize>-1</pointsize>
+            <italic>false</italic>
+            <bold>false</bold>
            </font>
           </property>
           <property name="frameShape">
@@ -190,8 +240,9 @@
           <property name="font">
            <font>
             <family>Courier New</family>
-            <pointsize>16</pointsize>
-            <bold>true</bold>
+            <pointsize>-1</pointsize>
+            <italic>false</italic>
+            <bold>false</bold>
            </font>
           </property>
           <property name="frameShape">
@@ -210,8 +261,9 @@
           <property name="font">
            <font>
             <family>Courier New</family>
-            <pointsize>16</pointsize>
-            <bold>true</bold>
+            <pointsize>-1</pointsize>
+            <italic>false</italic>
+            <bold>false</bold>
            </font>
           </property>
           <property name="frameShape">
@@ -230,8 +282,9 @@
           <property name="font">
            <font>
             <family>Courier New</family>
-            <pointsize>16</pointsize>
-            <bold>true</bold>
+            <pointsize>-1</pointsize>
+            <italic>false</italic>
+            <bold>false</bold>
            </font>
           </property>
           <property name="frameShape">
@@ -250,8 +303,9 @@
           <property name="font">
            <font>
             <family>Courier New</family>
-            <pointsize>16</pointsize>
-            <bold>true</bold>
+            <pointsize>-1</pointsize>
+            <italic>false</italic>
+            <bold>false</bold>
            </font>
           </property>
           <property name="frameShape">
@@ -627,8 +681,8 @@
           </property>
           <property name="minimumSize">
            <size>
-            <width>120</width>
-            <height>40</height>
+            <width>145</width>
+            <height>39</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -652,8 +706,8 @@
           </property>
           <property name="minimumSize">
            <size>
-            <width>120</width>
-            <height>40</height>
+            <width>145</width>
+            <height>39</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -677,8 +731,8 @@
           </property>
           <property name="minimumSize">
            <size>
-            <width>120</width>
-            <height>40</height>
+            <width>145</width>
+            <height>39</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -702,8 +756,8 @@
           </property>
           <property name="minimumSize">
            <size>
-            <width>120</width>
-            <height>40</height>
+            <width>145</width>
+            <height>39</height>
            </size>
           </property>
           <property name="maximumSize">
