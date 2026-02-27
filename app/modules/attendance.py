@@ -1381,6 +1381,9 @@ class BulkAttendanceDialog(QDialog):
         s = str(txt or "").strip()
         if not s:
             return 0.0
+        s = s.replace("₺", "")
+        s = s.replace("TL", "")
+        s = s.replace(" ", "")
         s = s.replace(".", "")
         s = s.replace(",", ".")
         try:
@@ -4328,6 +4331,22 @@ class BulkAttendanceDialog(QDialog):
                             is_cift_row = ("cift" in mt_txt)
                         except Exception:
                             is_cift_row = False
+                        if not bool(is_cift_row):
+                            # Fallback: UI cell text can be empty/changed on reload; infer from route definition.
+                            try:
+                                mt2 = self._norm_tr_text(self._movement_type_for_route(int(key[0] or 0)) or "")
+                                is_cift_row = ("cift" in mt2)
+                            except Exception:
+                                is_cift_row = False
+                        if not bool(is_cift_row):
+                            # Last resort: infer from time_text pattern if it looks like a double (entry+exit) label.
+                            try:
+                                t_it2 = self.table.item(int(row_idx), self._col_time_text)
+                                t_txt2 = (t_it2.text() if t_it2 is not None else "")
+                                if self._looks_like_double_time_text(t_txt2):
+                                    is_cift_row = True
+                            except Exception:
+                                pass
                         # If DB stored an already-halved price for a split group, UI would show /4.
                         # Use contract/route fallback as the authoritative full unit price.
                         pr_full = float(pr)
@@ -4836,10 +4855,22 @@ class BulkAttendanceDialog(QDialog):
                             p_full = p_item.data(Qt.ItemDataRole.UserRole)
                     except Exception:
                         p_full = None
+                    # Manual rows: UserRole is initialized to 0.0 and may stay stale.
+                    # Prefer parsed text when it yields a positive value.
+                    disp_price = 0.0
+                    try:
+                        disp_price = float(self._parse_tr_float(p_txt)) if str(p_txt).strip() else 0.0
+                    except Exception:
+                        disp_price = 0.0
+
                     if p_full is None or (isinstance(p_full, str) and not str(p_full).strip()):
-                        unit_price = float(self._parse_tr_float(p_txt))
+                        unit_price = float(disp_price)
                     else:
-                        unit_price = float(p_full or 0.0)
+                        try:
+                            p_full_f = float(p_full or 0.0)
+                        except Exception:
+                            p_full_f = 0.0
+                        unit_price = float(disp_price) if float(disp_price or 0.0) > 0.0 and float(p_full_f or 0.0) <= 0.0 else float(p_full_f)
                 except Exception:
                     unit_price = 0.0
 
@@ -4931,8 +4962,10 @@ class BulkAttendanceDialog(QDialog):
                     db_price = float(existing_price_map.get(kdb) or 0.0)
                     eps = 0.0001
                     if disp > 0.0:
-                        # If DB is half and UI is quarter: db_price ~= disp*2 -> fix to full via db*2
-                        if db_price > 0.0 and abs(float(db_price) - (float(disp) * 2.0)) < eps:
+                        # Only upscale when DB is actually storing the displayed value.
+                        # In correct state: DB=full, UI=half -> db_price ~= disp*2. That is NOT a legacy bug.
+                        # Legacy bug: DB=half and UI=half -> db_price ~= disp, so fix via db*2.
+                        if db_price > 0.0 and abs(float(db_price) - float(disp)) < eps:
                             base_price = float(db_price) * 2.0
                         # If we are about to persist displayed value (half), fix to full via *2
                         elif abs(float(base_price) - float(disp)) < eps:
