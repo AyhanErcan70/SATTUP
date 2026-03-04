@@ -189,7 +189,7 @@ class CustomersApp(QWidget):
         query = """
             SELECT customer_code, musteri_turu, kisilik, title, tax_number, il, ilce, phone, email, is_active
             FROM customers
-            ORDER BY id ASC
+            ORDER BY title COLLATE TRNOCASE ASC, customer_code COLLATE TRNOCASE ASC
         """
 
         try:

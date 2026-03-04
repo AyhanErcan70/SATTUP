@@ -5,6 +5,32 @@ from datetime import datetime, timedelta
 from typing import Optional
 from config import DB_PATH, BASE_DIR
 
+
+# Türk alfabesi sırası: a b c ç d e f g ğ h ı i j k l m n o ö p r s ş t u ü v y z
+# Türk alfabesinde olmayan q, w, x gibi harfleri en sona atıyoruz.
+_TR_ALPHABET = " 0123456789abcçdefgğhıijklmnoöprsştuüvyzqwx"
+_TR_ORDER = {ch: i for i, ch in enumerate(_TR_ALPHABET)}
+
+
+def _tr_lower(s: str) -> str:
+    s = str(s or "")
+    return s.replace("I", "ı").replace("İ", "i").lower()
+
+
+def _tr_key(s: str):
+    s2 = _tr_lower(s)
+    return tuple(_TR_ORDER.get(ch, 1000 + ord(ch)) for ch in s2)
+
+
+def _tr_collate(a: str, b: str) -> int:
+    ka = _tr_key(a)
+    kb = _tr_key(b)
+    if ka < kb:
+        return -1
+    if ka > kb:
+        return 1
+    return 0
+
 class DatabaseManager:
     def __init__(self):
         self.db_path = DB_PATH
@@ -28,6 +54,10 @@ class DatabaseManager:
         try:
             # check_same_thread=False ekliyoruz ki farklı modüllerden erişirken sorun çıkmasın
             conn = sqlite3.connect(self.db_path, check_same_thread=False)
+            try:
+                conn.create_collation("TRNOCASE", _tr_collate)
+            except Exception:
+                pass
             return conn
         except Exception as e:
             print(f"Database connection error: {e}")
@@ -2449,6 +2479,9 @@ class DatabaseManager:
             cur = conn.cursor()
             d = str(trip_date or "").strip()
             pc = str(pricing_category or "").strip().upper()
+            row = None
+
+            # 1) Exact category match
             cur.execute(
                 """
                 SELECT price, subcontractor_price, effective_from
@@ -2465,6 +2498,44 @@ class DatabaseManager:
                 (int(contract_id), str(service_type), int(route_params_id), pc, d),
             )
             row = cur.fetchone()
+
+            # 2) Fallback: empty/unspecified pricing_category
+            if not row:
+                cur.execute(
+                    """
+                    SELECT price, subcontractor_price, effective_from
+                    FROM trip_prices
+                    WHERE contract_id = ?
+                      AND service_type = ?
+                      AND route_params_id = ?
+                      AND (COALESCE(pricing_category,'') = '')
+                      AND COALESCE(effective_from,'') <> ''
+                      AND effective_from <= ?
+                    ORDER BY effective_from DESC
+                    LIMIT 1
+                    """,
+                    (int(contract_id), str(service_type), int(route_params_id), d),
+                )
+                row = cur.fetchone()
+
+            # 3) Last resort: any category for same contract/service/route
+            if not row:
+                cur.execute(
+                    """
+                    SELECT price, subcontractor_price, effective_from
+                    FROM trip_prices
+                    WHERE contract_id = ?
+                      AND service_type = ?
+                      AND route_params_id = ?
+                      AND COALESCE(effective_from,'') <> ''
+                      AND effective_from <= ?
+                    ORDER BY effective_from DESC
+                    LIMIT 1
+                    """,
+                    (int(contract_id), str(service_type), int(route_params_id), d),
+                )
+                row = cur.fetchone()
+
             if not row:
                 return None
             try:
@@ -2618,12 +2689,23 @@ class DatabaseManager:
         start_date = d0.strftime("%Y-%m-%d")
         end_date = (d1 - timedelta(days=1)).strftime("%Y-%m-%d")
 
+        self.create_employees_table()
+
         conn = self.connect()
         if not conn:
             return []
         try:
             cur = conn.cursor()
-            params: list[object] = [int(contract_id), str(service_type), str(start_date), str(end_date)]
+            params: list[object] = [
+                int(contract_id),
+                str(service_type),
+                str(start_date),
+                str(end_date),
+                int(contract_id),
+                str(service_type),
+                str(start_date),
+                str(end_date),
+            ]
             customer_filter_sql = ""
             if customer_id is not None:
                 customer_filter_sql = " AND cu.id = ? "
@@ -2633,32 +2715,65 @@ class DatabaseManager:
             # We use ascii-normalized LIKE checks.
             cur.execute(
                 f"""
+                WITH split_groups AS (
+                    SELECT
+                        contract_id,
+                        route_params_id,
+                        trip_date,
+                        service_type,
+                        COALESCE(TRIM(time_block), '') AS time_block,
+                        1 AS has_split
+                    FROM trip_entries
+                    WHERE contract_id = ?
+                      AND service_type = ?
+                      AND trip_date BETWEEN ? AND ?
+                    GROUP BY contract_id, route_params_id, trip_date, service_type, COALESCE(TRIM(time_block), '')
+                    HAVING MAX(COALESCE(line_no,0)) > 0
+                )
                 SELECT
                     COALESCE(cu.title, '') AS firma,
-                    COALESCE(rp.route_name, '') AS guzergah,
-                    COALESCE(v.arac_sahibi, '') AS sahis,
+                    (COALESCE(rp.route_name, '') || CASE WHEN COALESCE(rp.stops,'') <> '' THEN (' | ' || COALESCE(rp.stops,'')) ELSE '' END) AS guzergah,
+                    COALESCE(v.arac_sahibi, COALESCE(e.ad_soyad,''), '') AS sahis,
                     COALESCE(rp.movement_type, '') AS hareket,
-                    SUM(COALESCE(ta.qty, 0)) AS qty_sum,
+                    SUM(CASE WHEN COALESCE(sg.has_split,0)=1 THEN (COALESCE(ta.qty,0) / 2.0) ELSE COALESCE(ta.qty,0) END) AS qty_sum,
                     MAX(COALESCE(ta.trip_date, '')) AS last_trip_date,
                     rp.id AS route_params_id
                 FROM trip_allocations ta
+                LEFT JOIN split_groups sg
+                  ON sg.contract_id = ta.contract_id
+                 AND sg.route_params_id = ta.route_params_id
+                 AND sg.trip_date = ta.trip_date
+                 AND sg.service_type = ta.service_type
+                 AND sg.time_block = COALESCE(TRIM(ta.time_block), '')
                 LEFT JOIN route_params rp ON rp.id = ta.route_params_id
-                LEFT JOIN vehicles v ON v.id = ta.vehicle_id
+                LEFT JOIN vehicles v ON (v.id = ta.vehicle_id OR v.vehicle_code = CAST(ta.vehicle_id AS TEXT))
+                LEFT JOIN employees e ON e.personel_kodu = CAST(ta.driver_id AS TEXT)
                 LEFT JOIN contracts co ON co.id = ta.contract_id
                 LEFT JOIN customers cu ON cu.id = co.customer_id
                 WHERE ta.contract_id = ?
                   AND ta.service_type = ?
                   AND ta.trip_date BETWEEN ? AND ?
                   AND (
-                        REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TASERON%'
-                        AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ARAC%'
+                        (
+                            v.id IS NOT NULL
+                            AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TASERON%'
+                            AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ARAC%'
+                        )
+                        OR (
+                            v.id IS NULL
+                            AND COALESCE(e.ad_soyad,'') <> ''
+                            AND NOT (
+                                REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(e.ad_soyad,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ASIL%'
+                                AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(e.ad_soyad,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TUR%'
+                            )
+                        )
                   )
                   AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(rp.movement_type,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') NOT LIKE '%CENAZE%'
                   {customer_filter_sql}
                 GROUP BY
                     COALESCE(cu.title, ''),
-                    COALESCE(rp.route_name, ''),
-                    COALESCE(v.arac_sahibi, ''),
+                    (COALESCE(rp.route_name, '') || CASE WHEN COALESCE(rp.stops,'') <> '' THEN (' | ' || COALESCE(rp.stops,'')) ELSE '' END),
+                    COALESCE(v.arac_sahibi, COALESCE(e.ad_soyad,''), ''),
                     COALESCE(rp.movement_type, ''),
                     rp.id
                 ORDER BY firma, sahis, guzergah
@@ -2691,26 +2806,29 @@ class DatabaseManager:
             if qty_f <= 0:
                 continue
 
-            pc = self._pricing_category_from_movement_type(str(hareket or ""))
-            d_for_price = str(last_trip_date or "").strip() or str(end_date)
-            key = (rid, pc, d_for_price)
-            if key in price_cache:
-                unit_price = float(price_cache.get(key) or 0.0)
-            else:
-                unit_price = 0.0
-                try:
-                    pr = self.get_trip_price_for_date(
-                        contract_id=int(contract_id),
-                        service_type=str(service_type),
-                        route_params_id=int(rid),
-                        pricing_category=str(pc),
-                        trip_date=str(d_for_price),
-                    )
-                    if pr:
-                        unit_price = float(pr[1] or 0.0)
-                except Exception:
+            unit_price = 0.0
+            st = str(service_type or "").strip()
+            if st:
+                pc = self._pricing_category_from_movement_type(str(hareket or ""))
+                d_for_price = str(last_trip_date or "").strip() or str(end_date)
+                key = (rid, pc, d_for_price)
+                if key in price_cache:
+                    unit_price = float(price_cache.get(key) or 0.0)
+                else:
                     unit_price = 0.0
-                price_cache[key] = float(unit_price or 0.0)
+                    try:
+                        pr = self.get_trip_price_for_date(
+                            contract_id=int(contract_id),
+                            service_type=str(st),
+                            route_params_id=int(rid),
+                            pricing_category=str(pc),
+                            trip_date=str(d_for_price),
+                        )
+                        if pr:
+                            unit_price = float(pr[1] or 0.0)
+                    except Exception:
+                        unit_price = 0.0
+                    price_cache[key] = float(unit_price or 0.0)
 
             total = float(qty_f * float(unit_price or 0.0))
             kdv = float(total * 0.20)
@@ -2730,6 +2848,296 @@ class DatabaseManager:
                     kdv,
                     ara_top,
                     tevkifat,
+                    g_toplam,
+                )
+            )
+
+        return out_rows
+
+    def get_hakedis_tab1_owner_list_for_period(
+        self,
+        period: str,
+        customer_id: int | None = None,
+    ) -> list[str]:
+        month = str(period).strip()[:7]
+        if len(month) != 7 or month[4] != "-":
+            return []
+
+        try:
+            d0 = datetime.strptime(month + "-01", "%Y-%m-%d")
+        except Exception:
+            return []
+        if d0.month == 12:
+            d1 = datetime(d0.year + 1, 1, 1)
+        else:
+            d1 = datetime(d0.year, d0.month + 1, 1)
+        start_date = d0.strftime("%Y-%m-%d")
+        end_date = (d1 - timedelta(days=1)).strftime("%Y-%m-%d")
+
+        conn = self.connect()
+        if not conn:
+            return []
+        try:
+            cur = conn.cursor()
+            params: list[object] = [str(start_date), str(end_date)]
+            customer_filter_sql = ""
+            if customer_id is not None:
+                customer_filter_sql = " AND cu.id = ? "
+                params.append(int(customer_id))
+
+            cur.execute(
+                f"""
+                SELECT DISTINCT owner FROM (
+                    SELECT COALESCE(v.arac_sahibi,'') AS owner
+                    FROM trip_allocations ta
+                    LEFT JOIN vehicles v ON (v.id = ta.vehicle_id OR v.vehicle_code = CAST(ta.vehicle_id AS TEXT))
+                    LEFT JOIN employees e ON e.personel_kodu = CAST(ta.driver_id AS TEXT)
+                    LEFT JOIN contracts co ON co.id = ta.contract_id
+                    LEFT JOIN customers cu ON cu.id = co.customer_id
+                    WHERE ta.trip_date BETWEEN ? AND ?
+                      AND v.id IS NOT NULL
+                      AND COALESCE(v.arac_sahibi,'') <> ''
+                      AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TASERON%'
+                      AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ARAC%'
+                      {customer_filter_sql}
+                    UNION
+                    SELECT COALESCE(e.ad_soyad,'') AS owner
+                    FROM trip_allocations ta
+                    LEFT JOIN vehicles v ON (v.id = ta.vehicle_id OR v.vehicle_code = CAST(ta.vehicle_id AS TEXT))
+                    LEFT JOIN employees e ON e.personel_kodu = CAST(ta.driver_id AS TEXT)
+                    LEFT JOIN contracts co ON co.id = ta.contract_id
+                    LEFT JOIN customers cu ON cu.id = co.customer_id
+                    WHERE ta.trip_date BETWEEN ? AND ?
+                      AND v.id IS NULL
+                      AND COALESCE(e.ad_soyad,'') <> ''
+                      {customer_filter_sql}
+                )
+                WHERE COALESCE(owner,'') <> ''
+                ORDER BY owner
+                """,
+                tuple(params + params),
+            )
+            owners = [str(r[0] or "").strip() for r in (cur.fetchall() or [])]
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+        return [o for o in owners if o]
+
+    def get_hakedis_tab1_owner_report_rows_all(
+        self,
+        period: str,
+        owner: str,
+        customer_id: int | None = None,
+    ):
+        month = str(period).strip()[:7]
+        if len(month) != 7 or month[4] != "-":
+            return []
+        if not str(owner or "").strip():
+            return []
+
+        try:
+            d0 = datetime.strptime(month + "-01", "%Y-%m-%d")
+        except Exception:
+            return []
+        if d0.month == 12:
+            d1 = datetime(d0.year + 1, 1, 1)
+        else:
+            d1 = datetime(d0.year, d0.month + 1, 1)
+        start_date = d0.strftime("%Y-%m-%d")
+        end_date = (d1 - timedelta(days=1)).strftime("%Y-%m-%d")
+
+        self.create_employees_table()
+
+        owner_param = str(owner or "").strip()
+        conn = self.connect()
+        if not conn:
+            return []
+        try:
+            cur = conn.cursor()
+            params: list[object] = [
+                str(start_date),
+                str(end_date),
+                str(owner_param),
+                str(start_date),
+                str(end_date),
+                str(owner_param),
+                str(owner_param),
+                str(owner_param),
+            ]
+            customer_filter_sql = ""
+            if customer_id is not None:
+                customer_filter_sql = " AND cu.id = ? "
+                params.append(int(customer_id))
+
+            cur.execute(
+                f"""
+                WITH split_groups AS (
+                    SELECT
+                        contract_id,
+                        route_params_id,
+                        trip_date,
+                        service_type,
+                        COALESCE(TRIM(time_block), '') AS time_block,
+                        1 AS has_split
+                    FROM trip_entries
+                    WHERE trip_date BETWEEN ? AND ?
+                    GROUP BY contract_id, route_params_id, trip_date, service_type, COALESCE(TRIM(time_block), '')
+                    HAVING MAX(COALESCE(line_no,0)) > 0
+                )
+                SELECT
+                    COALESCE(cu.title, '') AS firma,
+                    (COALESCE(rp.route_name, '') || CASE WHEN COALESCE(rp.stops,'') <> '' THEN (' | ' || COALESCE(rp.stops,'')) ELSE '' END) AS guzergah,
+                    COALESCE(CASE WHEN v.id IS NULL THEN COALESCE(?, '') ELSE v.arac_sahibi END, '') AS owner,
+                    COALESCE(e.ad_soyad,'') AS sofor,
+                    COALESCE(v.plate_number,'') AS plaka,
+                    COALESCE(rp.movement_type, '') AS hareket,
+                    SUM(CASE WHEN COALESCE(sg.has_split,0)=1 THEN (COALESCE(ta.qty,0) / 2.0) ELSE COALESCE(ta.qty,0) END) AS qty_sum,
+                    MAX(COALESCE(ta.trip_date, '')) AS last_trip_date,
+                    rp.id AS route_params_id,
+                    ta.contract_id AS contract_id,
+                    COALESCE(ta.service_type,'') AS service_type
+                FROM trip_allocations ta
+                LEFT JOIN split_groups sg
+                  ON sg.contract_id = ta.contract_id
+                 AND sg.route_params_id = ta.route_params_id
+                 AND sg.trip_date = ta.trip_date
+                 AND sg.service_type = ta.service_type
+                 AND sg.time_block = COALESCE(TRIM(ta.time_block), '')
+                LEFT JOIN route_params rp ON rp.id = ta.route_params_id
+                LEFT JOIN vehicles v ON (v.id = ta.vehicle_id OR v.vehicle_code = CAST(ta.vehicle_id AS TEXT))
+                LEFT JOIN employees e ON e.personel_kodu = CAST(ta.driver_id AS TEXT)
+                LEFT JOIN contracts co ON co.id = ta.contract_id
+                LEFT JOIN customers cu ON cu.id = co.customer_id
+                WHERE ta.trip_date BETWEEN ? AND ?
+                  AND (
+                        (
+                            v.id IS NOT NULL
+                            AND COALESCE(v.arac_sahibi,'') <> ''
+                            AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TASERON%'
+                            AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ARAC%'
+                            AND (
+                                REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_sahibi,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C')
+                                =
+                                REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(? ,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C')
+                            )
+                        )
+                        OR (
+                            v.id IS NULL
+                            AND COALESCE(e.ad_soyad,'') <> ''
+                            AND (
+                                REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(e.ad_soyad,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C')
+                                =
+                                REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(? ,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C')
+                            )
+                        )
+                  )
+                  AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(rp.movement_type,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') NOT LIKE '%CENAZE%'
+                  {customer_filter_sql}
+                GROUP BY
+                    COALESCE(cu.title, ''),
+                    (COALESCE(rp.route_name, '') || CASE WHEN COALESCE(rp.stops,'') <> '' THEN (' | ' || COALESCE(rp.stops,'')) ELSE '' END),
+                    COALESCE(CASE WHEN v.id IS NULL THEN COALESCE(?, '') ELSE v.arac_sahibi END, ''),
+                    COALESCE(e.ad_soyad,''),
+                    COALESCE(v.plate_number,''),
+                    COALESCE(rp.movement_type, ''),
+                    rp.id,
+                    ta.contract_id,
+                    COALESCE(ta.service_type,'')
+                ORDER BY firma, guzergah, hareket, plaka
+                """,
+                tuple(params),
+            )
+            grouped = cur.fetchall() or []
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+        out_rows = []
+        price_cache: dict[tuple[int, str, str, int, str], float] = {}
+
+        for (
+            firma,
+            guzergah,
+            owner2,
+            sofor,
+            plaka,
+            hareket,
+            qty_sum,
+            last_trip_date,
+            route_params_id,
+            contract_id,
+            service_type,
+        ) in grouped:
+            try:
+                rid = int(route_params_id or 0)
+            except Exception:
+                rid = 0
+            if rid <= 0:
+                continue
+
+            try:
+                cid = int(contract_id or 0)
+            except Exception:
+                cid = 0
+            if cid <= 0:
+                continue
+
+            st = str(service_type or "").strip()
+
+            try:
+                qty_f = float(qty_sum or 0.0)
+            except Exception:
+                qty_f = 0.0
+            if qty_f <= 0:
+                continue
+
+            unit_price = 0.0
+            if st:
+                pc = self._pricing_category_from_movement_type(str(hareket or ""))
+                d_for_price = str(last_trip_date or "").strip() or str(end_date)
+                key = (rid, pc, d_for_price, cid, st)
+                if key in price_cache:
+                    unit_price = float(price_cache.get(key) or 0.0)
+                else:
+                    unit_price = 0.0
+                    try:
+                        pr = self.get_trip_price_for_date(
+                            contract_id=int(cid),
+                            service_type=str(st),
+                            route_params_id=int(rid),
+                            pricing_category=str(pc),
+                            trip_date=str(d_for_price),
+                        )
+                        if pr:
+                            unit_price = float(pr[1] or 0.0)
+                    except Exception:
+                        unit_price = 0.0
+                    price_cache[key] = float(unit_price or 0.0)
+
+            total = float(qty_f * float(unit_price or 0.0))
+            kdv = float(total * 0.20)
+            ara_top = float(total + kdv)
+            g_toplam = float(ara_top - float(kdv * 0.50))
+
+            sahis = (str(owner2 or "").strip() + (" / " + str(sofor or "").strip() if str(sofor or "").strip() else "")).strip()
+
+            out_rows.append(
+                (
+                    str(firma or ""),
+                    str(guzergah or ""),
+                    str(sahis or ""),
+                    str(plaka or ""),
+                    str(hareket or ""),
+                    qty_f,
+                    float(unit_price or 0.0),
+                    total,
+                    kdv,
+                    ara_top,
                     g_toplam,
                 )
             )
@@ -2763,12 +3171,14 @@ class DatabaseManager:
         start_date = d0.strftime("%Y-%m-%d")
         end_date = (d1 - timedelta(days=1)).strftime("%Y-%m-%d")
 
+        self.create_employees_table()
+
         conn = self.connect()
         if not conn:
             return []
         try:
             cur = conn.cursor()
-            params: list[object] = [str(start_date), str(end_date)]
+            params: list[object] = [str(start_date), str(end_date), str(start_date), str(end_date)]
             customer_filter_sql = ""
             if customer_id is not None:
                 customer_filter_sql = " AND cu.id = ? "
@@ -2776,32 +3186,63 @@ class DatabaseManager:
 
             cur.execute(
                 f"""
+                WITH split_groups AS (
+                    SELECT
+                        contract_id,
+                        route_params_id,
+                        trip_date,
+                        service_type,
+                        COALESCE(TRIM(time_block), '') AS time_block,
+                        1 AS has_split
+                    FROM trip_entries
+                    WHERE trip_date BETWEEN ? AND ?
+                    GROUP BY contract_id, route_params_id, trip_date, service_type, COALESCE(TRIM(time_block), '')
+                    HAVING MAX(COALESCE(line_no,0)) > 0
+                )
                 SELECT
                     COALESCE(cu.title, '') AS firma,
-                    COALESCE(rp.route_name, '') AS guzergah,
-                    COALESCE(v.arac_sahibi, '') AS sahis,
+                    (COALESCE(rp.route_name, '') || CASE WHEN COALESCE(rp.stops,'') <> '' THEN (' | ' || COALESCE(rp.stops,'')) ELSE '' END) AS guzergah,
+                    COALESCE(v.arac_sahibi, COALESCE(e.ad_soyad,''), '') AS sahis,
                     COALESCE(rp.movement_type, '') AS hareket,
-                    SUM(COALESCE(ta.qty, 0)) AS qty_sum,
+                    SUM(CASE WHEN COALESCE(sg.has_split,0)=1 THEN (COALESCE(ta.qty,0) / 2.0) ELSE COALESCE(ta.qty,0) END) AS qty_sum,
                     MAX(COALESCE(ta.trip_date, '')) AS last_trip_date,
                     rp.id AS route_params_id,
                     ta.contract_id AS contract_id,
                     COALESCE(ta.service_type,'') AS service_type
                 FROM trip_allocations ta
+                LEFT JOIN split_groups sg
+                  ON sg.contract_id = ta.contract_id
+                 AND sg.route_params_id = ta.route_params_id
+                 AND sg.trip_date = ta.trip_date
+                 AND sg.service_type = ta.service_type
+                 AND sg.time_block = TRIM(ta.time_block)
                 LEFT JOIN route_params rp ON rp.id = ta.route_params_id
-                LEFT JOIN vehicles v ON v.id = ta.vehicle_id
+                LEFT JOIN vehicles v ON (v.id = ta.vehicle_id OR v.vehicle_code = CAST(ta.vehicle_id AS TEXT))
+                LEFT JOIN employees e ON e.personel_kodu = CAST(ta.driver_id AS TEXT)
                 LEFT JOIN contracts co ON co.id = ta.contract_id
                 LEFT JOIN customers cu ON cu.id = co.customer_id
                 WHERE ta.trip_date BETWEEN ? AND ?
                   AND (
-                        REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TASERON%'
-                        AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ARAC%'
+                        (
+                            v.id IS NOT NULL
+                            AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TASERON%'
+                            AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ARAC%'
+                        )
+                        OR (
+                            v.id IS NULL
+                            AND COALESCE(e.ad_soyad,'') <> ''
+                            AND NOT (
+                                REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(e.ad_soyad,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ASIL%'
+                                AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(e.ad_soyad,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TUR%'
+                            )
+                        )
                   )
                   AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(rp.movement_type,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') NOT LIKE '%CENAZE%'
                   {customer_filter_sql}
                 GROUP BY
                     COALESCE(cu.title, ''),
-                    COALESCE(rp.route_name, ''),
-                    COALESCE(v.arac_sahibi, ''),
+                    (COALESCE(rp.route_name, '') || CASE WHEN COALESCE(rp.stops,'') <> '' THEN (' | ' || COALESCE(rp.stops,'')) ELSE '' END),
+                    COALESCE(v.arac_sahibi, COALESCE(e.ad_soyad,''), ''),
                     COALESCE(rp.movement_type, ''),
                     rp.id,
                     ta.contract_id,
@@ -2846,8 +3287,6 @@ class DatabaseManager:
                 continue
 
             st = str(service_type or "").strip()
-            if not st:
-                continue
 
             try:
                 qty_f = float(qty_sum or 0.0)
@@ -2856,26 +3295,28 @@ class DatabaseManager:
             if qty_f <= 0:
                 continue
 
-            pc = self._pricing_category_from_movement_type(str(hareket or ""))
-            d_for_price = str(last_trip_date or "").strip() or str(end_date)
-            key = (rid, pc, d_for_price, cid, st)
-            if key in price_cache:
-                unit_price = float(price_cache.get(key) or 0.0)
-            else:
-                unit_price = 0.0
-                try:
-                    pr = self.get_trip_price_for_date(
-                        contract_id=int(cid),
-                        service_type=str(st),
-                        route_params_id=int(rid),
-                        pricing_category=str(pc),
-                        trip_date=str(d_for_price),
-                    )
-                    if pr:
-                        unit_price = float(pr[1] or 0.0)
-                except Exception:
+            unit_price = 0.0
+            if st:
+                pc = self._pricing_category_from_movement_type(str(hareket or ""))
+                d_for_price = str(last_trip_date or "").strip() or str(end_date)
+                key = (rid, pc, d_for_price, cid, st)
+                if key in price_cache:
+                    unit_price = float(price_cache.get(key) or 0.0)
+                else:
                     unit_price = 0.0
-                price_cache[key] = float(unit_price or 0.0)
+                    try:
+                        pr = self.get_trip_price_for_date(
+                            contract_id=int(cid),
+                            service_type=str(st),
+                            route_params_id=int(rid),
+                            pricing_category=str(pc),
+                            trip_date=str(d_for_price),
+                        )
+                        if pr:
+                            unit_price = float(pr[1] or 0.0)
+                    except Exception:
+                        unit_price = 0.0
+                    price_cache[key] = float(unit_price or 0.0)
 
             total = float(qty_f * float(unit_price or 0.0))
             kdv = float(total * 0.20)
@@ -2928,12 +3369,14 @@ class DatabaseManager:
         start_date = d0.strftime("%Y-%m-%d")
         end_date = (d1 - timedelta(days=1)).strftime("%Y-%m-%d")
 
+        self.create_employees_table()
+
         conn = self.connect()
         if not conn:
             return []
         try:
             cur = conn.cursor()
-            params: list[object] = [str(start_date), str(end_date)]
+            params: list[object] = [str(start_date), str(end_date), str(start_date), str(end_date)]
             customer_filter_sql = ""
             if customer_id is not None:
                 customer_filter_sql = " AND cu.id = ? "
@@ -2941,37 +3384,68 @@ class DatabaseManager:
 
             cur.execute(
                 f"""
+                WITH split_groups AS (
+                    SELECT
+                        contract_id,
+                        route_params_id,
+                        trip_date,
+                        service_type,
+                        TRIM(time_block) AS time_block,
+                        1 AS has_split
+                    FROM trip_entries
+                    WHERE trip_date BETWEEN ? AND ?
+                    GROUP BY contract_id, route_params_id, trip_date, service_type, TRIM(time_block)
+                    HAVING MAX(COALESCE(line_no,0)) > 0
+                )
                 SELECT
-                    COALESCE(rp.route_name, '') AS guzergah,
-                    COALESCE(v.arac_sahibi, '') AS sahis,
+                    COALESCE(cu.title, '') AS firma,
+                    (COALESCE(rp.route_name, '') || CASE WHEN COALESCE(rp.stops,'') <> '' THEN (' | ' || COALESCE(rp.stops,'')) ELSE '' END) AS guzergah,
+                    COALESCE(v.arac_sahibi, COALESCE(e.ad_soyad,''), '') AS sahis,
                     COALESCE(v.plate_number, '') AS plaka,
                     COALESCE(rp.movement_type, '') AS hareket,
-                    SUM(COALESCE(ta.qty, 0)) AS qty_sum,
+                    SUM(CASE WHEN COALESCE(sg.has_split,0)=1 THEN (COALESCE(ta.qty,0) / 2.0) ELSE COALESCE(ta.qty,0) END) AS qty_sum,
                     MAX(COALESCE(ta.trip_date, '')) AS last_trip_date,
                     rp.id AS route_params_id,
                     ta.contract_id AS contract_id,
                     COALESCE(ta.service_type,'') AS service_type
                 FROM trip_allocations ta
+                LEFT JOIN split_groups sg
+                  ON sg.contract_id = ta.contract_id
+                 AND sg.route_params_id = ta.route_params_id
+                 AND sg.trip_date = ta.trip_date
+                 AND sg.service_type = ta.service_type
+                 AND sg.time_block = COALESCE(TRIM(ta.time_block), '')
                 LEFT JOIN route_params rp ON rp.id = ta.route_params_id
-                LEFT JOIN vehicles v ON v.id = ta.vehicle_id
+                LEFT JOIN vehicles v ON (v.id = ta.vehicle_id OR v.vehicle_code = CAST(ta.vehicle_id AS TEXT))
+                LEFT JOIN employees e ON e.personel_kodu = CAST(ta.driver_id AS TEXT)
                 LEFT JOIN contracts co ON co.id = ta.contract_id
                 LEFT JOIN customers cu ON cu.id = co.customer_id
                 WHERE ta.trip_date BETWEEN ? AND ?
-                  AND NOT (
-                        REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TASERON%'
-                        AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ARAC%'
+                  AND (
+                        (
+                            v.id IS NOT NULL
+                            AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_sahibi,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ASIL%'
+                            AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_sahibi,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TUR%'
+                        )
+                        OR (
+                            v.id IS NULL
+                            AND COALESCE(e.ad_soyad,'') <> ''
+                            AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(e.ad_soyad,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ASIL%'
+                            AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(e.ad_soyad,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TUR%'
+                        )
                   )
                   AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(rp.movement_type,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') NOT LIKE '%CENAZE%'
                   {customer_filter_sql}
                 GROUP BY
-                    COALESCE(rp.route_name, ''),
-                    COALESCE(v.arac_sahibi, ''),
+                    COALESCE(cu.title, ''),
+                    (COALESCE(rp.route_name, '') || CASE WHEN COALESCE(rp.stops,'') <> '' THEN (' | ' || COALESCE(rp.stops,'')) ELSE '' END),
+                    COALESCE(v.arac_sahibi, COALESCE(e.ad_soyad,''), ''),
                     COALESCE(v.plate_number, ''),
                     COALESCE(rp.movement_type, ''),
                     rp.id,
                     ta.contract_id,
                     COALESCE(ta.service_type,'')
-                ORDER BY guzergah, plaka
+                ORDER BY firma, guzergah, plaka
                 """,
                 tuple(params),
             )
@@ -2986,6 +3460,7 @@ class DatabaseManager:
         price_cache: dict[tuple[int, str, str, int, str], float] = {}
 
         for (
+            firma,
             guzergah,
             sahis,
             plaka,
@@ -3011,8 +3486,6 @@ class DatabaseManager:
                 continue
 
             st = str(service_type or "").strip()
-            if not st:
-                continue
 
             try:
                 qty_f = float(qty_sum or 0.0)
@@ -3021,26 +3494,28 @@ class DatabaseManager:
             if qty_f <= 0:
                 continue
 
-            pc = self._pricing_category_from_movement_type(str(hareket or ""))
-            d_for_price = str(last_trip_date or "").strip() or str(end_date)
-            key = (rid, pc, d_for_price, cid, st)
-            if key in price_cache:
-                unit_price = float(price_cache.get(key) or 0.0)
-            else:
-                unit_price = 0.0
-                try:
-                    pr = self.get_trip_price_for_date(
-                        contract_id=int(cid),
-                        service_type=str(st),
-                        route_params_id=int(rid),
-                        pricing_category=str(pc),
-                        trip_date=str(d_for_price),
-                    )
-                    if pr:
-                        unit_price = float(pr[1] or 0.0)
-                except Exception:
+            unit_price = 0.0
+            if st:
+                pc = self._pricing_category_from_movement_type(str(hareket or ""))
+                d_for_price = str(last_trip_date or "").strip() or str(end_date)
+                key = (rid, pc, d_for_price, cid, st)
+                if key in price_cache:
+                    unit_price = float(price_cache.get(key) or 0.0)
+                else:
                     unit_price = 0.0
-                price_cache[key] = float(unit_price or 0.0)
+                    try:
+                        pr = self.get_trip_price_for_date(
+                            contract_id=int(cid),
+                            service_type=str(st),
+                            route_params_id=int(rid),
+                            pricing_category=str(pc),
+                            trip_date=str(d_for_price),
+                        )
+                        if pr:
+                            unit_price = float(pr[0] or 0.0)
+                    except Exception:
+                        unit_price = 0.0
+                    price_cache[key] = float(unit_price or 0.0)
 
             total = float(qty_f * float(unit_price or 0.0))
             kdv = float(total * 0.20)
@@ -3050,6 +3525,7 @@ class DatabaseManager:
 
             out_rows.append(
                 (
+                    str(firma or ""),
                     str(guzergah or ""),
                     str(sahis or ""),
                     str(plaka or ""),
@@ -3113,12 +3589,23 @@ class DatabaseManager:
         start_date = d0.strftime("%Y-%m-%d")
         end_date = (d1 - timedelta(days=1)).strftime("%Y-%m-%d")
 
+        self.create_employees_table()
+
         conn = self.connect()
         if not conn:
             return []
         try:
             cur = conn.cursor()
-            params: list[object] = [int(contract_id), str(service_type), str(start_date), str(end_date)]
+            params: list[object] = [
+                int(contract_id),
+                str(service_type),
+                str(start_date),
+                str(end_date),
+                int(contract_id),
+                str(service_type),
+                str(start_date),
+                str(end_date),
+            ]
             customer_filter_sql = ""
             if customer_id is not None:
                 customer_filter_sql = " AND cu.id = ? "
@@ -3126,35 +3613,68 @@ class DatabaseManager:
 
             cur.execute(
                 f"""
+                WITH split_groups AS (
+                    SELECT
+                        contract_id,
+                        route_params_id,
+                        trip_date,
+                        service_type,
+                        TRIM(time_block) AS time_block,
+                        1 AS has_split
+                    FROM trip_entries
+                    WHERE contract_id = ?
+                      AND service_type = ?
+                      AND trip_date BETWEEN ? AND ?
+                    GROUP BY contract_id, route_params_id, trip_date, service_type, TRIM(time_block)
+                    HAVING MAX(COALESCE(line_no,0)) > 0
+                )
                 SELECT
-                    COALESCE(rp.route_name, '') AS guzergah,
-                    COALESCE(v.arac_sahibi, '') AS sahis,
+                    COALESCE(cu.title, '') AS firma,
+                    (COALESCE(rp.route_name, '') || CASE WHEN COALESCE(rp.stops,'') <> '' THEN (' | ' || COALESCE(rp.stops,'')) ELSE '' END) AS guzergah,
+                    COALESCE(v.arac_sahibi, COALESCE(e.ad_soyad,''), '') AS sahis,
                     COALESCE(v.plate_number, '') AS plaka,
                     COALESCE(rp.movement_type, '') AS hareket,
-                    SUM(COALESCE(ta.qty, 0)) AS qty_sum,
+                    SUM(CASE WHEN COALESCE(sg.has_split,0)=1 THEN (COALESCE(ta.qty,0) / 2.0) ELSE COALESCE(ta.qty,0) END) AS qty_sum,
                     MAX(COALESCE(ta.trip_date, '')) AS last_trip_date,
                     rp.id AS route_params_id
                 FROM trip_allocations ta
+                LEFT JOIN split_groups sg
+                  ON sg.contract_id = ta.contract_id
+                 AND sg.route_params_id = ta.route_params_id
+                 AND sg.trip_date = ta.trip_date
+                 AND sg.service_type = ta.service_type
+                 AND sg.time_block = COALESCE(TRIM(ta.time_block), '')
                 LEFT JOIN route_params rp ON rp.id = ta.route_params_id
-                LEFT JOIN vehicles v ON v.id = ta.vehicle_id
+                LEFT JOIN vehicles v ON (v.id = ta.vehicle_id OR v.vehicle_code = CAST(ta.vehicle_id AS TEXT))
+                LEFT JOIN employees e ON e.personel_kodu = CAST(ta.driver_id AS TEXT)
                 LEFT JOIN contracts co ON co.id = ta.contract_id
                 LEFT JOIN customers cu ON cu.id = co.customer_id
                 WHERE ta.contract_id = ?
                   AND ta.service_type = ?
                   AND ta.trip_date BETWEEN ? AND ?
-                  AND NOT (
-                        REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TASERON%'
-                        AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ARAC%'
+                  AND (
+                        (
+                            v.id IS NOT NULL
+                            AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_sahibi,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ASIL%'
+                            AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_sahibi,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TUR%'
+                        )
+                        OR (
+                            v.id IS NULL
+                            AND COALESCE(e.ad_soyad,'') <> ''
+                            AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(e.ad_soyad,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ASIL%'
+                            AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(e.ad_soyad,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TUR%'
+                        )
                   )
                   AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(rp.movement_type,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') NOT LIKE '%CENAZE%'
                   {customer_filter_sql}
                 GROUP BY
-                    COALESCE(rp.route_name, ''),
-                    COALESCE(v.arac_sahibi, ''),
+                    COALESCE(cu.title, ''),
+                    (COALESCE(rp.route_name, '') || CASE WHEN COALESCE(rp.stops,'') <> '' THEN (' | ' || COALESCE(rp.stops,'')) ELSE '' END),
+                    COALESCE(v.arac_sahibi, COALESCE(e.ad_soyad,''), ''),
                     COALESCE(v.plate_number, ''),
                     COALESCE(rp.movement_type, ''),
                     rp.id
-                ORDER BY guzergah, plaka
+                ORDER BY firma, guzergah, plaka
                 """,
                 tuple(params),
             )
@@ -3168,7 +3688,7 @@ class DatabaseManager:
         out_rows = []
         price_cache: dict[tuple[int, str, str], float] = {}
 
-        for guzergah, sahis, plaka, hareket, qty_sum, last_trip_date, route_params_id in grouped:
+        for firma, guzergah, sahis, plaka, hareket, qty_sum, last_trip_date, route_params_id in grouped:
             try:
                 rid = int(route_params_id or 0)
             except Exception:
@@ -3199,7 +3719,7 @@ class DatabaseManager:
                         trip_date=str(d_for_price),
                     )
                     if pr:
-                        unit_price = float(pr[1] or 0.0)
+                        unit_price = float(pr[0] or 0.0)
                 except Exception:
                     unit_price = 0.0
                 price_cache[key] = float(unit_price or 0.0)
@@ -3212,6 +3732,7 @@ class DatabaseManager:
 
             out_rows.append(
                 (
+                    str(firma or ""),
                     str(guzergah or ""),
                     str(sahis or ""),
                     str(plaka or ""),
@@ -3746,7 +4267,7 @@ class DatabaseManager:
         try:
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT id, COALESCE(title,'') FROM customers WHERE COALESCE(is_active,1)=1 ORDER BY title COLLATE NOCASE"
+                "SELECT id, COALESCE(title,'') FROM customers WHERE COALESCE(is_active,1)=1 ORDER BY title COLLATE TRNOCASE"
             )
             return cursor.fetchall()
         finally:
@@ -4598,12 +5119,7 @@ class DatabaseManager:
                 WHERE is_active = 1
                   AND gorevi IS NOT NULL
                   AND (UPPER(gorevi) = 'ŞOFÖR' OR UPPER(gorevi) = 'SOFOR')
-                ORDER BY
-                    CASE
-                        WHEN personel_kodu GLOB 'PER[0-9]*' THEN CAST(SUBSTR(personel_kodu, 4) AS INTEGER)
-                        ELSE 999999
-                    END,
-                    personel_kodu
+                ORDER BY ad_soyad COLLATE TRNOCASE ASC, personel_kodu COLLATE TRNOCASE ASC
                 """
             )
             return cursor.fetchall()

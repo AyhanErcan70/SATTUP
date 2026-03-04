@@ -7,6 +7,7 @@ from pathlib import Path
 
 from PyQt6 import uic
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QFileDialog,
     QInputDialog,
@@ -43,7 +44,7 @@ class HakedisApp(QWidget):
         self._clear_tables()
 
     def _clear_tables(self):
-        for name in ("tbl_tab1_yuklenici_araclari", "tbl_tab2_sirket_araclari"):
+        for name in ("tbl_tab1_yuklenici_araclari", "tbl_tab2_sirket_araclari", "tbl_owner_report"):
             tbl = getattr(self, name, None)
             if tbl is None:
                 continue
@@ -59,6 +60,11 @@ class HakedisApp(QWidget):
             self.btn_export_excel.clicked.connect(self.export_excel)
         if hasattr(self, "btn_export_pdf"):
             self.btn_export_pdf.clicked.connect(self.export_pdf)
+        if hasattr(self, "cmb_owner"):
+            try:
+                self.cmb_owner.currentIndexChanged.connect(self._load_owner_report)
+            except Exception:
+                pass
 
     def _init_filters(self):
         self._fill_year_month()
@@ -158,16 +164,37 @@ class HakedisApp(QWidget):
             x = float(v or 0)
         except Exception:
             x = 0.0
-        if abs(x - int(x)) < 1e-9:
-            return str(int(x))
         s = f"{x:,.2f}"
-        return s.replace(",", "X").replace(".", ",").replace("X", ".")
+        s = s.replace(",", "X").replace(".", ",").replace("X", ".")
+        try:
+            if "," in s:
+                s2 = s.rstrip("0").rstrip(",")
+                return s2 if s2 else "0"
+        except Exception:
+            pass
+        return s
 
     def _set_item(self, tbl: QTableWidget, r: int, c: int, text: str, align=Qt.AlignmentFlag.AlignCenter):
         it = QTableWidgetItem(str(text))
         it.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
         try:
             it.setTextAlignment(align)
+        except Exception:
+            pass
+        tbl.setItem(int(r), int(c), it)
+
+    def _set_item_total(self, tbl: QTableWidget, r: int, c: int, text: str, align=Qt.AlignmentFlag.AlignCenter):
+        it = QTableWidgetItem(str(text))
+        it.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
+        try:
+            it.setTextAlignment(align)
+        except Exception:
+            pass
+        try:
+            f = QFont()
+            f.setBold(True)
+            f.setItalic(True)
+            it.setFont(f)
         except Exception:
             pass
         tbl.setItem(int(r), int(c), it)
@@ -192,12 +219,171 @@ class HakedisApp(QWidget):
 
         self._fill_tab1(rows_tab1 or [])
         self._fill_tab2(rows_tab2 or [])
+        self._refresh_owner_list()
+        self._load_owner_report()
+
+    def _refresh_owner_list(self):
+        cmb = getattr(self, "cmb_owner", None)
+        if cmb is None:
+            return
+        period = self._selected_period()
+        if period is None:
+            return
+        customer_id = self._selected_customer_id()
+        month_key = period.key()
+
+        prev = ""
+        try:
+            prev = str(cmb.currentData() or "")
+        except Exception:
+            prev = ""
+
+        cmb.blockSignals(True)
+        try:
+            cmb.clear()
+            cmb.addItem("Seçiniz...", "")
+            for o in self.db.get_hakedis_tab1_owner_list_for_period(
+                period=str(month_key),
+                customer_id=int(customer_id) if customer_id is not None else None,
+            ):
+                cmb.addItem(str(o), str(o))
+        finally:
+            cmb.blockSignals(False)
+
+        try:
+            if prev:
+                ix = cmb.findData(str(prev))
+                if ix >= 0:
+                    cmb.setCurrentIndex(ix)
+        except Exception:
+            pass
+
+    def _load_owner_report(self):
+        tbl = getattr(self, "tbl_owner_report", None)
+        cmb = getattr(self, "cmb_owner", None)
+        if tbl is None or cmb is None:
+            return
+        period = self._selected_period()
+        if period is None:
+            return
+        customer_id = self._selected_customer_id()
+        month_key = period.key()
+
+        try:
+            owner = str(cmb.currentData() or "").strip()
+        except Exception:
+            owner = ""
+
+        if not owner:
+            try:
+                tbl.clearContents()
+            except Exception:
+                pass
+            try:
+                tbl.setRowCount(0)
+            except Exception:
+                pass
+            return
+
+        rows = self.db.get_hakedis_tab1_owner_report_rows_all(
+            period=str(month_key),
+            owner=str(owner),
+            customer_id=int(customer_id) if customer_id is not None else None,
+        )
+        self._fill_owner_report(rows or [])
+
+    def _fill_owner_report(self, rows: list[tuple]):
+        tbl = getattr(self, "tbl_owner_report", None)
+        if tbl is None:
+            return
+        try:
+            tbl.clearContents()
+        except Exception:
+            pass
+        tbl.setRowCount(int(len(rows)) + 1)
+
+        sum_gun = 0.0
+        sum_tutar = 0.0
+        sum_kdv = 0.0
+        sum_ara = 0.0
+        sum_genel = 0.0
+
+        for r, rec in enumerate(rows):
+            try:
+                firma, guzergah, sahis, plaka, hareket, gun, bfiyat, tutar, kdv, ara_top, genel = rec
+            except Exception:
+                continue
+
+            try:
+                sum_gun += float(gun or 0)
+            except Exception:
+                pass
+            try:
+                sum_tutar += float(tutar or 0)
+            except Exception:
+                pass
+            try:
+                sum_kdv += float(kdv or 0)
+            except Exception:
+                pass
+            try:
+                sum_ara += float(ara_top or 0)
+            except Exception:
+                pass
+            try:
+                sum_genel += float(genel or 0)
+            except Exception:
+                pass
+
+            self._set_item(tbl, r, 0, str(firma), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            self._set_item(tbl, r, 1, str(guzergah), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            self._set_item(tbl, r, 2, str(sahis), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            self._set_item(tbl, r, 3, str(plaka))
+            self._set_item(tbl, r, 4, str(hareket))
+            self._set_item(tbl, r, 5, self._fmt_qty(gun))
+            self._set_item(tbl, r, 6, self._fmt_money(bfiyat))
+            self._set_item(tbl, r, 7, self._fmt_money(tutar))
+            self._set_item(tbl, r, 8, self._fmt_money(kdv))
+            self._set_item(tbl, r, 9, self._fmt_money(ara_top))
+            self._set_item(tbl, r, 10, self._fmt_money(genel))
+
+        tr = int(len(rows))
+        try:
+            self._set_item_total(tbl, tr, 0, "")
+            self._set_item_total(tbl, tr, 1, "")
+            self._set_item_total(tbl, tr, 2, "")
+            self._set_item_total(tbl, tr, 3, "")
+            self._set_item_total(tbl, tr, 4, "TOPLAM", Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            self._set_item_total(tbl, tr, 5, self._fmt_qty(sum_gun))
+            self._set_item_total(tbl, tr, 6, "")
+            self._set_item_total(tbl, tr, 7, self._fmt_money(sum_tutar))
+            self._set_item_total(tbl, tr, 8, self._fmt_money(sum_kdv))
+            self._set_item_total(tbl, tr, 9, self._fmt_money(sum_ara))
+            self._set_item_total(tbl, tr, 10, self._fmt_money(sum_genel))
+        except Exception:
+            pass
+
+        try:
+            tbl.resizeColumnsToContents()
+        except Exception:
+            pass
 
     def _fill_tab1(self, rows: list[tuple]):
         tbl = getattr(self, "tbl_tab1_yuklenici_araclari", None)
         if tbl is None:
             return
-        tbl.setRowCount(int(len(rows)))
+        try:
+            tbl.clearContents()
+        except Exception:
+            pass
+        tbl.setRowCount(int(len(rows)) + 1)
+
+        sum_gun = 0.0
+        sum_toplam = 0.0
+        sum_kdv = 0.0
+        sum_ara_top = 0.0
+        sum_tev = 0.0
+        sum_gtop = 0.0
 
         # Expected columns in UI (11): MÜŞTERİ/CARİ(FİRMA), GÜZERGAH, ŞAHIS, HAREKET TÜRÜ,
         # GÜN TOP., B.FİYAT, TOPLAM, KDV%20, ARA TOPLAM, TEVKİFAT %10, GENEL TOPLAM
@@ -206,6 +392,31 @@ class HakedisApp(QWidget):
                 firma, guzergah, sahis, hareket, gun, bfiyat, toplam, kdv, ara_top, tev, gtop = rec
             except Exception:
                 continue
+
+            try:
+                sum_gun += float(gun or 0)
+            except Exception:
+                pass
+            try:
+                sum_toplam += float(toplam or 0)
+            except Exception:
+                pass
+            try:
+                sum_kdv += float(kdv or 0)
+            except Exception:
+                pass
+            try:
+                sum_ara_top += float(ara_top or 0)
+            except Exception:
+                pass
+            try:
+                sum_tev += float(tev or 0)
+            except Exception:
+                pass
+            try:
+                sum_gtop += float(gtop or 0)
+            except Exception:
+                pass
 
             self._set_item(tbl, r, 0, str(firma), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
             self._set_item(tbl, r, 1, str(guzergah), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
@@ -219,6 +430,22 @@ class HakedisApp(QWidget):
             self._set_item(tbl, r, 9, self._fmt_money(tev))
             self._set_item(tbl, r, 10, self._fmt_money(gtop))
 
+        tr = int(len(rows))
+        try:
+            self._set_item_total(tbl, tr, 0, "")
+            self._set_item_total(tbl, tr, 1, "")
+            self._set_item_total(tbl, tr, 2, "")
+            self._set_item_total(tbl, tr, 3, "TOPLAM", Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            self._set_item_total(tbl, tr, 4, self._fmt_qty(sum_gun))
+            self._set_item_total(tbl, tr, 5, "")
+            self._set_item_total(tbl, tr, 6, self._fmt_money(sum_toplam))
+            self._set_item_total(tbl, tr, 7, self._fmt_money(sum_kdv))
+            self._set_item_total(tbl, tr, 8, self._fmt_money(sum_ara_top))
+            self._set_item_total(tbl, tr, 9, self._fmt_money(sum_tev))
+            self._set_item_total(tbl, tr, 10, self._fmt_money(sum_gtop))
+        except Exception:
+            pass
+
         try:
             tbl.resizeColumnsToContents()
         except Exception:
@@ -228,26 +455,81 @@ class HakedisApp(QWidget):
         tbl = getattr(self, "tbl_tab2_sirket_araclari", None)
         if tbl is None:
             return
-        tbl.setRowCount(int(len(rows)))
+        try:
+            tbl.clearContents()
+        except Exception:
+            pass
+        tbl.setRowCount(int(len(rows)) + 1)
+
+        sum_gun = 0.0
+        sum_toplam = 0.0
+        sum_kdv = 0.0
+        sum_ara_top = 0.0
+        sum_tev = 0.0
+        sum_gtop = 0.0
 
         # UI columns (11): GÜZERGAH, ŞAHIS, PLAKA, HAREKET TÜRÜ, GÜN TOP., B.FİYAT,
         # TOPLAM, KDV%20, ARA TOPLAM, TEVKİFAT %10, GENEL TOPLAM
         for r, rec in enumerate(rows):
             try:
-                guzergah, sahis, plaka, hareket, gun, bfiyat, toplam, kdv, ara_top, tev, gtop = rec
+                firma, guzergah, sahis, plaka, hareket, gun, bfiyat, toplam, kdv, ara_top, tev, gtop = rec
             except Exception:
                 continue
-            self._set_item(tbl, r, 0, str(guzergah), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-            self._set_item(tbl, r, 1, str(sahis), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-            self._set_item(tbl, r, 2, str(plaka))
-            self._set_item(tbl, r, 3, str(hareket))
-            self._set_item(tbl, r, 4, self._fmt_qty(gun))
-            self._set_item(tbl, r, 5, self._fmt_money(bfiyat))
-            self._set_item(tbl, r, 6, self._fmt_money(toplam))
-            self._set_item(tbl, r, 7, self._fmt_money(kdv))
-            self._set_item(tbl, r, 8, self._fmt_money(ara_top))
-            self._set_item(tbl, r, 9, self._fmt_money(tev))
-            self._set_item(tbl, r, 10, self._fmt_money(gtop))
+
+            try:
+                sum_gun += float(gun or 0)
+            except Exception:
+                pass
+            try:
+                sum_toplam += float(toplam or 0)
+            except Exception:
+                pass
+            try:
+                sum_kdv += float(kdv or 0)
+            except Exception:
+                pass
+            try:
+                sum_ara_top += float(ara_top or 0)
+            except Exception:
+                pass
+            try:
+                sum_tev += float(tev or 0)
+            except Exception:
+                pass
+            try:
+                sum_gtop += float(gtop or 0)
+            except Exception:
+                pass
+
+            self._set_item(tbl, r, 0, str(firma), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            self._set_item(tbl, r, 1, str(guzergah), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            self._set_item(tbl, r, 2, str(sahis), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            self._set_item(tbl, r, 3, str(plaka))
+            self._set_item(tbl, r, 4, str(hareket))
+            self._set_item(tbl, r, 5, self._fmt_qty(gun))
+            self._set_item(tbl, r, 6, self._fmt_money(bfiyat))
+            self._set_item(tbl, r, 7, self._fmt_money(toplam))
+            self._set_item(tbl, r, 8, self._fmt_money(kdv))
+            self._set_item(tbl, r, 9, self._fmt_money(ara_top))
+            self._set_item(tbl, r, 10, self._fmt_money(tev))
+            self._set_item(tbl, r, 11, self._fmt_money(gtop))
+
+        tr = int(len(rows))
+        try:
+            self._set_item_total(tbl, tr, 0, "")
+            self._set_item_total(tbl, tr, 1, "")
+            self._set_item_total(tbl, tr, 2, "")
+            self._set_item_total(tbl, tr, 3, "")
+            self._set_item_total(tbl, tr, 4, "TOPLAM", Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            self._set_item_total(tbl, tr, 5, self._fmt_qty(sum_gun))
+            self._set_item_total(tbl, tr, 6, "")
+            self._set_item_total(tbl, tr, 7, self._fmt_money(sum_toplam))
+            self._set_item_total(tbl, tr, 8, self._fmt_money(sum_kdv))
+            self._set_item_total(tbl, tr, 9, self._fmt_money(sum_ara_top))
+            self._set_item_total(tbl, tr, 10, self._fmt_money(sum_tev))
+            self._set_item_total(tbl, tr, 11, self._fmt_money(sum_gtop))
+        except Exception:
+            pass
 
         try:
             tbl.resizeColumnsToContents()

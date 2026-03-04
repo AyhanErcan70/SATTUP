@@ -37,6 +37,9 @@ from app.utils.excel_utils import create_excel
 from config import get_ui_path
 
 
+DISABLE_VEHICLE_MOVEMENT_LIMIT_WARNING = True
+
+
 def _norm_month_key(m: str) -> str:
     ms = str(m or "").strip()
     if not ms:
@@ -1972,25 +1975,25 @@ class BulkAttendanceDialog(QDialog):
             pass
 
         # Prefer the movement type shown in the UI row; it is the most reliable indicator for this row.
-        is_cift = False
+        is_split_mt = False
         try:
             mt_item = self.table.item(int(row), self._col_movement)
             mt_txt = self._norm_tr_text(mt_item.text() if mt_item is not None else "")
-            is_cift = ("cift" in mt_txt)
+            is_split_mt = (("cift" in mt_txt) or ("paket" in mt_txt))
         except Exception:
-            is_cift = False
+            is_split_mt = False
 
-        if not is_cift:
+        if not is_split_mt:
             mt = self._norm_tr_text(self._movement_type_for_route(rid) or "")
-            is_cift = ("cift" in mt)
-        if not is_cift:
+            is_split_mt = (("cift" in mt) or ("paket" in mt))
+        if not is_split_mt:
             t_it = self.table.item(row, self._col_time_text)
             t_txt = (t_it.text() if t_it is not None else "")
             if self._looks_like_double_time_text(t_txt):
-                is_cift = True
+                is_split_mt = True
 
-        if not is_cift:
-            QMessageBox.information(self, "Bilgi", "Bu satır ÇİFT servis değil. Ayırma işlemi ÇİFT satırlar için tasarlandı.")
+        if not is_split_mt:
+            QMessageBox.information(self, "Bilgi", "Bu satır ÇİFT servis veya PAKET değil. Ayırma işlemi ÇİFT/PAKET satırlar için tasarlandı.")
             return
 
         try:
@@ -3387,7 +3390,7 @@ class BulkAttendanceDialog(QDialog):
                         try:
                             if default_vehicle_id is not None and str(default_vehicle_id).strip():
                                 mv = int(self.db.get_vehicle_movements_for_day(int(self.contract_id), str(trip_date), default_vehicle_id) or 0)
-                                if mv > 8:
+                                if (not DISABLE_VEHICLE_MOVEMENT_LIMIT_WARNING) and mv > 8:
                                     QMessageBox.warning(self, "Uyarı", f"Bu araç için {trip_date} tarihinde hareket sayısı {mv} oldu (limit: 8).")
                         except Exception:
                             pass
@@ -3486,7 +3489,7 @@ class BulkAttendanceDialog(QDialog):
                     try:
                         if vsel is not None and str(vsel).strip():
                             mv = int(self.db.get_vehicle_movements_for_day(int(self.contract_id), str(trip_date), vsel) or 0)
-                            if mv > 8:
+                            if (not DISABLE_VEHICLE_MOVEMENT_LIMIT_WARNING) and mv > 8:
                                 QMessageBox.warning(self, "Uyarı", f"Bu araç için {trip_date} tarihinde hareket sayısı {mv} oldu (limit: 8).")
                     except Exception:
                         pass
@@ -4324,34 +4327,34 @@ class BulkAttendanceDialog(QDialog):
                 for row_idx in (row_idxs or []):
                     p_item = self.table.item(int(row_idx), self._col_price)
                     if p_item is not None:
-                        is_cift_row = False
+                        is_split_mt = False
                         try:
                             mt_item = self.table.item(int(row_idx), self._col_movement)
                             mt_txt = self._norm_tr_text(mt_item.text() if mt_item is not None else "")
-                            is_cift_row = ("cift" in mt_txt)
+                            is_split_mt = (("cift" in mt_txt) or ("paket" in mt_txt))
                         except Exception:
-                            is_cift_row = False
-                        if not bool(is_cift_row):
+                            is_split_mt = False
+                        if not bool(is_split_mt):
                             # Fallback: UI cell text can be empty/changed on reload; infer from route definition.
                             try:
                                 mt2 = self._norm_tr_text(self._movement_type_for_route(int(key[0] or 0)) or "")
-                                is_cift_row = ("cift" in mt2)
+                                is_split_mt = (("cift" in mt2) or ("paket" in mt2))
                             except Exception:
-                                is_cift_row = False
-                        if not bool(is_cift_row):
+                                is_split_mt = False
+                        if not bool(is_split_mt):
                             # Last resort: infer from time_text pattern if it looks like a double (entry+exit) label.
                             try:
                                 t_it2 = self.table.item(int(row_idx), self._col_time_text)
                                 t_txt2 = (t_it2.text() if t_it2 is not None else "")
                                 if self._looks_like_double_time_text(t_txt2):
-                                    is_cift_row = True
+                                    is_split_mt = True
                             except Exception:
                                 pass
                         # If DB stored an already-halved price for a split group, UI would show /4.
                         # Use contract/route fallback as the authoritative full unit price.
                         pr_full = float(pr)
                         try:
-                            if bool(has_split) and bool(is_cift_row):
+                            if bool(has_split) and bool(is_split_mt):
                                 fb = route_price_by_id.get(int(key[0] or 0))
                                 if fb is not None:
                                     try:
@@ -4361,7 +4364,7 @@ class BulkAttendanceDialog(QDialog):
                         except Exception:
                             pr_full = float(pr)
 
-                        pr_ui = (float(pr_full) / 2.0) if (has_split and is_cift_row) else float(pr_full)
+                        pr_ui = (float(pr_full) / 2.0) if (has_split and is_split_mt) else float(pr_full)
                         # Store full unit price in UserRole to prevent /4 issues on repeated loads.
                         try:
                             p_item.setData(Qt.ItemDataRole.UserRole, float(pr_full))
@@ -4504,7 +4507,7 @@ class BulkAttendanceDialog(QDialog):
                         continue
                     mt_item = self.table.item(int(r0), self._col_movement)
                     mt_txt = self._norm_tr_text(mt_item.text() if mt_item is not None else "")
-                    if ("cift" in mt_txt):
+                    if ("cift" in mt_txt) or ("paket" in mt_txt):
                         split_keys.add((rid_i, tb_s))
 
                 for r in range(self.table.rowCount()):
@@ -4527,10 +4530,10 @@ class BulkAttendanceDialog(QDialog):
                     try:
                         mt_item = self.table.item(int(r), self._col_movement)
                         mt_txt = self._norm_tr_text(mt_item.text() if mt_item is not None else "")
-                        is_cift_row = ("cift" in mt_txt)
+                        is_split_mt = (("cift" in mt_txt) or ("paket" in mt_txt))
                     except Exception:
-                        is_cift_row = False
-                    if not is_cift_row:
+                        is_split_mt = False
+                    if not is_split_mt:
                         continue
                     if (rid_i, tb_s) not in split_keys:
                         continue
@@ -4941,13 +4944,13 @@ class BulkAttendanceDialog(QDialog):
             except Exception:
                 price = 0.0
 
-            is_cift_row = False
+            is_split_mt = False
             try:
                 mt_item = self.table.item(r, self._col_movement)
                 mt_txt = self._norm_tr_text(mt_item.text() if mt_item is not None else "")
-                is_cift_row = ("cift" in mt_txt)
+                is_split_mt = (("cift" in mt_txt) or ("paket" in mt_txt))
             except Exception:
-                is_cift_row = False
+                is_split_mt = False
 
             # Persist trip_prices as the full base unit price.
             # Full unit price is carried in UserRole; UI may display half for split rows.
@@ -4956,7 +4959,7 @@ class BulkAttendanceDialog(QDialog):
             # Scenario A: DB already contains half price, UI shows quarter -> use DB*2.
             # Scenario B: UI shows half, and we are about to write half -> use UI*2.
             try:
-                if bool(is_cift_row) and (int(rid), str(time_block)) in split_keys:
+                if bool(is_split_mt) and (int(rid), str(time_block)) in split_keys:
                     disp = float(self._parse_tr_float(p_txt)) if str(p_txt).strip() else 0.0
                     kdb = (int(rid), str(time_block))
                     db_price = float(existing_price_map.get(kdb) or 0.0)
@@ -4988,7 +4991,9 @@ class BulkAttendanceDialog(QDialog):
                 qty = int(val) if val.isdigit() else 0
                 trip_date = QDate(self.year, self.month, day).toString("yyyy-MM-dd")
                 key = (int(rid), str(trip_date), str(time_block), int(line_no))
-                if is_planned or qty != 0 or key in existing_entries:
+                # Persist only meaningful quantities (or existing rows so user can clear to 0).
+                # Writing all planned 0-qty rows can create huge workloads and freeze the UI.
+                if qty != 0 or key in existing_entries:
                     entry_rows.append(
                         (
                             int(self.contract_id),
@@ -5004,12 +5009,42 @@ class BulkAttendanceDialog(QDialog):
                         )
                     )
 
+                try:
+                    if int(line_no or 0) == 0 and int(qty or 0) > 0 and (int(rid), str(time_block)) in split_keys:
+                        k_split = (int(rid), str(trip_date), str(time_block), 1)
+                        if (k_split in existing_entries) or (k_split in {(int(er[1]), str(er[2]), str(er[4]), int(er[5])) for er in (entry_rows or [])}):
+                            pass
+                        else:
+                            entry_rows.append(
+                                (
+                                    int(self.contract_id),
+                                    int(rid),
+                                    str(trip_date),
+                                    str(self.service_type),
+                                    str(time_block),
+                                    1,
+                                    0,
+                                    "",
+                                    now,
+                                    now,
+                                )
+                            )
+                except Exception:
+                    pass
+
                 key2 = (int(rid), str(trip_date), str(time_block), int(line_no))
-                if is_planned or qty != 0 or key2 in existing_allocations:
-                    override = self._alloc_override_map.get((int(rid), str(time_block), str(trip_date), int(line_no))) or {}
-                    v2 = override.get("vehicle_id", vehicle_id)
-                    d2 = override.get("driver_id", driver_id)
-                    note2 = (override.get("note") or "").strip()
+                override = self._alloc_override_map.get((int(rid), str(time_block), str(trip_date), int(line_no))) or {}
+                v2 = override.get("vehicle_id", vehicle_id)
+                d2 = override.get("driver_id", driver_id)
+                note2 = (override.get("note") or "").strip()
+                has_override = bool(
+                    (override.get("is_override"))
+                    or bool(note2)
+                    or (v2 is not None and str(v2).strip() and (vehicle_id is None or str(v2) != str(vehicle_id)))
+                    or (d2 is not None and str(d2).strip() and (driver_id is None or str(d2) != str(driver_id)))
+                )
+                # Persist allocation only when it matters (qty / override) or when clearing an existing record.
+                if qty != 0 or key2 in existing_allocations or has_override:
                     alloc_rows.append(
                         (
                             int(self.contract_id),
@@ -5052,7 +5087,7 @@ class BulkAttendanceDialog(QDialog):
                                 break
 
                     if (not has_any_qty) and (not has_any_override) and (not (time_text or "").strip()):
-                        empty_split_groups.append((int(rid), str(time_block), int(line_no)))
+                        pass
             except Exception:
                 pass
 
@@ -5357,7 +5392,7 @@ class BulkAttendanceDialog(QDialog):
                         continue
                     warned.add(k)
                     mv = int(self.db.get_vehicle_movements_for_day(int(self.contract_id), str(tdate), vid) or 0)
-                    if mv > 8:
+                    if (not DISABLE_VEHICLE_MOVEMENT_LIMIT_WARNING) and mv > 8:
                         QMessageBox.warning(self, "Uyarı", f"Bu araç için {tdate} tarihinde hareket sayısı {mv} oldu (limit: 8).")
             except Exception:
                 pass

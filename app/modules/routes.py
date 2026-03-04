@@ -231,7 +231,7 @@ class RoutesApp(QWidget):
             conn = self.db.connect()
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT id, COALESCE(title,'') FROM customers WHERE is_active = 1 ORDER BY title COLLATE NOCASE"
+                "SELECT id, COALESCE(title,'') FROM customers WHERE is_active = 1 ORDER BY title COLLATE TRNOCASE"
             )
             rows = cursor.fetchall()
             conn.close()

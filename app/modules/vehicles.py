@@ -83,7 +83,7 @@ class VehiclesApp(QWidget):
                 FROM customers
                 WHERE COALESCE(is_active,1)=1
                   AND (COALESCE(musteri_turu,'') = 'ALT YÜKLENICI' OR COALESCE(musteri_turu,'') = 'ALT YÜKLENİCİ')
-                ORDER BY title COLLATE NOCASE
+                ORDER BY title COLLATE TRNOCASE
                 """
             )
             items = cur.fetchall() or []

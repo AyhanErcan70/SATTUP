@@ -276,7 +276,8 @@ class EmployeesApp(QWidget):
         # 4. Verileri Çek ve Yerleştir
         query = """
             SELECT personel_kodu, personel_turu, tckn, ad_soyad, gorevi, gsm, email, kan_grubu, is_active 
-            FROM employees ORDER BY rowid ASC
+            FROM employees
+            ORDER BY ad_soyad COLLATE TRNOCASE ASC, personel_kodu COLLATE TRNOCASE ASC
         """
         try:
             conn = self.db.connect()

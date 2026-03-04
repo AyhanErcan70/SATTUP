@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1003</width>
-    <height>652</height>
+    <width>1325</width>
+    <height>662</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,13 +17,13 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>20</y>
-     <width>971</width>
-     <height>80</height>
+     <y>10</y>
+     <width>1291</width>
+     <height>50</height>
     </rect>
    </property>
    <property name="frameShape">
-    <enum>QFrame::Shape::Box</enum>
+    <enum>QFrame::Shape::NoFrame</enum>
    </property>
    <property name="frameShadow">
     <enum>QFrame::Shadow::Plain</enum>
@@ -32,9 +32,9 @@
     <property name="geometry">
      <rect>
       <x>70</x>
-      <y>30</y>
+      <y>10</y>
       <width>49</width>
-      <height>16</height>
+      <height>31</height>
      </rect>
     </property>
     <property name="text">
@@ -45,7 +45,7 @@
     <property name="geometry">
      <rect>
       <x>130</x>
-      <y>20</y>
+      <y>10</y>
       <width>93</width>
       <height>26</height>
      </rect>
@@ -70,7 +70,7 @@
     <property name="geometry">
      <rect>
       <x>240</x>
-      <y>20</y>
+      <y>10</y>
       <width>93</width>
       <height>26</height>
      </rect>
@@ -146,13 +146,13 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>120</y>
-     <width>971</width>
-     <height>80</height>
+     <y>70</y>
+     <width>1291</width>
+     <height>50</height>
     </rect>
    </property>
    <property name="frameShape">
-    <enum>QFrame::Shape::Box</enum>
+    <enum>QFrame::Shape::NoFrame</enum>
    </property>
    <property name="frameShadow">
     <enum>QFrame::Shadow::Plain</enum>
@@ -161,7 +161,7 @@
     <property name="geometry">
      <rect>
       <x>140</x>
-      <y>40</y>
+      <y>10</y>
       <width>351</width>
       <height>26</height>
      </rect>
@@ -171,7 +171,7 @@
     <property name="geometry">
      <rect>
       <x>40</x>
-      <y>40</y>
+      <y>10</y>
       <width>91</width>
       <height>21</height>
      </rect>
@@ -183,8 +183,8 @@
    <widget class="QPushButton" name="btn_refresh">
     <property name="geometry">
      <rect>
-      <x>550</x>
-      <y>20</y>
+      <x>600</x>
+      <y>10</y>
       <width>101</width>
       <height>31</height>
      </rect>
@@ -196,8 +196,8 @@
    <widget class="QPushButton" name="btn_export_excel">
     <property name="geometry">
      <rect>
-      <x>670</x>
-      <y>20</y>
+      <x>750</x>
+      <y>10</y>
       <width>101</width>
       <height>31</height>
      </rect>
@@ -209,8 +209,8 @@
    <widget class="QPushButton" name="btn_export_pdf">
     <property name="geometry">
      <rect>
-      <x>790</x>
-      <y>20</y>
+      <x>910</x>
+      <y>10</y>
       <width>101</width>
       <height>31</height>
      </rect>
@@ -223,20 +223,20 @@
   <widget class="QFrame" name="bottom_frame">
    <property name="geometry">
     <rect>
-     <x>20</x>
-     <y>240</y>
-     <width>971</width>
-     <height>411</height>
+     <x>10</x>
+     <y>120</y>
+     <width>1301</width>
+     <height>531</height>
     </rect>
    </property>
    <property name="frameShape">
-    <enum>QFrame::Shape::Box</enum>
+    <enum>QFrame::Shape::NoFrame</enum>
    </property>
    <property name="frameShadow">
     <enum>QFrame::Shadow::Plain</enum>
    </property>
    <layout class="QGridLayout" name="gridLayout">
-    <item row="0" column="0">
+    <item row="0" column="1">
      <widget class="QTabWidget" name="tabWidget_hakedis">
       <property name="currentIndex">
        <number>0</number>
@@ -250,8 +250,8 @@
          <rect>
           <x>10</x>
           <y>10</y>
-          <width>927</width>
-          <height>344</height>
+          <width>1251</width>
+          <height>460</height>
          </rect>
         </property>
         <column>
@@ -320,10 +320,15 @@
          <rect>
           <x>10</x>
           <y>10</y>
-          <width>927</width>
-          <height>344</height>
+          <width>1251</width>
+          <height>450</height>
          </rect>
         </property>
+        <column>
+         <property name="text">
+          <string>MÜŞTERİ/CARİ</string>
+         </property>
+        </column>
         <column>
          <property name="text">
           <string>GÜZERGAH</string>
@@ -379,6 +384,101 @@
           <string>GENEL TOPLAM</string>
          </property>
         </column>
+       </widget>
+      </widget>
+      <widget class="QWidget" name="tab">
+       <attribute name="title">
+        <string>DAĞILIM</string>
+       </attribute>
+       <widget class="QTableWidget" name="tbl_owner_report">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>50</y>
+          <width>1241</width>
+          <height>411</height>
+         </rect>
+        </property>
+        <column>
+         <property name="text">
+          <string>MÜŞTERİ/CARİ</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>GÜZERGAH</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>ARAÇ SAHİBİ+ŞOFÖR</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>ARAÇ PLAKA</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>HAREKET TÜRÜ</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>GÜN TOP.</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>B.FİYAT</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>TUTAR</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>KDV %20</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>ARA TOP.</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>GENEL TOPLAM</string>
+         </property>
+        </column>
+       </widget>
+       <widget class="QWidget" name="layoutWidget">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>10</y>
+          <width>311</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <item>
+          <widget class="QLabel" name="lbl_arac_sahibi">
+           <property name="text">
+            <string>YÜKLENİCİ SEÇ :</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="cmb_owner"/>
+         </item>
+        </layout>
        </widget>
       </widget>
      </widget>
