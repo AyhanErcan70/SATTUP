@@ -306,11 +306,12 @@ class HakedisApp(QWidget):
         sum_tutar = 0.0
         sum_kdv = 0.0
         sum_ara = 0.0
+        sum_tev = 0.0
         sum_genel = 0.0
 
         for r, rec in enumerate(rows):
             try:
-                firma, guzergah, sahis, plaka, hareket, gun, bfiyat, tutar, kdv, ara_top, genel = rec
+                firma, guzergah, sahis, plaka, hareket, gun, bfiyat, tutar, kdv, ara_top, tev, genel = rec
             except Exception:
                 continue
 
@@ -331,6 +332,10 @@ class HakedisApp(QWidget):
             except Exception:
                 pass
             try:
+                sum_tev += float(tev or 0)
+            except Exception:
+                pass
+            try:
                 sum_genel += float(genel or 0)
             except Exception:
                 pass
@@ -345,7 +350,8 @@ class HakedisApp(QWidget):
             self._set_item(tbl, r, 7, self._fmt_money(tutar))
             self._set_item(tbl, r, 8, self._fmt_money(kdv))
             self._set_item(tbl, r, 9, self._fmt_money(ara_top))
-            self._set_item(tbl, r, 10, self._fmt_money(genel))
+            self._set_item(tbl, r, 10, self._fmt_money(tev))
+            self._set_item(tbl, r, 11, self._fmt_money(genel))
 
         tr = int(len(rows))
         try:
@@ -359,7 +365,8 @@ class HakedisApp(QWidget):
             self._set_item_total(tbl, tr, 7, self._fmt_money(sum_tutar))
             self._set_item_total(tbl, tr, 8, self._fmt_money(sum_kdv))
             self._set_item_total(tbl, tr, 9, self._fmt_money(sum_ara))
-            self._set_item_total(tbl, tr, 10, self._fmt_money(sum_genel))
+            self._set_item_total(tbl, tr, 10, self._fmt_money(sum_tev))
+            self._set_item_total(tbl, tr, 11, self._fmt_money(sum_genel))
         except Exception:
             pass
 

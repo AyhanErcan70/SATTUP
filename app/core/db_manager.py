@@ -2705,6 +2705,10 @@ class DatabaseManager:
                 str(service_type),
                 str(start_date),
                 str(end_date),
+                int(contract_id),
+                str(service_type),
+                str(start_date),
+                str(end_date),
             ]
             customer_filter_sql = ""
             if customer_id is not None:
@@ -2721,14 +2725,39 @@ class DatabaseManager:
                         route_params_id,
                         trip_date,
                         service_type,
-                        COALESCE(TRIM(time_block), '') AS time_block,
+                        time_block,
                         1 AS has_split
-                    FROM trip_entries
-                    WHERE contract_id = ?
-                      AND service_type = ?
-                      AND trip_date BETWEEN ? AND ?
-                    GROUP BY contract_id, route_params_id, trip_date, service_type, COALESCE(TRIM(time_block), '')
-                    HAVING MAX(COALESCE(line_no,0)) > 0
+                    FROM (
+                        SELECT
+                            contract_id,
+                            route_params_id,
+                            trip_date,
+                            service_type,
+                            COALESCE(TRIM(time_block), '') AS time_block,
+                            MAX(COALESCE(line_no,0)) AS max_ln
+                        FROM trip_entries
+                        WHERE contract_id = ?
+                          AND service_type = ?
+                          AND trip_date BETWEEN ? AND ?
+                        GROUP BY contract_id, route_params_id, trip_date, service_type, COALESCE(TRIM(time_block), '')
+
+                        UNION ALL
+
+                        SELECT
+                            contract_id,
+                            route_params_id,
+                            trip_date,
+                            service_type,
+                            COALESCE(TRIM(time_block), '') AS time_block,
+                            MAX(COALESCE(line_no,0)) AS max_ln
+                        FROM trip_allocations
+                        WHERE contract_id = ?
+                          AND service_type = ?
+                          AND trip_date BETWEEN ? AND ?
+                        GROUP BY contract_id, route_params_id, trip_date, service_type, COALESCE(TRIM(time_block), '')
+                    ) u
+                    WHERE COALESCE(u.max_ln,0) > 0
+                    GROUP BY contract_id, route_params_id, trip_date, service_type, time_block
                 )
                 SELECT
                     COALESCE(cu.title, '') AS firma,
@@ -2982,7 +3011,7 @@ class DatabaseManager:
                         service_type,
                         COALESCE(TRIM(time_block), '') AS time_block,
                         1 AS has_split
-                    FROM trip_entries
+                    FROM trip_allocations
                     WHERE trip_date BETWEEN ? AND ?
                     GROUP BY contract_id, route_params_id, trip_date, service_type, COALESCE(TRIM(time_block), '')
                     HAVING MAX(COALESCE(line_no,0)) > 0
@@ -3122,7 +3151,8 @@ class DatabaseManager:
             total = float(qty_f * float(unit_price or 0.0))
             kdv = float(total * 0.20)
             ara_top = float(total + kdv)
-            g_toplam = float(ara_top - float(kdv * 0.50))
+            tevkifat = float(kdv * 0.50)
+            g_toplam = float(ara_top - tevkifat)
 
             sahis = (str(owner2 or "").strip() + (" / " + str(sofor or "").strip() if str(sofor or "").strip() else "")).strip()
 
@@ -3138,6 +3168,7 @@ class DatabaseManager:
                     total,
                     kdv,
                     ara_top,
+                    tevkifat,
                     g_toplam,
                 )
             )
@@ -3178,7 +3209,14 @@ class DatabaseManager:
             return []
         try:
             cur = conn.cursor()
-            params: list[object] = [str(start_date), str(end_date), str(start_date), str(end_date)]
+            params: list[object] = [
+                str(start_date),
+                str(end_date),
+                str(start_date),
+                str(end_date),
+                str(start_date),
+                str(end_date),
+            ]
             customer_filter_sql = ""
             if customer_id is not None:
                 customer_filter_sql = " AND cu.id = ? "
@@ -3192,12 +3230,35 @@ class DatabaseManager:
                         route_params_id,
                         trip_date,
                         service_type,
-                        COALESCE(TRIM(time_block), '') AS time_block,
+                        time_block,
                         1 AS has_split
-                    FROM trip_entries
-                    WHERE trip_date BETWEEN ? AND ?
-                    GROUP BY contract_id, route_params_id, trip_date, service_type, COALESCE(TRIM(time_block), '')
-                    HAVING MAX(COALESCE(line_no,0)) > 0
+                    FROM (
+                        SELECT
+                            contract_id,
+                            route_params_id,
+                            trip_date,
+                            service_type,
+                            COALESCE(TRIM(time_block), '') AS time_block,
+                            MAX(COALESCE(line_no,0)) AS max_ln
+                        FROM trip_entries
+                        WHERE trip_date BETWEEN ? AND ?
+                        GROUP BY contract_id, route_params_id, trip_date, service_type, COALESCE(TRIM(time_block), '')
+
+                        UNION ALL
+
+                        SELECT
+                            contract_id,
+                            route_params_id,
+                            trip_date,
+                            service_type,
+                            COALESCE(TRIM(time_block), '') AS time_block,
+                            MAX(COALESCE(line_no,0)) AS max_ln
+                        FROM trip_allocations
+                        WHERE trip_date BETWEEN ? AND ?
+                        GROUP BY contract_id, route_params_id, trip_date, service_type, COALESCE(TRIM(time_block), '')
+                    ) u
+                    WHERE COALESCE(u.max_ln,0) > 0
+                    GROUP BY contract_id, route_params_id, trip_date, service_type, time_block
                 )
                 SELECT
                     COALESCE(cu.title, '') AS firma,
@@ -3215,7 +3276,7 @@ class DatabaseManager:
                  AND sg.route_params_id = ta.route_params_id
                  AND sg.trip_date = ta.trip_date
                  AND sg.service_type = ta.service_type
-                 AND sg.time_block = TRIM(ta.time_block)
+                 AND sg.time_block = COALESCE(TRIM(ta.time_block), '')
                 LEFT JOIN route_params rp ON rp.id = ta.route_params_id
                 LEFT JOIN vehicles v ON (v.id = ta.vehicle_id OR v.vehicle_code = CAST(ta.vehicle_id AS TEXT))
                 LEFT JOIN employees e ON e.personel_kodu = CAST(ta.driver_id AS TEXT)
@@ -3390,11 +3451,11 @@ class DatabaseManager:
                         route_params_id,
                         trip_date,
                         service_type,
-                        TRIM(time_block) AS time_block,
+                        COALESCE(TRIM(time_block), '') AS time_block,
                         1 AS has_split
                     FROM trip_entries
                     WHERE trip_date BETWEEN ? AND ?
-                    GROUP BY contract_id, route_params_id, trip_date, service_type, TRIM(time_block)
+                    GROUP BY contract_id, route_params_id, trip_date, service_type, COALESCE(TRIM(time_block), '')
                     HAVING MAX(COALESCE(line_no,0)) > 0
                 )
                 SELECT
@@ -3619,13 +3680,13 @@ class DatabaseManager:
                         route_params_id,
                         trip_date,
                         service_type,
-                        TRIM(time_block) AS time_block,
+                        COALESCE(TRIM(time_block), '') AS time_block,
                         1 AS has_split
                     FROM trip_entries
                     WHERE contract_id = ?
                       AND service_type = ?
                       AND trip_date BETWEEN ? AND ?
-                    GROUP BY contract_id, route_params_id, trip_date, service_type, TRIM(time_block)
+                    GROUP BY contract_id, route_params_id, trip_date, service_type, COALESCE(TRIM(time_block), '')
                     HAVING MAX(COALESCE(line_no,0)) > 0
                 )
                 SELECT

@@ -3535,7 +3535,98 @@ class BulkAttendanceDialog(QDialog):
 
             r = item.row()
             c = item.column()
-            if c in (0, 1, self._col_vehicle, self._col_driver, self._col_time_text, self._col_total_qty, self._col_total_price):
+            if c in (0, 1, self._col_time_text, self._col_total_qty, self._col_total_price):
+                return
+
+            if c == self._col_vehicle:
+                try:
+                    txtv = (item.text() or "").strip()
+                except Exception:
+                    txtv = ""
+
+                try:
+                    with QSignalBlocker(self.table):
+                        item.setData(Qt.ItemDataRole.UserRole, None)
+                        if not txtv:
+                            item.setText("")
+                except Exception:
+                    try:
+                        item.setData(Qt.ItemDataRole.UserRole, None)
+                    except Exception:
+                        pass
+
+                if not txtv:
+                    try:
+                        meta = self._row_meta[int(r)] if int(r) < len(self._row_meta) else None
+                        rid = int((meta or {}).get("route_params_id") or 0)
+                        time_block = str((meta or {}).get("time_block") or "").strip()
+                        line_no = int((meta or {}).get("line_no") or 0)
+                    except Exception:
+                        rid, time_block, line_no = 0, "", 0
+
+                    if int(rid or 0) > 0 and str(time_block):
+                        try:
+                            for day in range(1, int(self.days_in_month) + 1):
+                                trip_date = QDate(self.year, self.month, int(day)).toString("yyyy-MM-dd")
+                                k = (int(rid), str(time_block), str(trip_date), int(line_no))
+                                if k in (self._alloc_override_map or {}):
+                                    rec = (self._alloc_override_map.get(k) or {})
+                                    rec["vehicle_id"] = None
+                                    if (not rec.get("driver_id")) and (not (rec.get("note") or "").strip()):
+                                        try:
+                                            del self._alloc_override_map[k]
+                                        except Exception:
+                                            pass
+                                    else:
+                                        self._alloc_override_map[k] = rec
+                        except Exception:
+                            pass
+
+                return
+
+            if c == self._col_driver:
+                try:
+                    txtd = (item.text() or "").strip()
+                except Exception:
+                    txtd = ""
+                try:
+                    with QSignalBlocker(self.table):
+                        item.setData(Qt.ItemDataRole.UserRole, None)
+                        if not txtd:
+                            item.setText("")
+                except Exception:
+                    try:
+                        item.setData(Qt.ItemDataRole.UserRole, None)
+                    except Exception:
+                        pass
+
+                if not txtd:
+                    try:
+                        meta = self._row_meta[int(r)] if int(r) < len(self._row_meta) else None
+                        rid = int((meta or {}).get("route_params_id") or 0)
+                        time_block = str((meta or {}).get("time_block") or "").strip()
+                        line_no = int((meta or {}).get("line_no") or 0)
+                    except Exception:
+                        rid, time_block, line_no = 0, "", 0
+
+                    if int(rid or 0) > 0 and str(time_block):
+                        try:
+                            for day in range(1, int(self.days_in_month) + 1):
+                                trip_date = QDate(self.year, self.month, int(day)).toString("yyyy-MM-dd")
+                                k = (int(rid), str(time_block), str(trip_date), int(line_no))
+                                if k in (self._alloc_override_map or {}):
+                                    rec = (self._alloc_override_map.get(k) or {})
+                                    rec["driver_id"] = None
+                                    if (not rec.get("vehicle_id")) and (not (rec.get("note") or "").strip()):
+                                        try:
+                                            del self._alloc_override_map[k]
+                                        except Exception:
+                                            pass
+                                    else:
+                                        self._alloc_override_map[k] = rec
+                        except Exception:
+                            pass
+
                 return
 
             if c == self._col_movement:
@@ -5338,6 +5429,11 @@ class BulkAttendanceDialog(QDialog):
                 for rid0, tb0, ln0 in (empty_split_groups or []):
                     if int(ln0 or 0) <= 0:
                         continue
+                    try:
+                        if (int(rid0), str(tb0)) in (split_keys or set()):
+                            continue
+                    except Exception:
+                        pass
                     cur.execute(
                         """
                         DELETE FROM trip_entries
