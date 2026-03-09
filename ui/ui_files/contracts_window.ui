@@ -815,7 +815,7 @@
       <item row="0" column="0">
        <widget class="QTabWidget" name="tab_contracts">
         <property name="currentIndex">
-         <number>0</number>
+         <number>1</number>
         </property>
         <widget class="QWidget" name="tab_list">
          <attribute name="title">
@@ -1043,21 +1043,21 @@
             <item row="0" column="10">
              <widget class="QPushButton" name="btn_special_add">
               <property name="text">
-               <string>SATIR EKLE</string>
+               <string>ÖZEL DURUM EKLE</string>
               </property>
              </widget>
             </item>
             <item row="0" column="11">
              <widget class="QPushButton" name="btn_special_delete">
               <property name="text">
-               <string>SATIR SİL</string>
+               <string>ÖZEL DURUM SİL</string>
               </property>
              </widget>
             </item>
             <item row="0" column="12">
              <widget class="QPushButton" name="btn_special_save">
               <property name="text">
-               <string>KAYDET</string>
+               <string>ÖZEL DURUM KAYDET</string>
               </property>
              </widget>
             </item>

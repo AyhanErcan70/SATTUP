@@ -2,7 +2,7 @@ import os
 
 import traceback
 
-from PyQt5 import QtWidgets, QtGui, QtCore
+from PyQt6 import QtWidgets, QtGui, QtCore
 from PyQt6.QtCore import QDate
 from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import QMainWindow, QScrollArea, QSizePolicy, QGraphicsOpacityEffect, QLabel, QGraphicsColorizeEffect, QFrame, QMessageBox, QComboBox, QPushButton, QGraphicsBlurEffect

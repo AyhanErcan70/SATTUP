@@ -26,13 +26,31 @@ import ui.icons.context_rc
 def get_hwid():
     """Bilgisayarın benzersiz donanım kimliğini (UUID) döndürür."""
     try:
-        # Windows UUID alma komutu
-        cmd = 'wmic csproduct get uuid'
-        uuid = str(subprocess.check_output(cmd, shell=True))
-        # Güvenlik için hash'liyoruz
-        return hashlib.sha256(uuid.encode()).hexdigest()[:16]
-    except:
-        return "default_hwid_12345"
+        cmd = [
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            "(Get-CimInstance Win32_ComputerSystemProduct).UUID",
+        ]
+        uuid = subprocess.check_output(cmd, text=True, stderr=subprocess.DEVNULL)
+        uuid = (uuid or "").strip()
+        if uuid:
+            return hashlib.sha256(uuid.encode()).hexdigest()[:16]
+    except Exception:
+        pass
+
+    try:
+        cmd2 = "wmic csproduct get uuid"
+        uuid2 = subprocess.check_output(cmd2, shell=True, text=True, stderr=subprocess.DEVNULL)
+        uuid2 = (uuid2 or "").strip()
+        if uuid2:
+            return hashlib.sha256(uuid2.encode()).hexdigest()[:16]
+    except Exception:
+        pass
+
+    return "default_hwid_12345"
 
 def get_license_path():
     """Lisans dosyasının AppData altındaki gizli yolunu oluşturur."""
@@ -70,7 +88,7 @@ def main():
         # Eğer kullanıcı doğru şifreyi girip 'AKTİVE ET' (accept) dediyse:
         if lic_dialog.exec() == QDialog.DialogCode.Accepted:
             # HWID'yi dosyaya yaz ve kalıcı lisans oluştur
-            lic_path = os.path.join(BASE_DIR, ".sys_config.bin")
+            lic_path = get_license_path()
             with open(lic_path, "w") as f:
                 f.write(get_hwid())
         else:

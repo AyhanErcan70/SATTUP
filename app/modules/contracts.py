@@ -1088,6 +1088,13 @@ class ContractsApp(QWidget):
             ]
             for c, v in enumerate(vals):
                 it = QTableWidgetItem(v)
+                if c == 0:
+                    try:
+                        rid = (row or {}).get("id")
+                        if rid is not None and str(rid).strip() != "":
+                            it.setData(Qt.ItemDataRole.UserRole + 1, int(rid))
+                    except Exception:
+                        pass
                 if c in (2, 3):
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 tbl.setItem(r, c, it)
@@ -1112,14 +1119,23 @@ class ContractsApp(QWidget):
         def save_rows():
             out = []
             for r in range(tbl.rowCount()):
-                hat = (tbl.item(r, 0).text().strip() if tbl.item(r, 0) else "")
+                it_hat = tbl.item(r, 0)
+                hat = (it_hat.text().strip() if it_hat else "")
                 hareket = (tbl.item(r, 1).text().strip() if tbl.item(r, 1) else "")
                 km_txt = (tbl.item(r, 2).text().strip() if tbl.item(r, 2) else "")
                 kps_txt = (tbl.item(r, 3).text().strip() if tbl.item(r, 3) else "")
                 if not any([hat, hareket, km_txt, kps_txt]):
                     continue
+
+                rid = None
+                try:
+                    rid = it_hat.data(Qt.ItemDataRole.UserRole + 1) if it_hat is not None else None
+                    rid = int(rid) if rid is not None and str(rid).strip() != "" else None
+                except Exception:
+                    rid = None
                 out.append(
                     {
+                        "id": rid,
                         "route_name": str(hat or "").strip(),
                         "movement_type": str(hareket or "").strip(),
                         "distance_km": self._parse_money(km_txt),

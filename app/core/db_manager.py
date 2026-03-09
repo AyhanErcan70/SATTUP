@@ -4410,10 +4410,16 @@ class DatabaseManager:
         try:
             cur = conn.cursor()
             cur.execute("BEGIN")
+            ctx_contract_id = int(contract_id)
+            ctx_service_type = str(service_type or "").strip()
+
+            # Keep stable IDs to avoid breaking trip_prices.route_params_id references.
             cur.execute(
-                "DELETE FROM route_params WHERE contract_id=? AND service_type=?",
-                (int(contract_id), str(service_type or "").strip()),
+                "SELECT id FROM route_params WHERE contract_id=? AND service_type=?",
+                (ctx_contract_id, ctx_service_type),
             )
+            existing_ids = {int(r[0]) for r in (cur.fetchall() or []) if r and r[0] is not None}
+            kept_ids: set[int] = set()
 
             for r in rows or []:
                 route_name = str((r or {}).get("route_name") or "").strip()
@@ -4431,26 +4437,76 @@ class DatabaseManager:
                 if not any([route_name, movement_type, distance_km, vehicle_capacity]):
                     continue
 
+                rid = (r or {}).get("id")
+                try:
+                    rid_int = int(rid) if rid is not None and str(rid).strip() != "" else None
+                except Exception:
+                    rid_int = None
+
+                if rid_int is not None and rid_int in existing_ids:
+                    cur.execute(
+                        """
+                        UPDATE route_params
+                        SET contract_number=?, start_date=?, end_date=?,
+                            route_name=?, movement_type=?, stops=?, distance_km=?, vehicle_capacity=?
+                        WHERE id=? AND contract_id=? AND service_type=?
+                        """,
+                        (
+                            str(contract_number or "").strip(),
+                            str(start_date or "").strip(),
+                            str(end_date or "").strip(),
+                            route_name,
+                            movement_type,
+                            "",
+                            float(distance_km or 0.0),
+                            vehicle_capacity,
+                            int(rid_int),
+                            ctx_contract_id,
+                            ctx_service_type,
+                        ),
+                    )
+                    kept_ids.add(int(rid_int))
+                else:
+                    cur.execute(
+                        """
+                        INSERT INTO route_params (
+                            contract_id, contract_number, start_date, end_date, service_type,
+                            route_name, movement_type, stops, distance_km, vehicle_capacity, created_at
+                        ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                        """,
+                        (
+                            ctx_contract_id,
+                            str(contract_number or "").strip(),
+                            str(start_date or "").strip(),
+                            str(end_date or "").strip(),
+                            ctx_service_type,
+                            route_name,
+                            movement_type,
+                            "",
+                            float(distance_km or 0.0),
+                            vehicle_capacity,
+                            now,
+                        ),
+                    )
+                    try:
+                        kept_ids.add(int(cur.lastrowid))
+                    except Exception:
+                        pass
+
+            # Delete rows removed from UI (and clean up tariff prices tied to them).
+            removed_ids = sorted(existing_ids - kept_ids)
+            if removed_ids:
+                placeholders = ",".join(["?"] * len(removed_ids))
+                try:
+                    cur.execute(
+                        f"DELETE FROM trip_prices WHERE contract_id=? AND route_params_id IN ({placeholders})",
+                        (ctx_contract_id, *removed_ids),
+                    )
+                except Exception:
+                    pass
                 cur.execute(
-                    """
-                    INSERT INTO route_params (
-                        contract_id, contract_number, start_date, end_date, service_type,
-                        route_name, movement_type, stops, distance_km, vehicle_capacity, created_at
-                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
-                    """,
-                    (
-                        int(contract_id),
-                        str(contract_number or "").strip(),
-                        str(start_date or "").strip(),
-                        str(end_date or "").strip(),
-                        str(service_type or "").strip(),
-                        route_name,
-                        movement_type,
-                        "",
-                        float(distance_km or 0.0),
-                        vehicle_capacity,
-                        now,
-                    ),
+                    f"DELETE FROM route_params WHERE contract_id=? AND service_type=? AND id IN ({placeholders})",
+                    (ctx_contract_id, ctx_service_type, *removed_ids),
                 )
 
             conn.commit()
