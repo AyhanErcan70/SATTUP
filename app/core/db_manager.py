@@ -3867,7 +3867,7 @@ class DatabaseManager:
         if "paket" in s or (("sabah" in s) and ("akşam" in s or "aksam" in s)):
             return ("PAKET", "sabah-akşam")
         if "cift" in s or "çift" in s:
-            return ("TEK_SERVIS", "tek servis")
+            return ("CIFT_SERVIS", "cift servis")
         if "tek" in s:
             return ("TEK_SERVIS", "tek servis")
         if s == "teks" or s == "tekservis":

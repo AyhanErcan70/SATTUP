@@ -1462,6 +1462,214 @@ class BulkAttendanceDialog(QDialog):
         except Exception:
             return "0,00"
 
+    def _remove_summary_rows(self):
+        try:
+            self.table.blockSignals(True)
+        except Exception:
+            pass
+        try:
+            r = 0
+            while r < self.table.rowCount():
+                meta = self._row_meta[r] if r < len(self._row_meta) else None
+                if bool((meta or {}).get("is_summary")):
+                    try:
+                        self.table.removeRow(int(r))
+                    except Exception:
+                        r += 1
+                        continue
+                    try:
+                        if r < len(self._row_meta):
+                            self._row_meta.pop(int(r))
+                    except Exception:
+                        pass
+                    continue
+                r += 1
+        finally:
+            try:
+                self.table.blockSignals(False)
+            except Exception:
+                pass
+
+    def _apply_vehicle_driver_summary_rows(self):
+        """Insert TOPLAMLAR rows per consecutive (vehicle,driver) block and a final GENEL TOPLAM."""
+        self._remove_summary_rows()
+
+        def _cell_txt(rr: int, cc: int) -> str:
+            """Return displayed cell text, resolving merged/spanned cells.
+
+            After span merges, Qt may remove items in covered rows. For grouping we need the
+            logical displayed value, so we scan upwards for a spanning top-left cell.
+            """
+            try:
+                it = self.table.item(int(rr), int(cc))
+                txt = (it.text() or "").strip() if it is not None else ""
+                if txt:
+                    return txt
+            except Exception:
+                txt = ""
+
+            # Resolve from a spanning cell above
+            try:
+                r0 = int(rr) - 1
+                while r0 >= 0:
+                    try:
+                        meta0 = self._row_meta[r0] if r0 < len(self._row_meta) else None
+                        if bool((meta0 or {}).get("is_summary")):
+                            break
+                    except Exception:
+                        pass
+
+                    try:
+                        span = int(self.table.rowSpan(int(r0), int(cc)) or 1)
+                    except Exception:
+                        span = 1
+                    if span > 1 and int(r0) + int(span) > int(rr):
+                        it0 = self.table.item(int(r0), int(cc))
+                        return ((it0.text() or "").strip() if it0 is not None else "")
+
+                    it0 = self.table.item(int(r0), int(cc))
+                    t0 = ((it0.text() or "").strip() if it0 is not None else "")
+                    if t0:
+                        return t0
+                    r0 -= 1
+            except Exception:
+                pass
+            return ""
+
+        def _row_total_qty_value(rr: int) -> float:
+            try:
+                return float(int(self._row_day_qty_sum(int(rr))))
+            except Exception:
+                return 0.0
+
+        def _row_total_price_value(rr: int) -> float:
+            try:
+                it_tp = self.table.item(int(rr), int(self._col_total_price))
+                return float(self._parse_tr_float((it_tp.text() if it_tp is not None else "") or "0"))
+            except Exception:
+                return 0.0
+
+        def _mk(txt: str, bg: QColor, font: QFont | None):
+            it = QTableWidgetItem(str(txt or ""))
+            it.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            it.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            try:
+                it.setBackground(bg)
+            except Exception:
+                pass
+            if font is not None:
+                try:
+                    it.setFont(font)
+                except Exception:
+                    pass
+            return it
+
+        def _insert_summary_row(insert_at: int, label: str, vehicle_txt: str, driver_txt: str, qty_sum: float, price_sum: float):
+            try:
+                self.table.insertRow(int(insert_at))
+            except Exception:
+                return
+
+            while int(insert_at) > len(self._row_meta):
+                self._row_meta.append({})
+            self._row_meta.insert(
+                int(insert_at),
+                {
+                    "route_params_id": 0,
+                    "sub_index": 0,
+                    "line_no": 0,
+                    "time_block": "SUMMARY",
+                    "plan_time_block": "",
+                    "is_summary": True,
+                },
+            )
+
+            bg = QColor("#cfe8ff")
+            font = None
+            try:
+                font = QFont(self.table.font())
+                font.setBold(True)
+            except Exception:
+                font = None
+
+            # Fill all columns with empty (styled) items to keep row stable
+            for cc in range(self.table.columnCount()):
+                self.table.setItem(int(insert_at), int(cc), _mk("", bg, font))
+
+            # Put label in column 0 and merge columns 0.._col_total_qty-1 horizontally
+            try:
+                self.table.item(int(insert_at), 0).setText(str(label or ""))
+            except Exception:
+                pass
+            try:
+                merge_cols = int(self._col_total_qty)
+                if merge_cols > 1:
+                    self.table.setSpan(int(insert_at), 0, 1, int(merge_cols))
+            except Exception:
+                pass
+
+            qty_txt = "" if float(qty_sum) <= 0 else (str(int(qty_sum)) if float(qty_sum).is_integer() else str(qty_sum))
+            try:
+                self.table.item(int(insert_at), int(self._col_total_qty)).setText(qty_txt)
+            except Exception:
+                pass
+            try:
+                self.table.item(int(insert_at), int(self._col_total_price)).setText(self._format_tr_currency(float(price_sum or 0.0)))
+            except Exception:
+                pass
+
+        grand_qty = 0.0
+        grand_price = 0.0
+
+        r = 0
+        while r < self.table.rowCount():
+            meta = self._row_meta[r] if r < len(self._row_meta) else None
+            if bool((meta or {}).get("is_summary")):
+                r += 1
+                continue
+
+            rid0 = 0
+            try:
+                rid0 = int((meta or {}).get("route_params_id") or 0)
+            except Exception:
+                rid0 = 0
+            if rid0 <= 0:
+                r += 1
+                continue
+
+            vehicle = _cell_txt(r, int(self._col_vehicle))
+            driver = _cell_txt(r, int(self._col_driver))
+            if (not vehicle) and (not driver):
+                r += 1
+                continue
+
+            qty_sum = 0.0
+            price_sum = 0.0
+            start = int(r)
+            rr = int(r)
+            while rr < self.table.rowCount():
+                m2 = self._row_meta[rr] if rr < len(self._row_meta) else None
+                if bool((m2 or {}).get("is_summary")):
+                    break
+                if int((m2 or {}).get("route_params_id") or 0) <= 0:
+                    break
+                if _cell_txt(rr, int(self._col_vehicle)) != vehicle or _cell_txt(rr, int(self._col_driver)) != driver:
+                    break
+                qty_sum += _row_total_qty_value(rr)
+                price_sum += _row_total_price_value(rr)
+                rr += 1
+
+            if rr > start:
+                grand_qty += float(qty_sum or 0.0)
+                grand_price += float(price_sum or 0.0)
+                _insert_summary_row(int(rr), "TOPLAMLAR", vehicle, driver, qty_sum, price_sum)
+                r = int(rr) + 1
+            else:
+                r += 1
+
+        if self.table.rowCount() > 0:
+            _insert_summary_row(self.table.rowCount(), "GENEL TOPLAM", "", "", grand_qty, grand_price)
+
     def _manual_row_indexes(self) -> list[int]:
         out: list[int] = []
         try:
@@ -1783,6 +1991,11 @@ class BulkAttendanceDialog(QDialog):
             except Exception:
                 rid0 = 0
 
+            # Skip summary rows entirely – they get their own horizontal spans below.
+            if bool((meta0 or {}).get("is_summary")):
+                r += 1
+                continue
+
             # Manual rows (route_params_id <= 0) should never be merged/spanned.
             # Treat them as a one-line group.
             if int(rid0 or 0) <= 0:
@@ -1864,6 +2077,96 @@ class BulkAttendanceDialog(QDialog):
                         pass
 
             r += span_len
+
+        # Vertical merge for split row pairs: TOPLAM, FİYAT, TOPLAM TUTAR columns.
+        # Split pairs share the same (route_params_id, plan_time_block).
+        r = 0
+        while r < self.table.rowCount():
+            try:
+                m0 = self._row_meta[r] if r < len(self._row_meta) else None
+                if bool((m0 or {}).get("is_summary")) or bool((m0 or {}).get("is_manual")):
+                    r += 1
+                    continue
+                rid0 = int((m0 or {}).get("route_params_id") or 0)
+                ptb0 = str((m0 or {}).get("plan_time_block") or "").strip()
+                if rid0 <= 0 or not ptb0:
+                    r += 1
+                    continue
+            except Exception:
+                r += 1
+                continue
+
+            # Count consecutive rows with same (rid, plan_time_block)
+            span_cnt = 1
+            rr = r + 1
+            while rr < self.table.rowCount():
+                try:
+                    m2 = self._row_meta[rr] if rr < len(self._row_meta) else None
+                    if bool((m2 or {}).get("is_summary")) or bool((m2 or {}).get("is_manual")):
+                        break
+                    rid2 = int((m2 or {}).get("route_params_id") or 0)
+                    ptb2 = str((m2 or {}).get("plan_time_block") or "").strip()
+                    if rid2 != rid0 or ptb2 != ptb0:
+                        break
+                    span_cnt += 1
+                    rr += 1
+                except Exception:
+                    break
+
+            if span_cnt > 1:
+                # Calculate combined qty from all rows in the split group
+                combined_qty = 0.0
+                for sr in range(r, r + span_cnt):
+                    combined_qty += float(self._row_day_qty_sum(sr) or 0)
+                half_qty = combined_qty / 2.0
+
+                # Get unit price from first row
+                try:
+                    p_it = self.table.item(r, int(self._col_price))
+                    unit_price = float(self._parse_tr_float((p_it.text() if p_it else "") or "0"))
+                except Exception:
+                    unit_price = 0.0
+
+                total_price = half_qty * unit_price
+
+                # Set values on first row of the group
+                try:
+                    qty_txt = str(int(half_qty)) if float(half_qty).is_integer() else str(half_qty)
+                    self.table.item(r, int(self._col_total_qty)).setText(qty_txt)
+                except Exception:
+                    pass
+                try:
+                    self.table.item(r, int(self._col_total_price)).setText(self._format_tr_currency(total_price))
+                except Exception:
+                    pass
+
+                # Apply vertical span on the 3 columns
+                for mc in (self._col_total_qty, self._col_price, self._col_total_price):
+                    try:
+                        self.table.setSpan(r, int(mc), int(span_cnt), 1)
+                    except Exception:
+                        pass
+                    for rdel in range(r + 1, r + span_cnt):
+                        try:
+                            self.table.takeItem(rdel, int(mc))
+                        except Exception:
+                            pass
+
+            r += span_cnt
+
+        # Apply horizontal spans for summary rows (TOPLAMLAR / GENEL TOPLAM).
+        try:
+            merge_cols = int(self._col_total_qty)
+        except Exception:
+            merge_cols = 0
+        if merge_cols > 1:
+            for sr in range(self.table.rowCount()):
+                try:
+                    sm = self._row_meta[sr] if sr < len(self._row_meta) else None
+                    if bool((sm or {}).get("is_summary")):
+                        self.table.setSpan(int(sr), 0, 1, int(merge_cols))
+                except Exception:
+                    pass
 
     def _movement_type_for_route(self, route_params_id: int) -> str:
         try:
@@ -2063,11 +2366,11 @@ class BulkAttendanceDialog(QDialog):
                 except Exception:
                     pass
 
-            # Split model (yarım iş): keep qty as-is; halve unit price on both rows.
+            # Split rows: unit price must remain unchanged.
+            # Keep full unit price in UserRole and display the same full unit price on both rows.
             try:
                 p_it = self.table.item(row, self._col_price)
                 if p_it is not None:
-                    # Persist full unit price in UserRole to avoid repeated halving on reload/split.
                     try:
                         p_full = p_it.data(Qt.ItemDataRole.UserRole)
                     except Exception:
@@ -2079,13 +2382,12 @@ class BulkAttendanceDialog(QDialog):
                     except Exception:
                         p_full_f = 0.0
 
-                    half = p_full_f / 2.0
                     p_it.setData(Qt.ItemDataRole.UserRole, float(p_full_f))
-                    p_it.setText(self._format_tr_currency(half))
+                    p_it.setText(self._format_tr_currency(p_full_f))
                     p2 = self.table.item(insert_at, self._col_price)
                     if p2 is not None:
                         p2.setData(Qt.ItemDataRole.UserRole, float(p_full_f))
-                        p2.setText(self._format_tr_currency(half))
+                        p2.setText(self._format_tr_currency(p_full_f))
             except Exception:
                 pass
 
@@ -2253,7 +2555,7 @@ class BulkAttendanceDialog(QDialog):
         if "paket" in s or (("sabah" in s) and ("akşam" in s or "aksam" in s)):
             return "sabah-akşam"
         if "cift" in s or "çift" in s:
-            return "tek servis"
+            return "cift servis"
         if "tek" in s:
             return "tek servis"
         if s == "teks" or s == "tekservis":
@@ -2881,6 +3183,16 @@ class BulkAttendanceDialog(QDialog):
             pass
 
         self._apply_route_group_spans()
+
+        try:
+            self._apply_vehicle_driver_summary_rows()
+        except Exception:
+            pass
+
+        try:
+            self._apply_route_group_spans()
+        except Exception:
+            pass
 
         self.table.itemChanged.connect(self._recalc_row_total)
 
@@ -3899,6 +4211,16 @@ class BulkAttendanceDialog(QDialog):
         except Exception:
             pass
 
+        try:
+            self._apply_vehicle_driver_summary_rows()
+        except Exception:
+            pass
+
+        try:
+            self._apply_route_group_spans()
+        except Exception:
+            pass
+
     def _recalc_price_total_for_row(self, row: int):
         try:
             if any(int(x) < 0 for x in (self._col_total_qty, self._col_total_price, self._col_price)):
@@ -4131,6 +4453,7 @@ class BulkAttendanceDialog(QDialog):
             price_rows = []
 
         price_map = {}
+        tarife_price_map: dict[tuple[int, str], float] = {}
         for rpid, tblock, price in price_rows or []:
             try:
                 k = (int(rpid or 0), str(tblock or ""))
@@ -4140,6 +4463,23 @@ class BulkAttendanceDialog(QDialog):
                     price_map[k] = v
                 else:
                     price_map[k] = max(float(prev or 0.0), float(v or 0.0))
+
+                # Also accept TARIFE-based price rows: time_block like 'TARIFE|CIFT_SERVIS|2026-01-01'
+                # to provide a route-level unit price by pricing category.
+                try:
+                    tb_s = str(tblock or "").strip()
+                    if tb_s.upper().startswith("TARIFE|"):
+                        parts = tb_s.split("|")
+                        cat = str(parts[1] if len(parts) > 1 else "").strip().upper()
+                        if cat:
+                            kt = (int(rpid or 0), str(cat))
+                            prevt = tarife_price_map.get(kt)
+                            if prevt is None:
+                                tarife_price_map[kt] = float(v or 0.0)
+                            else:
+                                tarife_price_map[kt] = max(float(prevt or 0.0), float(v or 0.0))
+                except Exception:
+                    pass
             except Exception:
                 k = (int(rpid or 0), str(tblock or ""))
                 if k not in price_map:
@@ -4220,6 +4560,7 @@ class BulkAttendanceDialog(QDialog):
                     if st and st.lower() != str(self.service_type).strip().lower():
                         continue
                     mt = self._extract_movement_type(rec or {})
+                    mt = self._norm_tr_text(mt)
                     try:
                         pr = float((rec or {}).get("fiyat") or 0.0)
                     except Exception:
@@ -4268,7 +4609,7 @@ class BulkAttendanceDialog(QDialog):
                 rn = (rname or "").strip().lower()
                 if not rn:
                     continue
-                mt_rn = (mt_r or "").strip().lower()
+                mt_rn = self._norm_tr_text((mt_r or "").strip())
                 pr = None
                 if mt_rn and (rn, mt_rn) in contract_price_by_name_mt:
                     pr = float(contract_price_by_name_mt.get((rn, mt_rn)) or 0.0)
@@ -4329,6 +4670,35 @@ class BulkAttendanceDialog(QDialog):
 
         try:
             self.table.blockSignals(True)
+
+            # One-time debug popup when an unexpectedly high unit price is selected.
+            try:
+                if not hasattr(self, "_debug_price_popup_shown") or self._debug_price_popup_shown is None:
+                    self._debug_price_popup_shown = set()
+            except Exception:
+                self._debug_price_popup_shown = set()
+
+            def _pricing_category_for_row(rr: int, rid_i: int) -> str:
+                try:
+                    mt_item = self.table.item(int(rr), self._col_movement)
+                    mt_txt = self._norm_tr_text(mt_item.text() if mt_item is not None else "")
+                except Exception:
+                    mt_txt = ""
+                if not mt_txt:
+                    try:
+                        mt_txt = self._norm_tr_text(self._movement_type_for_route(int(rid_i)) or "")
+                    except Exception:
+                        mt_txt = ""
+
+                if "mesa" in mt_txt:
+                    return "MESAI"
+                if "paket" in mt_txt or (("sabah" in mt_txt) and ("aksam" in mt_txt)):
+                    return "PAKET_SERVIS"
+                if "cift" in mt_txt or "grs" in mt_txt or "giris" in mt_txt or "cikis" in mt_txt:
+                    return "CIFT_SERVIS"
+                if "tek" in mt_txt:
+                    return "TEK_SERVIS"
+                return "TEK_SERVIS"
 
             for key, row_idxs in row_index_plan.items():
                 pv, pd = plan_map.get(key, ("", ""))
@@ -4393,75 +4763,87 @@ class BulkAttendanceDialog(QDialog):
                     self._apply_day_cell_style(int(r), col)
 
             for key, row_idxs in row_index_time.items():
-                pr = price_map.get(key)
-                if pr is None:
+                pr = None
+                pr_source = ""
+
+                pr0 = price_map.get(key)
+                if pr0 is not None:
+                    pr = pr0
+                    pr_source = "trip_prices (direct time_block)"
+                else:
                     rp = route_default_price.get(int(key[0] or 0))
                     if rp is not None:
                         pr = rp
+                        pr_source = "trip_prices (route_default max)"
                     else:
-                        pr = route_price_by_id.get(int(key[0] or 0))
+                        pr1 = route_price_by_id.get(int(key[0] or 0))
+                        if pr1 is not None:
+                            pr = pr1
+                            pr_source = "contract tariff (price_matrix_json route match)"
+
+                # Prefer TARIFE category prices when available; they represent the authoritative unit price
+                # for TEK/ÇİFT/PAKET/MESAI regardless of time_block and help correct legacy/wrong direct prices.
+                try:
+                    rid_i = int(key[0] or 0)
+                except Exception:
+                    rid_i = 0
+                if rid_i > 0 and row_idxs:
+                    try:
+                        cat = _pricing_category_for_row(int(row_idxs[0]), int(rid_i))
+                    except Exception:
+                        cat = ""
+                    if cat:
+                        pr_tar = tarife_price_map.get((int(rid_i), str(cat)))
+                        if pr_tar is not None and float(pr_tar or 0.0) > 0.0:
+                            pr = pr_tar
+                            pr_source = f"trip_prices (TARIFE category {str(cat)})"
 
                 if pr is None:
                     continue
 
-                # If this (route_params_id, time_block) has split rows (line_no>0), UI should display half price
-                # (yarım iş), while trip_prices remains the full base unit price.
-                has_split = False
-                try:
-                    for rr in (row_idxs or []):
-                        mm = self._row_meta[int(rr)] if int(rr) < len(self._row_meta) else None
-                        if int((mm or {}).get("line_no") or 0) > 0:
-                            has_split = True
-                            break
-                except Exception:
-                    has_split = False
+                # Split rows must keep the same full unit price in the UI.
                 for row_idx in (row_idxs or []):
                     p_item = self.table.item(int(row_idx), self._col_price)
                     if p_item is not None:
-                        is_split_mt = False
-                        try:
-                            mt_item = self.table.item(int(row_idx), self._col_movement)
-                            mt_txt = self._norm_tr_text(mt_item.text() if mt_item is not None else "")
-                            is_split_mt = (("cift" in mt_txt) or ("paket" in mt_txt))
-                        except Exception:
-                            is_split_mt = False
-                        if not bool(is_split_mt):
-                            # Fallback: UI cell text can be empty/changed on reload; infer from route definition.
-                            try:
-                                mt2 = self._norm_tr_text(self._movement_type_for_route(int(key[0] or 0)) or "")
-                                is_split_mt = (("cift" in mt2) or ("paket" in mt2))
-                            except Exception:
-                                is_split_mt = False
-                        if not bool(is_split_mt):
-                            # Last resort: infer from time_text pattern if it looks like a double (entry+exit) label.
-                            try:
-                                t_it2 = self.table.item(int(row_idx), self._col_time_text)
-                                t_txt2 = (t_it2.text() if t_it2 is not None else "")
-                                if self._looks_like_double_time_text(t_txt2):
-                                    is_split_mt = True
-                            except Exception:
-                                pass
-                        # If DB stored an already-halved price for a split group, UI would show /4.
-                        # Use contract/route fallback as the authoritative full unit price.
                         pr_full = float(pr)
-                        try:
-                            if bool(has_split) and bool(is_split_mt):
-                                fb = route_price_by_id.get(int(key[0] or 0))
-                                if fb is not None:
-                                    try:
-                                        pr_full = max(float(pr_full), float(fb))
-                                    except Exception:
-                                        pr_full = float(pr_full)
-                        except Exception:
-                            pr_full = float(pr)
 
-                        pr_ui = (float(pr_full) / 2.0) if (has_split and is_split_mt) else float(pr_full)
+                        # Debug popup when a high unit price is selected.
+                        try:
+                            if float(pr_full or 0.0) >= 4000.0:
+                                rid_dbg = int(key[0] or 0)
+                                tb_dbg = str(key[1] or "").strip()
+                                # Include movement type text for this particular row
+                                mt_dbg = ""
+                                try:
+                                    mt_it = self.table.item(int(row_idx), self._col_movement)
+                                    mt_dbg = (mt_it.text() if mt_it is not None else "") or ""
+                                except Exception:
+                                    mt_dbg = ""
+                                popup_key = (int(rid_dbg), str(tb_dbg), str(mt_dbg).strip())
+                                if popup_key not in (self._debug_price_popup_shown or set()):
+                                    (self._debug_price_popup_shown or set()).add(popup_key)
+                                    QMessageBox.information(
+                                        self,
+                                        "Fiyat İzleme",
+                                        "4500 gibi yüksek bir fiyat seçildi.\n\n"
+                                        f"contract_id: {int(self.contract_id)}\n"
+                                        f"month: {str(self.month_key)}\n"
+                                        f"service_type: {str(self.service_type)}\n"
+                                        f"route_params_id: {int(rid_dbg)}\n"
+                                        f"time_block: {str(tb_dbg)}\n"
+                                        f"hareket_turu: {str(mt_dbg).strip()}\n"
+                                        f"secilen_fiyat: {float(pr_full):.2f}\n"
+                                        f"kaynak: {str(pr_source)}",
+                                    )
+                        except Exception:
+                            pass
+
                         # Store full unit price in UserRole to prevent /4 issues on repeated loads.
                         try:
                             p_item.setData(Qt.ItemDataRole.UserRole, float(pr_full))
                         except Exception:
                             pass
-                        p_item.setText(self._format_tr_currency(pr_ui))
+                        p_item.setText(self._format_tr_currency(pr_full))
 
             def _row_for_line(rlist0: list[int], ln0: int) -> int | None:
                 if not rlist0:
@@ -4889,6 +5271,12 @@ class BulkAttendanceDialog(QDialog):
 
         for r in range(self.table.rowCount()):
             try:
+                meta0 = self._row_meta[r] if r < len(self._row_meta) else None
+                if bool((meta0 or {}).get("is_summary")):
+                    continue
+            except Exception:
+                pass
+            try:
                 if self.table.isRowHidden(int(r)):
                     meta0 = self._row_meta[r] if r < len(self._row_meta) else None
                     try:
@@ -5046,26 +5434,8 @@ class BulkAttendanceDialog(QDialog):
             # Persist trip_prices as the full base unit price.
             # Full unit price is carried in UserRole; UI may display half for split rows.
             base_price = float(price)
-            # Repair legacy data for split ÇİFT rows.
-            # Scenario A: DB already contains half price, UI shows quarter -> use DB*2.
-            # Scenario B: UI shows half, and we are about to write half -> use UI*2.
-            try:
-                if bool(is_split_mt) and (int(rid), str(time_block)) in split_keys:
-                    disp = float(self._parse_tr_float(p_txt)) if str(p_txt).strip() else 0.0
-                    kdb = (int(rid), str(time_block))
-                    db_price = float(existing_price_map.get(kdb) or 0.0)
-                    eps = 0.0001
-                    if disp > 0.0:
-                        # Only upscale when DB is actually storing the displayed value.
-                        # In correct state: DB=full, UI=half -> db_price ~= disp*2. That is NOT a legacy bug.
-                        # Legacy bug: DB=half and UI=half -> db_price ~= disp, so fix via db*2.
-                        if db_price > 0.0 and abs(float(db_price) - float(disp)) < eps:
-                            base_price = float(db_price) * 2.0
-                        # If we are about to persist displayed value (half), fix to full via *2
-                        elif abs(float(base_price) - float(disp)) < eps:
-                            base_price = float(base_price) * 2.0
-            except Exception:
-                base_price = float(base_price)
+
+            # Do not scale split row unit prices; trip_prices must always persist the full unit price.
 
             if base_price != 0.0 or (int(rid), time_block) in existing_prices:
                 kprice = (int(rid), str(time_block))
@@ -5523,10 +5893,32 @@ class BulkAttendanceDialog(QDialog):
             return
         finally:
             self._saving = False
+            try:
+                self.table.setEnabled(True)
+            except Exception:
+                pass
+            try:
+                self.btn_save.setEnabled(True)
+            except Exception:
+                pass
+            try:
+                self.table.viewport().update()
+                self.table.update()
+            except Exception:
+                pass
 
         if bool(getattr(self, "_embedded", False)):
             try:
                 QMessageBox.information(self, "Bilgi", "Kayıt edildi.")
+            except Exception:
+                pass
+            try:
+                self.refresh_from_db()
+            except Exception:
+                pass
+            try:
+                self.table.viewport().update()
+                self.table.updateGeometry()
             except Exception:
                 pass
             return
