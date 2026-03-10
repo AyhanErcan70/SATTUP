@@ -194,32 +194,12 @@
          </item>
          <item>
           <property name="text">
-           <string>08:00</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>08:15</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>16:00</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>16:15</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
            <string>00:00</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>00:15</string>
+           <string>08:00</string>
           </property>
          </item>
          <item>
@@ -229,7 +209,27 @@
          </item>
          <item>
           <property name="text">
-           <string>12:15</string>
+           <string>16:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>17:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>17:30</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:30</string>
           </property>
          </item>
          <item>
@@ -239,7 +239,17 @@
          </item>
          <item>
           <property name="text">
-           <string>20:15</string>
+           <string>20:30</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:30</string>
           </property>
          </item>
         </widget>
@@ -327,17 +337,7 @@
          </item>
          <item>
           <property name="text">
-           <string>00:15</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
            <string>08:00</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>08:15</string>
           </property>
          </item>
          <item>
@@ -347,17 +347,27 @@
          </item>
          <item>
           <property name="text">
-           <string>12:15</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
            <string>16:00</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>16:15</string>
+           <string>17:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>17:30</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:30</string>
           </property>
          </item>
          <item>
@@ -367,7 +377,17 @@
          </item>
          <item>
           <property name="text">
-           <string>20:15</string>
+           <string>20:30</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:30</string>
           </property>
          </item>
         </widget>
@@ -455,17 +475,7 @@
          </item>
          <item>
           <property name="text">
-           <string>00:15</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
            <string>08:00</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>08:15</string>
           </property>
          </item>
          <item>
@@ -475,17 +485,27 @@
          </item>
          <item>
           <property name="text">
-           <string>12:15</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
            <string>16:00</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>16:15</string>
+           <string>17:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>17:30</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:30</string>
           </property>
          </item>
          <item>
@@ -495,7 +515,17 @@
          </item>
          <item>
           <property name="text">
-           <string>20:15</string>
+           <string>20:30</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:30</string>
           </property>
          </item>
         </widget>
@@ -583,17 +613,7 @@
          </item>
          <item>
           <property name="text">
-           <string>00:15</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
            <string>08:00</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>08:15</string>
           </property>
          </item>
          <item>
@@ -603,17 +623,27 @@
          </item>
          <item>
           <property name="text">
-           <string>12:15</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
            <string>16:00</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>16:15</string>
+           <string>17:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>17:30</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:30</string>
           </property>
          </item>
          <item>
@@ -623,7 +653,17 @@
          </item>
          <item>
           <property name="text">
-           <string>20:15</string>
+           <string>20:30</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:30</string>
           </property>
          </item>
         </widget>
@@ -686,17 +726,7 @@
          </item>
          <item>
           <property name="text">
-           <string>00:00</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
            <string>00:15</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>08:00</string>
           </property>
          </item>
          <item>
@@ -706,17 +736,7 @@
          </item>
          <item>
           <property name="text">
-           <string>12:00</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
            <string>12:15</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>16:00</string>
           </property>
          </item>
          <item>
@@ -726,12 +746,47 @@
          </item>
          <item>
           <property name="text">
-           <string>20:00</string>
+           <string>17:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>17:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:45</string>
           </property>
          </item>
          <item>
           <property name="text">
            <string>20:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Yeni Öge</string>
           </property>
          </item>
         </widget>
@@ -794,17 +849,7 @@
          </item>
          <item>
           <property name="text">
-           <string>00:00</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
            <string>00:15</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>08:00</string>
           </property>
          </item>
          <item>
@@ -814,17 +859,7 @@
          </item>
          <item>
           <property name="text">
-           <string>12:00</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
            <string>12:15</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>16:00</string>
           </property>
          </item>
          <item>
@@ -834,12 +869,42 @@
          </item>
          <item>
           <property name="text">
-           <string>20:00</string>
+           <string>17:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>17:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:45</string>
           </property>
          </item>
          <item>
           <property name="text">
            <string>20:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:45</string>
           </property>
          </item>
         </widget>
@@ -902,17 +967,7 @@
          </item>
          <item>
           <property name="text">
-           <string>00:00</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
            <string>00:15</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>08:00</string>
           </property>
          </item>
          <item>
@@ -922,17 +977,7 @@
          </item>
          <item>
           <property name="text">
-           <string>12:00</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
            <string>12:15</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>16:00</string>
           </property>
          </item>
          <item>
@@ -942,12 +987,42 @@
          </item>
          <item>
           <property name="text">
-           <string>20:00</string>
+           <string>17:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>17:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:45</string>
           </property>
          </item>
          <item>
           <property name="text">
            <string>20:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:45</string>
           </property>
          </item>
         </widget>
@@ -1010,17 +1085,7 @@
          </item>
          <item>
           <property name="text">
-           <string>00:00</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
            <string>00:15</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>08:00</string>
           </property>
          </item>
          <item>
@@ -1030,17 +1095,7 @@
          </item>
          <item>
           <property name="text">
-           <string>12:00</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
            <string>12:15</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>16:00</string>
           </property>
          </item>
          <item>
@@ -1050,12 +1105,42 @@
          </item>
          <item>
           <property name="text">
-           <string>20:00</string>
+           <string>17:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>17:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:45</string>
           </property>
          </item>
          <item>
           <property name="text">
            <string>20:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:45</string>
           </property>
          </item>
         </widget>
@@ -1216,7 +1301,17 @@
          </item>
          <item>
           <property name="text">
+           <string>00:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
            <string>08:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>12:00</string>
           </property>
          </item>
          <item>
@@ -1226,7 +1321,42 @@
          </item>
          <item>
           <property name="text">
-           <string>00:00</string>
+           <string>17:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>17:30</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:30</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20:30</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:30</string>
           </property>
          </item>
         </widget>
@@ -1309,7 +1439,17 @@
          </item>
          <item>
           <property name="text">
+           <string>00:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
            <string>08:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>12:00</string>
           </property>
          </item>
          <item>
@@ -1319,7 +1459,42 @@
          </item>
          <item>
           <property name="text">
-           <string>00:00</string>
+           <string>17:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>17:30</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:30</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20:30</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:30</string>
           </property>
          </item>
         </widget>
@@ -1402,7 +1577,17 @@
          </item>
          <item>
           <property name="text">
+           <string>00:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
            <string>08:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>12:00</string>
           </property>
          </item>
          <item>
@@ -1412,7 +1597,42 @@
          </item>
          <item>
           <property name="text">
-           <string>00:00</string>
+           <string>17:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>17:30</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:30</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20:30</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:30</string>
           </property>
          </item>
         </widget>
@@ -1495,7 +1715,17 @@
          </item>
          <item>
           <property name="text">
+           <string>00:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
            <string>08:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>12:00</string>
           </property>
          </item>
          <item>
@@ -1505,7 +1735,42 @@
          </item>
          <item>
           <property name="text">
-           <string>00:00</string>
+           <string>17:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>17:30</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:30</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20:30</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:00</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:30</string>
           </property>
          </item>
         </widget>
@@ -1568,7 +1833,17 @@
          </item>
          <item>
           <property name="text">
+           <string>00:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
            <string>08:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>12:15</string>
           </property>
          </item>
          <item>
@@ -1578,7 +1853,42 @@
          </item>
          <item>
           <property name="text">
-           <string>00:15</string>
+           <string>17:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>17:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:45</string>
           </property>
          </item>
         </widget>
@@ -1641,7 +1951,17 @@
          </item>
          <item>
           <property name="text">
+           <string>00:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
            <string>08:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>12:15</string>
           </property>
          </item>
          <item>
@@ -1651,7 +1971,42 @@
          </item>
          <item>
           <property name="text">
-           <string>00:15</string>
+           <string>17:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>17:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:45</string>
           </property>
          </item>
         </widget>
@@ -1714,7 +2069,17 @@
          </item>
          <item>
           <property name="text">
+           <string>00:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
            <string>08:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>12:15</string>
           </property>
          </item>
          <item>
@@ -1724,7 +2089,42 @@
          </item>
          <item>
           <property name="text">
-           <string>00:15</string>
+           <string>17:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>17:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:45</string>
           </property>
          </item>
         </widget>
@@ -1787,7 +2187,17 @@
          </item>
          <item>
           <property name="text">
+           <string>00:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
            <string>08:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>12:15</string>
           </property>
          </item>
          <item>
@@ -1797,7 +2207,42 @@
          </item>
          <item>
           <property name="text">
-           <string>00:15</string>
+           <string>17:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>17:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20:45</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:15</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>21:45</string>
           </property>
          </item>
         </widget>
@@ -2028,7 +2473,7 @@
             </size>
            </property>
            <property name="text">
-            <string>KAYDET</string>
+            <string>KAPAT</string>
            </property>
           </widget>
          </item>

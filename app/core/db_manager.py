@@ -2236,12 +2236,12 @@ class DatabaseManager:
                 """
                 INSERT INTO trip_allocations (
                     contract_id, route_params_id, trip_date, service_type, time_block, line_no,
-                    vehicle_id, driver_id, qty, time_text, note, created_at, updated_at
+                    driver_id, vehicle_id, qty, time_text, note, created_at, updated_at
                 ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
                 ON CONFLICT(contract_id, route_params_id, trip_date, service_type, time_block, line_no)
                 DO UPDATE SET
-                    vehicle_id=excluded.vehicle_id,
                     driver_id=excluded.driver_id,
+                    vehicle_id=excluded.vehicle_id,
                     qty=excluded.qty,
                     time_text=excluded.time_text,
                     note=excluded.note,
@@ -2255,8 +2255,8 @@ class DatabaseManager:
                     str(service_type),
                     str(time_block),
                     int(line_no or 0),
-                    vehicle_id,
                     driver_id,
+                    vehicle_id,
                     float(qty or 0),
                     str(time_text or ""),
                     str(note or ""),

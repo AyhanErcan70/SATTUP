@@ -708,8 +708,6 @@ class TripsGridApp(QWidget):
                 cols = self._resolve_tbl_grid_columns()
                 self._tbl_grid_cols = cols
                 c_rota = int(cols.get("rota", 0))
-                c_g = int(cols.get("giris", 1))
-                c_c = int(cols.get("cikis", 2))
                 for r in range(self.tbl_grid.rowCount()):
                     it_rota = self.tbl_grid.item(r, c_rota)
                     if it_rota is None:
@@ -719,8 +717,8 @@ class TripsGridApp(QWidget):
                     if str(rid2 or "") != str(route_id):
                         continue
                     tb2 = it_rota.data(Qt.ItemDataRole.UserRole + 2)
-                    g2 = (self.tbl_grid.item(r, c_g).text().strip() if self.tbl_grid.item(r, c_g) else "")
-                    c2 = (self.tbl_grid.item(r, c_c).text().strip() if self.tbl_grid.item(r, c_c) else "")
+                    g2 = (self.tbl_grid.item(r, int(cols.get("giris", 1))).text().strip() if self.tbl_grid.item(r, int(cols.get("giris", 1))) else "")
+                    c2 = (self.tbl_grid.item(r, int(cols.get("cikis", 2))).text().strip() if self.tbl_grid.item(r, int(cols.get("cikis", 2))) else "")
                     if not tb2 and (g2 or c2):
                         tb2 = f"{g2}-{c2}" if (g2 or c2) else ""
                     if not tb2:
@@ -805,23 +803,14 @@ class TripsGridApp(QWidget):
                 pass
 
         btn_atama = getattr(dlg, "btn_atama", None)
-        if btn_atama is not None:
-            try:
-                btn_atama.clicked.connect(
-                    lambda: QMessageBox.information(
-                        self,
-                        "Bilgi",
-                        "Bu atamalar ekran üzerinde görünür. Kalıcı olması için Seferler ekranında KAYDET'e basınız.",
-                    )
-                )
-            except Exception:
-                pass
-
-        btn_save = getattr(dlg, "btn_kaydet", None)
-        if btn_save is None:
+        btn_close = getattr(dlg, "btn_kaydet", None)
+        if btn_close is None:
             return
 
-        def _save():
+        had_existing_assignment = bool(existing_pairs) or bool(existing_vid) or bool(existing_did)
+        assignment_done_in_dialog = {"done": False}
+
+        def _apply_assignment_to_grid() -> bool:
             vid = cmb_v.currentData() if cmb_v is not None else None
             did = cmb_d.currentData() if cmb_d is not None else None
 
@@ -848,6 +837,7 @@ class TripsGridApp(QWidget):
             for chk, cg, cc in pairs:
                 if chk is None or not chk.isChecked():
                     continue
+
                 gt = _cmb_text_or_selected(cg)
                 ct = _cmb_text_or_selected(cc)
                 if gt and self._parse_time(gt) is None:
@@ -858,6 +848,10 @@ class TripsGridApp(QWidget):
                     return
                 if gt or ct:
                     chosen_pairs.append((gt, ct))
+
+            if not chosen_pairs:
+                QMessageBox.warning(self, "Uyarı", "Atama yapılacak sefer tipi/saat seçiniz.")
+                return False
 
             try:
                 if hasattr(self, "tbl_grid"):
@@ -924,18 +918,47 @@ class TripsGridApp(QWidget):
             except Exception:
                 pass
 
-            QMessageBox.information(
-                self,
-                "Bilgi",
-                "Değişiklikler tabloya aktarıldı. Kalıcı olması için Seferler ekranında KAYDET'e basınız.",
-            )
+            return True
+
+        def _do_assign_and_save():
+            ok = _apply_assignment_to_grid()
+            if not ok:
+                return
+
+            assignment_done_in_dialog["done"] = True
+
+            # Persist immediately
+            self._save_table_to_plan(show_message=False)
+            QMessageBox.information(self, "Bilgi", "Araç ve sürücü ataması yapılmıştır.")
             try:
                 dlg.accept()
             except Exception:
                 pass
 
+        def _close_with_optional_confirm():
+            if (not had_existing_assignment) and (not assignment_done_in_dialog.get("done")):
+                res = QMessageBox.question(
+                    self,
+                    "Onay",
+                    "Atama yapılmadı. Çıkmak istediğinizden emin misiniz?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if res != QMessageBox.StandardButton.Yes:
+                    return
+            try:
+                dlg.reject()
+            except Exception:
+                pass
+
+        if btn_atama is not None:
+            try:
+                btn_atama.clicked.connect(_do_assign_and_save)
+            except Exception:
+                pass
+
         try:
-            btn_save.clicked.connect(_save)
+            btn_close.clicked.connect(_close_with_optional_confirm)
         except Exception:
             pass
 
@@ -1013,12 +1036,13 @@ class TripsGridApp(QWidget):
 
         self._reload_grid()
 
-    def _save_table_to_plan(self):
+    def _save_table_to_plan(self, show_message: bool = True):
         if not self._selected_contract_id or not self._service_type():
             QMessageBox.warning(self, "Uyarı", "Önce müşteri / sözleşme / tip seçiniz.")
             return
         if not hasattr(self, "tbl_grid") or self.tbl_grid.rowCount() == 0:
-            QMessageBox.information(self, "Bilgi", "Kaydedilecek satır yok.")
+            if show_message:
+                QMessageBox.information(self, "Bilgi", "Kaydedilecek satır yok.")
             return
 
         contract_id = int(self._selected_contract_id)
@@ -1098,14 +1122,16 @@ class TripsGridApp(QWidget):
                     ),
                 )
             conn.commit()
-            QMessageBox.information(self, "Başarılı", "Sefer planı kaydedildi.")
+            if show_message:
+                QMessageBox.information(self, "Başarılı", "Sefer planı kaydedildi.")
         except Exception as e:
             try:
                 if conn is not None:
                     conn.rollback()
             except Exception:
                 pass
-            QMessageBox.critical(self, "Hata", f"Kayıt hatası:\n{str(e)}")
+            if show_message:
+                QMessageBox.critical(self, "Hata", f"Kayıt hatası:\n{str(e)}")
         finally:
             try:
                 if conn is not None:

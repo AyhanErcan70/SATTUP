@@ -35,6 +35,12 @@ class ContractsApp(QWidget):
         self._assign_next_number()
         self.load_table()
 
+        if hasattr(self, "tab_contracts"):
+            try:
+                self.tab_contracts.setCurrentIndex(0)
+            except Exception:
+                pass
+
         self._update_tarife_enabled_state()
 
     def _get_price_table(self):
@@ -344,14 +350,8 @@ class ContractsApp(QWidget):
             "GÜZERGAH",
             "HAREKET TÜRÜ",
             "KM",
-            "TEK",
-            "ÇİFT",
-            "PAKET",
-            "MESAI",
-            "A.Y.TEK",
-            "A.Y.ÇİFT",
-            "A.Y.PAKET",
-            "A.Y.MESAI",
+            "BİRİM FİYATI",
+            "A.Y.FİYATI",
         ]
 
         try:
@@ -360,19 +360,18 @@ class ContractsApp(QWidget):
             h = tbl.horizontalHeader()
             h.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
 
-            # Column widths
             try:
                 tbl.setColumnWidth(0, 260)
                 tbl.setColumnWidth(1, 140)
                 tbl.setColumnWidth(2, 70)
+                tbl.setColumnWidth(3, 110)
+                tbl.setColumnWidth(4, 110)
             except Exception:
                 pass
 
-            # Numeric columns fixed width (~10-11 chars like 11.000,00)
             for c in range(3, len(headers)):
                 try:
                     h.setSectionResizeMode(c, QHeaderView.ResizeMode.Fixed)
-                    tbl.setColumnWidth(c, 95)
                 except Exception:
                     pass
         except Exception:
@@ -392,6 +391,8 @@ class ContractsApp(QWidget):
             tbl.setRowCount(0)
             return
 
+        period = str(_period or "").strip() if _period is not None else ""
+
         eff = self._tarife_effective_from_iso()
         if not eff:
             tbl.setRowCount(0)
@@ -404,6 +405,16 @@ class ContractsApp(QWidget):
                 pass
         self._tarife_setup_price_table()
 
+        def _movement_to_category(mv: str) -> str:
+            s = str(mv or "").strip().lower()
+            if "mesai" in s:
+                return "MESAI"
+            if "paket" in s or (("sabah" in s) and ("akşam" in s or "aksam" in s)):
+                return "PAKET_SERVIS"
+            if "cift" in s or "çift" in s:
+                return "CIFT_SERVIS"
+            return "TEK_SERVIS"
+
         # Route list
         route_rows = []
         try:
@@ -413,6 +424,7 @@ class ContractsApp(QWidget):
 
         # Existing tariff map: (route_params_id, pricing_category) -> (price, subcontractor_price)
         tmap: dict[tuple[int, str], tuple[float, float]] = {}
+        legacy_map: dict[int, tuple[float, float]] = {}
         try:
             rows = self.db.list_trip_tariff_prices_for_effective_from(int(contract_id), str(service_type), str(eff))
             for rid, pc, pr, spr in rows or []:
@@ -423,6 +435,46 @@ class ContractsApp(QWidget):
         except Exception:
             pass
 
+        # Legacy fallback (old builds): prices stored in trip_prices with empty pricing_category/effective_from.
+        # We aggregate per route_params_id for the selected period month.
+        try:
+            conn = self.db.connect()
+            if conn:
+                try:
+                    cur = conn.cursor()
+                    legacy_month = ""
+                    try:
+                        legacy_month = str(period or "").strip()[:7]
+                    except Exception:
+                        legacy_month = ""
+                    cur.execute(
+                        """
+                        SELECT route_params_id,
+                               MAX(COALESCE(price,0)) AS price,
+                               MAX(COALESCE(subcontractor_price,0)) AS subcontractor_price
+                        FROM trip_prices
+                        WHERE contract_id=?
+                          AND service_type=?
+                          AND COALESCE(pricing_category,'') = ''
+                          AND COALESCE(effective_from,'') = ''
+                          AND COALESCE(month,'') = ?
+                          AND (COALESCE(price,0) > 0 OR COALESCE(subcontractor_price,0) > 0)
+                        GROUP BY route_params_id
+                        """,
+                        (int(contract_id), str(service_type), str(legacy_month)),
+                    )
+                    for rid, pr, spr in cur.fetchall() or []:
+                        try:
+                            legacy_map[int(rid)] = (float(pr or 0.0), float(spr or 0.0))
+                        except Exception:
+                            pass
+                finally:
+                    conn.close()
+        except Exception:
+            pass
+
+        read_only_flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+
         tbl.blockSignals(True)
         tbl.setRowCount(0)
         for rr in route_rows or []:
@@ -431,123 +483,46 @@ class ContractsApp(QWidget):
             except Exception:
                 continue
             rname = str(rr[1] if len(rr) > 1 else "")
-            stops = str(rr[2] if len(rr) > 2 else "")
             km = rr[3] if len(rr) > 3 else 0
             mv = str(rr[4] if len(rr) > 4 else "")
+
+            pc = _movement_to_category(mv)
+            price_val, sub_price_val = tmap.get((int(rid), pc), (0.0, 0.0))
+            if float(price_val or 0.0) <= 0 and float(sub_price_val or 0.0) <= 0:
+                price_val, sub_price_val = legacy_map.get(int(rid), (0.0, 0.0))
 
             r = tbl.rowCount()
             tbl.insertRow(r)
 
-            # col 0: route name
             it0 = QTableWidgetItem(str(rname or ""))
             it0.setData(Qt.ItemDataRole.UserRole + 1, int(rid))
+            it0.setFlags(read_only_flags)
             tbl.setItem(r, 0, it0)
-            tbl.setItem(r, 1, QTableWidgetItem(str(mv or "")))
+
+            it1 = QTableWidgetItem(str(mv or ""))
+            it1.setFlags(read_only_flags)
+            tbl.setItem(r, 1, it1)
+
             itkm = QTableWidgetItem("" if km is None else str(km))
             itkm.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            itkm.setFlags(read_only_flags)
             tbl.setItem(r, 2, itkm)
 
-            # price columns
-            col = 3
-            for pc in getattr(self, "_tarife_price_categories", []) or []:
-                pr, spr = tmap.get((int(rid), str(pc).upper()), (0.0, 0.0))
-                itp = QTableWidgetItem("" if float(pr or 0.0) <= 0 else self._format_money_tr(float(pr or 0.0)))
-                itp.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-                tbl.setItem(r, col, itp)
-                col += 1
+            itp = QTableWidgetItem("" if float(price_val or 0.0) <= 0 else self._format_money_tr(float(price_val or 0.0)))
+            itp.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            itp.setFlags(read_only_flags)
+            tbl.setItem(r, 3, itp)
 
-            # subcontractor price columns per category
-            for pc in getattr(self, "_tarife_price_categories", []) or []:
-                _pr, spr = tmap.get((int(rid), str(pc).upper()), (0.0, 0.0))
-                its = QTableWidgetItem("" if float(spr or 0.0) <= 0 else self._format_money_tr(float(spr or 0.0)))
-                its.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-                tbl.setItem(r, col, its)
-                col += 1
+            its = QTableWidgetItem("" if float(sub_price_val or 0.0) <= 0 else self._format_money_tr(float(sub_price_val or 0.0)))
+            its.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            its.setFlags(read_only_flags)
+            tbl.setItem(r, 4, its)
 
         tbl.blockSignals(False)
 
     def _tarife_save_prices(self):
-        tbl = getattr(self, "tbl_tarife_prices", None)
-        if tbl is None:
-            return
-
-        if not self._is_sefer_basi_ucret():
-            QMessageBox.warning(self, "Uyarı", "Tarife tanımı sadece 'SEFER BAŞI ÜCRET' seçili sözleşmelerde yapılır.")
-            return
-
-        contract_id, period, service_type = self._tarife_context()
-        if not contract_id:
-            QMessageBox.warning(self, "Uyarı", "Önce bir sözleşme seçiniz.")
-            return
-        if not period:
-            QMessageBox.warning(self, "Uyarı", "Dönem seçiniz.")
-            return
-        if not service_type:
-            QMessageBox.warning(self, "Uyarı", "Hizmet Tipi seçiniz.")
-            return
-        eff = self._tarife_effective_from_iso()
-        if not eff:
-            QMessageBox.warning(self, "Uyarı", "Geçerlilik tarihi seçiniz.")
-            return
-
-        # Kullanıcı farklı ayda bir tarih seçtiyse, kayıtlar 'kaybolmuş' gibi görünür.
-        # Bu yüzden effective_from ayı ile dönem ayı uyumlu olmalı.
-        try:
-            if str(eff)[:7] != str(period)[:7]:
-                QMessageBox.warning(self, "Uyarı", "Seçilen geçerlilik tarihi, seçilen dönem ile aynı ayda olmalıdır.")
-                return
-        except Exception:
-            pass
-
-        categories = list(getattr(self, "_tarife_price_categories", []) or [])
-        # col mapping: 0 route,1 mv,2 km, 3.. prices, then 3+len(categories) .. subcontractor prices
-        sub_base = 3 + len(categories)
-
-        def _parse_money(s: str) -> float:
-            txt = str(s or "").strip()
-            if not txt:
-                return 0.0
-            txt = txt.replace(".", "").replace(",", ".")
-            try:
-                return float(txt)
-            except Exception:
-                return 0.0
-
-        # Replace all tariff rows for this effective_from
-        if not self.db.delete_trip_tariff_prices_for_effective_from(int(contract_id), str(service_type).strip(), str(eff)):
-            QMessageBox.warning(self, "Uyarı", "Eski tarife satırları temizlenemedi.")
-            return
-
-        for r in range(tbl.rowCount()):
-            it0 = tbl.item(r, 0)
-            if not it0:
-                continue
-            rid = it0.data(Qt.ItemDataRole.UserRole + 1)
-            try:
-                rid = int(rid)
-            except Exception:
-                continue
-            # save each category
-            for i, pc in enumerate(categories):
-                price = _parse_money(tbl.item(r, 3 + i).text() if tbl.item(r, 3 + i) else "")
-                sub_price = _parse_money(tbl.item(r, sub_base + i).text() if tbl.item(r, sub_base + i) else "")
-                if float(price or 0.0) <= 0 and float(sub_price or 0.0) <= 0:
-                    continue
-                ok = self.db.upsert_trip_tariff_price(
-                    contract_id=int(contract_id),
-                    service_type=str(service_type).strip(),
-                    route_params_id=int(rid),
-                    pricing_category=str(pc).strip().upper(),
-                    effective_from=str(eff),
-                    price=float(price or 0.0),
-                    subcontractor_price=float(sub_price or 0.0),
-                )
-                if not ok:
-                    QMessageBox.warning(self, "Uyarı", "Tarife kaydında hata oluştu.")
-                    return
-
-        QMessageBox.information(self, "Başarılı", "Tarife kaydedildi.")
-        self._tarife_load_price_rows()
+        # Fiyat girişi artık İş Kalemi Ekle dialogu üzerinden yapılıyor.
+        self._open_hat_dialog()
 
     def _init_tarife_tab(self):
         # Period combo
@@ -600,7 +575,7 @@ class ContractsApp(QWidget):
             except Exception:
                 pass
 
-        # Tariff prices table
+        # Tariff prices table (read-only, double-click opens hat_dialog)
         tpt = getattr(self, "tbl_tarife_prices", None)
         if tpt is not None:
             try:
@@ -608,11 +583,12 @@ class ContractsApp(QWidget):
                 tpt.setAlternatingRowColors(True)
                 tpt.setSelectionBehavior(tpt.SelectionBehavior.SelectRows)
                 tpt.setSelectionMode(tpt.SelectionMode.ExtendedSelection)
+                tpt.setEditTriggers(tpt.EditTrigger.NoEditTriggers)
             except Exception:
                 pass
 
             try:
-                tpt.cellChanged.connect(self._tarife_on_price_cell_changed)
+                tpt.doubleClicked.connect(lambda _idx: self._open_hat_dialog())
             except Exception:
                 pass
 
@@ -1016,6 +992,30 @@ class ContractsApp(QWidget):
         except Exception:
             contract_id = None
 
+        ctx_contract_id, ctx_period, ctx_service_type = None, None, None
+        try:
+            ctx_contract_id, ctx_period, ctx_service_type = self._tarife_context()
+        except Exception:
+            ctx_contract_id, ctx_period, ctx_service_type = None, None, None
+        if ctx_contract_id:
+            contract_id = ctx_contract_id
+        if ctx_service_type:
+            service_type = str(ctx_service_type or "").strip() or service_type
+
+        eff = None
+        try:
+            eff = self._tarife_effective_from_iso()
+        except Exception:
+            eff = None
+        period = (str(ctx_period).strip() if ctx_period is not None else "")
+        if period and "-" in period:
+            eff_period = f"{period[:7]}-01"
+            if not eff or str(eff)[:7] != str(period)[:7]:
+                eff = eff_period
+        if not eff:
+            eff = (str(start_date or "").strip()[:10] if start_date else "")
+        eff = str(eff or "").strip()
+
         dlg = QDialog(self)
         try:
             uic.loadUi(get_ui_path("hat_dialog.ui"), dlg)
@@ -1026,7 +1026,7 @@ class ContractsApp(QWidget):
         tbl = getattr(dlg, "table_kalemler", None)
         btn_add = getattr(dlg, "btn_satir_ekle", None)
         btn_del = getattr(dlg, "btn_satir_sil", None)
-        btn_save = getattr(dlg, "btn_kaydet", None) or getattr(dlg, "pushButton", None)
+        btn_save = getattr(dlg, "btn_save", None) or getattr(dlg, "btn_kaydet", None) or getattr(dlg, "pushButton", None)
         btn_close = getattr(dlg, "btn_kapat", None)
 
         if tbl is None:
@@ -1038,6 +1038,9 @@ class ContractsApp(QWidget):
             "HAREKET TÜRÜ",
             "MESAFE (KM)",
             "ARAÇ KPST.",
+            "BİRİM FİYAT",
+            "A.Y.FİYATI",
+            "NOT",
         ]
         tbl.setColumnCount(len(headers))
         tbl.setHorizontalHeaderLabels(headers)
@@ -1051,6 +1054,97 @@ class ContractsApp(QWidget):
         h.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         h.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         h.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        h.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        h.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+        h.setSectionResizeMode(6, QHeaderView.ResizeMode.Stretch)
+
+        def _movement_to_category(mv: str) -> str:
+            s = str(mv or "").strip().lower()
+            if "mesai" in s:
+                return "MESAI"
+            if "paket" in s or (("sabah" in s) and ("akşam" in s or "aksam" in s)):
+                return "PAKET_SERVIS"
+            if "cift" in s or "çift" in s:
+                return "CIFT_SERVIS"
+            return "TEK_SERVIS"
+
+        # Load existing tariff prices for this contract
+        _price_map: dict[tuple[int, str], tuple[float, float]] = {}
+        _legacy_price_map: dict[int, tuple[float, float]] = {}
+        try:
+            if eff and contract_id and service_type:
+                tp_rows = self.db.list_trip_tariff_prices_for_effective_from(int(contract_id), str(service_type), str(eff))
+                for rid_p, pc_p, pr_p, spr_p in tp_rows or []:
+                    try:
+                        _price_map[(int(rid_p), str(pc_p).strip().upper())] = (float(pr_p or 0.0), float(spr_p or 0.0))
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+        # Legacy fallback for old builds: aggregate per route_params_id for selected period month.
+        try:
+            if eff and contract_id and service_type:
+                conn = self.db.connect()
+                if conn:
+                    try:
+                        cur = conn.cursor()
+                        legacy_month = ""
+                        try:
+                            legacy_month = str(period or "").strip()[:7]
+                        except Exception:
+                            legacy_month = ""
+                        cur.execute(
+                            """
+                            SELECT route_params_id,
+                                   MAX(COALESCE(price,0)) AS price,
+                                   MAX(COALESCE(subcontractor_price,0)) AS subcontractor_price
+                            FROM trip_prices
+                            WHERE contract_id=?
+                              AND service_type=?
+                              AND COALESCE(pricing_category,'') = ''
+                              AND COALESCE(effective_from,'') = ''
+                              AND COALESCE(month,'') = ?
+                              AND (COALESCE(price,0) > 0 OR COALESCE(subcontractor_price,0) > 0)
+                            GROUP BY route_params_id
+                            """,
+                            (int(contract_id), str(service_type), str(legacy_month)),
+                        )
+                        for rid_p, pr_p, spr_p in cur.fetchall() or []:
+                            try:
+                                _legacy_price_map[int(rid_p)] = (float(pr_p or 0.0), float(spr_p or 0.0))
+                            except Exception:
+                                pass
+                    finally:
+                        conn.close()
+        except Exception:
+            pass
+
+        def _format_price_cells(_row: int, _col: int):
+            try:
+                if int(_col) not in (4, 5):
+                    return
+                it = tbl.item(int(_row), int(_col))
+                if it is None:
+                    return
+                txt = (it.text() or "").strip()
+                if not txt:
+                    return
+                val = self._parse_money(txt)
+                tbl.blockSignals(True)
+                it.setText("" if float(val or 0.0) <= 0 else self._format_money_tr(float(val or 0.0)))
+            except Exception:
+                return
+            finally:
+                try:
+                    tbl.blockSignals(False)
+                except Exception:
+                    pass
+
+        try:
+            tbl.cellChanged.connect(_format_price_cells)
+        except Exception:
+            pass
 
         # route_params tablosundan yükle
         pm = []
@@ -1080,22 +1174,30 @@ class ContractsApp(QWidget):
         for row in pm or []:
             r = tbl.rowCount()
             tbl.insertRow(r)
+            rid_val = (row or {}).get("id")
+            mv_val = str((row or {}).get("movement_type") or "")
+            pc_val = _movement_to_category(mv_val)
+            price_val, sub_price_val = _price_map.get((int(rid_val or 0), pc_val), (0.0, 0.0))
+            if float(price_val or 0.0) <= 0 and float(sub_price_val or 0.0) <= 0:
+                price_val, sub_price_val = _legacy_price_map.get(int(rid_val or 0), (0.0, 0.0))
             vals = [
                 str((row or {}).get("route_name") or ""),
-                str((row or {}).get("movement_type") or ""),
+                mv_val,
                 ("" if (row or {}).get("distance_km") is None else str((row or {}).get("distance_km"))),
                 ("" if (row or {}).get("vehicle_capacity") is None else str((row or {}).get("vehicle_capacity"))),
+                ("" if float(price_val or 0.0) <= 0 else self._format_money_tr(float(price_val))),
+                ("" if float(sub_price_val or 0.0) <= 0 else self._format_money_tr(float(sub_price_val))),
+                "",
             ]
             for c, v in enumerate(vals):
                 it = QTableWidgetItem(v)
                 if c == 0:
                     try:
-                        rid = (row or {}).get("id")
-                        if rid is not None and str(rid).strip() != "":
-                            it.setData(Qt.ItemDataRole.UserRole + 1, int(rid))
+                        if rid_val is not None and str(rid_val).strip() != "":
+                            it.setData(Qt.ItemDataRole.UserRole + 1, int(rid_val))
                     except Exception:
                         pass
-                if c in (2, 3):
+                if c in (2, 3, 4, 5):
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 tbl.setItem(r, c, it)
 
@@ -1104,7 +1206,7 @@ class ContractsApp(QWidget):
             tbl.insertRow(r)
             for c in range(tbl.columnCount()):
                 it = QTableWidgetItem("")
-                if c in (2, 3):
+                if c in (2, 3, 4, 5):
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 tbl.setItem(r, c, it)
 
@@ -1118,12 +1220,16 @@ class ContractsApp(QWidget):
 
         def save_rows():
             out = []
+            price_out = []  # (rid, pricing_category, price, sub_price, route_name, movement_type)
+            entered_by_name: dict[tuple[str, str], tuple[float, float]] = {}
             for r in range(tbl.rowCount()):
                 it_hat = tbl.item(r, 0)
                 hat = (it_hat.text().strip() if it_hat else "")
                 hareket = (tbl.item(r, 1).text().strip() if tbl.item(r, 1) else "")
                 km_txt = (tbl.item(r, 2).text().strip() if tbl.item(r, 2) else "")
                 kps_txt = (tbl.item(r, 3).text().strip() if tbl.item(r, 3) else "")
+                price_txt = (tbl.item(r, 4).text().strip() if tbl.item(r, 4) else "")
+                sub_price_txt = (tbl.item(r, 5).text().strip() if tbl.item(r, 5) else "")
                 if not any([hat, hareket, km_txt, kps_txt]):
                     continue
 
@@ -1142,6 +1248,14 @@ class ContractsApp(QWidget):
                         "vehicle_capacity": self._parse_money(kps_txt),
                     }
                 )
+                # Collect price info for saving
+                pr_val = self._parse_money(price_txt)
+                spr_val = self._parse_money(sub_price_txt)
+                pc_cur = _movement_to_category(hareket) if hareket else ""
+                if hat and pc_cur:
+                    entered_by_name[(str(hat).strip(), str(pc_cur).strip().upper())] = (float(pr_val or 0.0), float(spr_val or 0.0))
+                if (pr_val > 0 or spr_val > 0) and hareket:
+                    price_out.append((rid, pc_cur, pr_val, spr_val, str(hat or "").strip(), str(hareket or "").strip()))
 
             if not contract_id:
                 QMessageBox.warning(self, "Uyarı", "Sözleşme bulunamadı. Lütfen sözleşmeyi kaydedip tekrar deneyiniz.")
@@ -1156,12 +1270,62 @@ class ContractsApp(QWidget):
                     service_type=str(service_type),
                     rows=out,
                 )
-                if ok:
-                    QMessageBox.information(self, "Başarılı", "İş kalemleri kaydedildi.")
-                else:
+                if not ok:
                     QMessageBox.warning(self, "Uyarı", "İş kalemleri kaydedilemedi.")
+                    return
             except Exception:
                 QMessageBox.warning(self, "Uyarı", "İş kalemleri kaydedilirken hata oluştu.")
+                return
+
+            # Save prices to trip_prices
+            if price_out:
+                if eff and service_type:
+                    try:
+                        self.db.delete_trip_tariff_prices_for_effective_from(int(contract_id), str(service_type).strip(), str(eff))
+                    except Exception:
+                        pass
+                    # Re-read route_params to get fresh IDs after replace
+                    fresh_routes = []
+                    try:
+                        fresh_routes = self.db.get_route_params_for_contract(int(contract_id), str(service_type))
+                    except Exception:
+                        fresh_routes = []
+                    # Build name->id map for matching
+                    name_to_rid: dict[tuple[str, str], int] = {}
+                    for fr in fresh_routes or []:
+                        try:
+                            name_to_rid[(str(fr[1] or "").strip(), str(fr[4] or "").strip())] = int(fr[0])
+                        except Exception:
+                            pass
+                    for orig_rid, pc, pr, spr, rname, mv in price_out:
+                        # Prefer stable existing rid, else match by (route_name, movement_type)
+                        save_rid = orig_rid
+                        if save_rid is None:
+                            try:
+                                save_rid = name_to_rid.get((str(rname or "").strip(), str(mv or "").strip()))
+                            except Exception:
+                                save_rid = None
+                        if save_rid is None:
+                            continue
+                        try:
+                            self.db.upsert_trip_tariff_price(
+                                contract_id=int(contract_id),
+                                service_type=str(service_type).strip(),
+                                route_params_id=int(save_rid),
+                                pricing_category=str(pc).strip().upper(),
+                                effective_from=str(eff),
+                                price=float(pr or 0.0),
+                                subcontractor_price=float(spr or 0.0),
+                            )
+                        except Exception:
+                            pass
+
+            QMessageBox.information(self, "Başarılı", "İş kalemleri ve fiyatlar kaydedildi.")
+            # Refresh tarife table if visible
+            try:
+                self._tarife_load_price_rows()
+            except Exception:
+                pass
             dlg.accept()
 
         if btn_add is not None:

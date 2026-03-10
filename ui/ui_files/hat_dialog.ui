@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>558</width>
+    <width>939</width>
     <height>366</height>
    </rect>
   </property>
@@ -49,6 +49,21 @@
         <column>
          <property name="text">
           <string>ARAÇ KPST.</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>BİRİM FİYAT</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>A.Y.FİYATI</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>NOT</string>
          </property>
         </column>
        </widget>
@@ -106,7 +121,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton">
+         <widget class="QPushButton" name="btn_save">
           <property name="minimumSize">
            <size>
             <width>100</width>
