@@ -354,6 +354,84 @@ class TripsGridApp(QWidget):
         if hasattr(self, "btn_delete_all"):
             self.btn_delete_all.clicked.connect(self._delete_all_table_rows)
 
+    def _maybe_confirm_puantaj_update_on_save(self, route_id: str) -> bool:
+        """If there are puantaj records for this route, ask user whether to update them on save."""
+        if not self._selected_contract_id or not self._service_type():
+            return False
+
+        try:
+            rid_i = int(route_id or 0)
+        except Exception:
+            return False
+        if rid_i <= 0:
+            return False
+
+        contract_id = int(self._selected_contract_id)
+        service_type = str(self._service_type())
+        month = str(self._month_key())
+
+        has_alloc = False
+        try:
+            has_alloc = bool(
+                self.db.has_trip_allocations_for_route_month(
+                    contract_id=contract_id,
+                    service_type=service_type,
+                    month=month,
+                    route_params_id=rid_i,
+                )
+            )
+        except Exception:
+            has_alloc = False
+
+        if not has_alloc:
+            return False
+
+        route_rec = self._selected_route_map.get(str(route_id), {})
+        route_name_txt = str(route_rec.get("route_name") or "").strip()
+
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Uyarı")
+        msg.setIcon(QMessageBox.Icon.Warning)
+        msg.setText(
+            "Bu rota için girilmiş puantaj kayıtları var.\n\n"
+            "Güncellemek istediğinizden eminseniz ilgili yıl ve ayı seçip güncelleme işlemini gerçekleştirebilirsiniz.\n"
+            "Unutmayın: Güncellemeyi kaydettiğiniz an puantaj kayıtları da buna göre değişecektir."
+        )
+        msg.setInformativeText(
+            f"Rota: {route_name_txt or route_id}\nDönem (aktif): {month}"
+        )
+        btn_yes = msg.addButton("Evet (Puantajı da güncelle)", QMessageBox.ButtonRole.YesRole)
+        btn_no = msg.addButton("Hayır (Sadece seferi güncelle)", QMessageBox.ButtonRole.NoRole)
+        msg.addButton("İptal", QMessageBox.ButtonRole.RejectRole)
+        msg.exec()
+        clicked = msg.clickedButton()
+        if clicked == btn_yes:
+            # Choose month explicitly to reduce accidental updates.
+            m_txt, ok = QInputDialog.getText(
+                self,
+                "Dönem Seçimi",
+                "Yıl-Ay (YYYY-AA):",
+                text=str(month),
+            )
+            if not ok:
+                return False
+            m_txt = str(m_txt or "").strip()
+            if (not m_txt) or (re.match(r"^\d{4}-\d{2}$", m_txt) is None):
+                QMessageBox.warning(self, "Uyarı", "Dönem formatı geçersiz. Örn: 2026-01")
+                return False
+
+            self._pending_puantaj_apply = {
+                "contract_id": int(contract_id),
+                "service_type": str(service_type),
+                "month": str(m_txt),
+                "route_params_id": int(rid_i),
+            }
+            return True
+
+        if clicked == btn_no:
+            return False
+        return False
+
     def _load_static_filters(self):
         if hasattr(self, "cmb_service_type"):
             self.cmb_service_type.blockSignals(True)
@@ -589,6 +667,14 @@ class TripsGridApp(QWidget):
         route_id = self._selected_route_id()
         if not route_id:
             return
+
+        # If this route already has puantaj records, ask user whether they want allocations
+        # to be updated when saving the new assignment.
+        try:
+            self._maybe_confirm_puantaj_update_on_save(str(route_id))
+        except Exception:
+            pass
+
         self._open_trips_dialog(str(route_id))
 
     def _open_trips_dialog(self, route_id: str):
@@ -929,6 +1015,43 @@ class TripsGridApp(QWidget):
 
             # Persist immediately
             self._save_table_to_plan(show_message=False)
+
+            # Apply plan to puantaj allocations if user explicitly confirmed.
+            try:
+                pending = getattr(self, "_pending_puantaj_apply", None) or {}
+                if (
+                    str(pending.get("contract_id")) == str(contract_id)
+                    and str(pending.get("service_type")) == str(service_type)
+                    and str(pending.get("route_params_id")) == str(route_id)
+                ):
+                    m_sel = str(pending.get("month") or "").strip()
+                    if re.match(r"^\d{4}-\d{2}$", m_sel):
+                        affected = int(
+                            self.db.apply_trip_plan_to_allocations_for_route_month(
+                                contract_id=int(contract_id),
+                                service_type=str(service_type),
+                                month=str(m_sel),
+                                route_params_id=int(route_id),
+                            )
+                            or 0
+                        )
+                        QMessageBox.information(
+                            self,
+                            "Bilgi",
+                            f"Araç ve sürücü ataması yapılmıştır.\n\nPuantaj güncellendi (Dönem: {m_sel})\nEtkilenen satır: {affected}",
+                        )
+                        try:
+                            self._pending_puantaj_apply = None
+                        except Exception:
+                            pass
+                        try:
+                            dlg.accept()
+                        except Exception:
+                            pass
+                        return
+            except Exception:
+                pass
+
             QMessageBox.information(self, "Bilgi", "Araç ve sürücü ataması yapılmıştır.")
             try:
                 dlg.accept()
@@ -967,6 +1090,15 @@ class TripsGridApp(QWidget):
             dlg.exec()
         finally:
             self._opening_trips_dialog = False
+
+            # If user didn't save in dialog, don't keep pending puantaj apply state.
+            try:
+                if not assignment_done_in_dialog.get("done"):
+                    pending = getattr(self, "_pending_puantaj_apply", None) or {}
+                    if str(pending.get("route_params_id")) == str(route_id):
+                        self._pending_puantaj_apply = None
+            except Exception:
+                pass
 
     def _time_pairs(self):
         # Removed legacy time_g1/time_c1 default-widget logic usage

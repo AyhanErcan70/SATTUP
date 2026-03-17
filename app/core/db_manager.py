@@ -2296,6 +2296,301 @@ class DatabaseManager:
         finally:
             conn.close()
 
+    def migrate_trip_route_for_month(
+        self,
+        contract_id: int,
+        service_type: str,
+        month: str,
+        old_route_params_id: int,
+        new_route_params_id: int,
+    ) -> bool:
+        """Move trip_entries + trip_allocations from old route_params_id to new route_params_id.
+
+        This is used when an assignment was corrected after data entry. Hakediş reads from
+        trip_allocations, so allocations must be migrated as well.
+
+        - Scope is limited to (contract_id, service_type, month).
+        - If a target row already exists, quantities are merged (summed).
+        """
+
+        try:
+            cid = int(contract_id or 0)
+            old_rid = int(old_route_params_id or 0)
+            new_rid = int(new_route_params_id or 0)
+        except Exception:
+            return False
+        st = str(service_type or "").strip()
+        m = str(month or "").strip()[:7]
+        if cid <= 0 or old_rid <= 0 or new_rid <= 0 or (not st) or len(m) != 7:
+            return False
+
+        if old_rid == new_rid:
+            return True
+
+        # Ensure tables exist
+        try:
+            self.create_trip_entries_tables()
+        except Exception:
+            pass
+
+        start_date = f"{m}-01"
+        end_date = f"{m}-31"
+
+        conn = self.connect()
+        if not conn:
+            return False
+        try:
+            cur = conn.cursor()
+            cur.execute("BEGIN")
+
+            # trip_allocations: merge qty, keep existing non-empty time_text/note when present
+            cur.execute(
+                """
+                INSERT INTO trip_allocations (
+                    contract_id, route_params_id, trip_date, service_type, time_block, line_no,
+                    driver_id, vehicle_id, qty, time_text, note, created_at, updated_at
+                )
+                SELECT
+                    contract_id, ?, trip_date, service_type, time_block, line_no,
+                    driver_id, vehicle_id, qty, time_text, note, created_at, updated_at
+                FROM trip_allocations
+                WHERE contract_id = ?
+                  AND route_params_id = ?
+                  AND service_type = ?
+                  AND trip_date BETWEEN ? AND ?
+                ON CONFLICT(contract_id, route_params_id, trip_date, service_type, time_block, line_no)
+                DO UPDATE SET
+                    qty = COALESCE(trip_allocations.qty,0) + COALESCE(excluded.qty,0),
+                    driver_id = COALESCE(excluded.driver_id, trip_allocations.driver_id),
+                    vehicle_id = COALESCE(excluded.vehicle_id, trip_allocations.vehicle_id),
+                    time_text = CASE
+                        WHEN COALESCE(trip_allocations.time_text,'') <> '' THEN trip_allocations.time_text
+                        ELSE COALESCE(excluded.time_text,'')
+                    END,
+                    note = CASE
+                        WHEN COALESCE(trip_allocations.note,'') <> '' THEN trip_allocations.note
+                        ELSE COALESCE(excluded.note,'')
+                    END,
+                    updated_at = COALESCE(excluded.updated_at, trip_allocations.updated_at)
+                """,
+                (int(new_rid), int(cid), int(old_rid), str(st), str(start_date), str(end_date)),
+            )
+            cur.execute(
+                """
+                DELETE FROM trip_allocations
+                WHERE contract_id = ?
+                  AND route_params_id = ?
+                  AND service_type = ?
+                  AND trip_date BETWEEN ? AND ?
+                """,
+                (int(cid), int(old_rid), str(st), str(start_date), str(end_date)),
+            )
+
+            # trip_entries: merge qty (integer)
+            cur.execute(
+                """
+                INSERT INTO trip_entries (
+                    contract_id, route_params_id, trip_date, service_type, time_block, line_no,
+                    qty, time_text, note, created_at, updated_at
+                )
+                SELECT
+                    contract_id, ?, trip_date, service_type, time_block, line_no,
+                    qty, time_text, note, created_at, updated_at
+                FROM trip_entries
+                WHERE contract_id = ?
+                  AND route_params_id = ?
+                  AND service_type = ?
+                  AND trip_date BETWEEN ? AND ?
+                ON CONFLICT(contract_id, route_params_id, trip_date, service_type, time_block, line_no)
+                DO UPDATE SET
+                    qty = COALESCE(trip_entries.qty,0) + COALESCE(excluded.qty,0),
+                    time_text = CASE
+                        WHEN COALESCE(trip_entries.time_text,'') <> '' THEN trip_entries.time_text
+                        ELSE COALESCE(excluded.time_text,'')
+                    END,
+                    note = CASE
+                        WHEN COALESCE(trip_entries.note,'') <> '' THEN trip_entries.note
+                        ELSE COALESCE(excluded.note,'')
+                    END,
+                    updated_at = COALESCE(excluded.updated_at, trip_entries.updated_at)
+                """,
+                (int(new_rid), int(cid), int(old_rid), str(st), str(start_date), str(end_date)),
+            )
+            cur.execute(
+                """
+                DELETE FROM trip_entries
+                WHERE contract_id = ?
+                  AND route_params_id = ?
+                  AND service_type = ?
+                  AND trip_date BETWEEN ? AND ?
+                """,
+                (int(cid), int(old_rid), str(st), str(start_date), str(end_date)),
+            )
+
+            conn.commit()
+            return True
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            try:
+                print(f"migrate_trip_route_for_month error: {e}")
+            except Exception:
+                pass
+            return False
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    def has_trip_allocations_for_route_month(
+        self,
+        contract_id: int,
+        service_type: str,
+        month: str,
+        route_params_id: int,
+    ) -> bool:
+        try:
+            cid = int(contract_id or 0)
+            rid = int(route_params_id or 0)
+        except Exception:
+            return False
+        st = str(service_type or "").strip()
+        m = str(month or "").strip()[:7]
+        if cid <= 0 or rid <= 0 or (not st) or len(m) != 7:
+            return False
+
+        start_date = f"{m}-01"
+        end_date = f"{m}-31"
+
+        conn = self.connect()
+        if not conn:
+            return False
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT 1
+                FROM trip_allocations
+                WHERE contract_id = ?
+                  AND route_params_id = ?
+                  AND service_type = ?
+                  AND trip_date BETWEEN ? AND ?
+                LIMIT 1
+                """,
+                (int(cid), int(rid), str(st), str(start_date), str(end_date)),
+            )
+            return cur.fetchone() is not None
+        except Exception:
+            return False
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    def apply_trip_plan_to_allocations_for_route_month(
+        self,
+        contract_id: int,
+        service_type: str,
+        month: str,
+        route_params_id: int,
+    ) -> int:
+        """Update trip_allocations vehicle_id/driver_id based on trip_plan for the given month/route.
+
+        Returns number of affected rows.
+        """
+
+        try:
+            cid = int(contract_id or 0)
+            rid = int(route_params_id or 0)
+        except Exception:
+            return 0
+        st = str(service_type or "").strip()
+        m = str(month or "").strip()[:7]
+        if cid <= 0 or rid <= 0 or (not st) or len(m) != 7:
+            return 0
+
+        start_date = f"{m}-01"
+        end_date = f"{m}-31"
+
+        conn = self.connect()
+        if not conn:
+            return 0
+        try:
+            cur = conn.cursor()
+            cur.execute("BEGIN")
+            cur.execute(
+                """
+                UPDATE trip_allocations
+                SET
+                    vehicle_id = (
+                        SELECT tp.vehicle_id
+                        FROM trip_plan tp
+                        WHERE tp.contract_id = trip_allocations.contract_id
+                          AND tp.route_params_id = trip_allocations.route_params_id
+                          AND tp.month = ?
+                          AND tp.service_type = trip_allocations.service_type
+                          AND tp.time_block = trip_allocations.time_block
+                        LIMIT 1
+                    ),
+                    driver_id = (
+                        SELECT tp.driver_id
+                        FROM trip_plan tp
+                        WHERE tp.contract_id = trip_allocations.contract_id
+                          AND tp.route_params_id = trip_allocations.route_params_id
+                          AND tp.month = ?
+                          AND tp.service_type = trip_allocations.service_type
+                          AND tp.time_block = trip_allocations.time_block
+                        LIMIT 1
+                    ),
+                    updated_at = COALESCE(updated_at, '')
+                WHERE contract_id = ?
+                  AND route_params_id = ?
+                  AND service_type = ?
+                  AND trip_date BETWEEN ? AND ?
+                  AND EXISTS (
+                    SELECT 1
+                    FROM trip_plan tp
+                    WHERE tp.contract_id = trip_allocations.contract_id
+                      AND tp.route_params_id = trip_allocations.route_params_id
+                      AND tp.month = ?
+                      AND tp.service_type = trip_allocations.service_type
+                      AND tp.time_block = trip_allocations.time_block
+                  )
+                """,
+                (
+                    str(m),
+                    str(m),
+                    int(cid),
+                    int(rid),
+                    str(st),
+                    str(start_date),
+                    str(end_date),
+                    str(m),
+                ),
+            )
+            affected = int(cur.rowcount or 0)
+            conn.commit()
+            return affected
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            try:
+                print(f"apply_trip_plan_to_allocations_for_route_month error: {e}")
+            except Exception:
+                pass
+            return 0
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
     def _ensure_trip_prices_table(self):
         conn = self.connect()
         if not conn:
@@ -2790,7 +3085,7 @@ class DatabaseManager:
                         )
                         OR (
                             v.id IS NULL
-                            AND COALESCE(e.ad_soyad,'') <> ''
+                            AND COALESCE(e.ad_soyad, CAST(ta.driver_id AS TEXT), '') <> ''
                             AND NOT (
                                 REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(e.ad_soyad,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ASIL%'
                                 AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(e.ad_soyad,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TUR%'
@@ -2908,43 +3203,98 @@ class DatabaseManager:
             return []
         try:
             cur = conn.cursor()
-            params: list[object] = [str(start_date), str(end_date)]
             customer_filter_sql = ""
             if customer_id is not None:
                 customer_filter_sql = " AND cu.id = ? "
+
+            params: list[object] = [
+                # eff: trip_entries
+                str(start_date),
+                str(end_date),
+                # eff: trip_allocations (entries not found)
+                str(start_date),
+                str(end_date),
+                # owners (ta.trip_date filter)
+                str(start_date),
+                str(end_date),
+            ]
+            if customer_id is not None:
                 params.append(int(customer_id))
 
             cur.execute(
                 f"""
                 SELECT DISTINCT owner FROM (
+                    WITH eff AS (
+                        SELECT
+                            te.contract_id,
+                            te.route_params_id,
+                            te.trip_date,
+                            te.service_type,
+                            COALESCE(TRIM(te.time_block), '') AS time_block,
+                            COALESCE(te.line_no, 0) AS line_no,
+                            COALESCE(ta.vehicle_id, tp.vehicle_id) AS vehicle_id,
+                            COALESCE(ta.driver_id, tp.driver_id) AS driver_id,
+                            COALESCE(ta.qty, te.qty, 0) AS qty,
+                            COALESCE(ta.time_text, te.time_text, '') AS time_text,
+                            COALESCE(ta.note, '') AS note
+                        FROM trip_entries te
+                        LEFT JOIN trip_plan tp
+                          ON tp.contract_id = te.contract_id
+                         AND tp.route_params_id = te.route_params_id
+                         AND tp.service_type = te.service_type
+                         AND COALESCE(TRIM(tp.time_block), '') = COALESCE(TRIM(te.time_block), '')
+                         AND COALESCE(TRIM(tp.month), '') = SUBSTR(COALESCE(te.trip_date,''), 1, 7)
+                        LEFT JOIN trip_allocations ta
+                          ON ta.contract_id = te.contract_id
+                         AND ta.route_params_id = te.route_params_id
+                         AND ta.trip_date = te.trip_date
+                         AND ta.service_type = te.service_type
+                         AND COALESCE(TRIM(ta.time_block), '') = COALESCE(TRIM(te.time_block), '')
+                         AND COALESCE(ta.line_no, 0) = COALESCE(te.line_no, 0)
+                        WHERE te.trip_date BETWEEN ? AND ?
+
+                        UNION ALL
+
+                        SELECT
+                            ta.contract_id,
+                            ta.route_params_id,
+                            ta.trip_date,
+                            ta.service_type,
+                            COALESCE(TRIM(ta.time_block), '') AS time_block,
+                            COALESCE(ta.line_no, 0) AS line_no,
+                            ta.vehicle_id,
+                            ta.driver_id,
+                            COALESCE(ta.qty, 0) AS qty,
+                            COALESCE(ta.time_text, '') AS time_text,
+                            COALESCE(ta.note, '') AS note
+                        FROM trip_allocations ta
+                        LEFT JOIN trip_entries te
+                          ON te.contract_id = ta.contract_id
+                         AND te.route_params_id = ta.route_params_id
+                         AND te.trip_date = ta.trip_date
+                         AND te.service_type = ta.service_type
+                         AND COALESCE(TRIM(te.time_block), '') = COALESCE(TRIM(ta.time_block), '')
+                         AND COALESCE(te.line_no, 0) = COALESCE(ta.line_no, 0)
+                        WHERE te.contract_id IS NULL
+                          AND ta.trip_date BETWEEN ? AND ?
+                    )
+
                     SELECT COALESCE(v.arac_sahibi,'') AS owner
-                    FROM trip_allocations ta
+                    FROM eff ta
                     LEFT JOIN vehicles v ON (v.id = ta.vehicle_id OR v.vehicle_code = CAST(ta.vehicle_id AS TEXT))
-                    LEFT JOIN employees e ON e.personel_kodu = CAST(ta.driver_id AS TEXT)
                     LEFT JOIN contracts co ON co.id = ta.contract_id
                     LEFT JOIN customers cu ON cu.id = co.customer_id
-                    WHERE ta.trip_date BETWEEN ? AND ?
-                      AND v.id IS NOT NULL
+                    WHERE v.id IS NOT NULL
                       AND COALESCE(v.arac_sahibi,'') <> ''
+                      AND ta.trip_date BETWEEN ? AND ?
                       AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TASERON%'
                       AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ARAC%'
-                      {customer_filter_sql}
-                    UNION
-                    SELECT COALESCE(e.ad_soyad,'') AS owner
-                    FROM trip_allocations ta
-                    LEFT JOIN vehicles v ON (v.id = ta.vehicle_id OR v.vehicle_code = CAST(ta.vehicle_id AS TEXT))
-                    LEFT JOIN employees e ON e.personel_kodu = CAST(ta.driver_id AS TEXT)
-                    LEFT JOIN contracts co ON co.id = ta.contract_id
-                    LEFT JOIN customers cu ON cu.id = co.customer_id
-                    WHERE ta.trip_date BETWEEN ? AND ?
-                      AND v.id IS NULL
-                      AND COALESCE(e.ad_soyad,'') <> ''
                       {customer_filter_sql}
                 )
                 WHERE COALESCE(owner,'') <> ''
                 ORDER BY owner
                 """,
-                tuple(params + params),
+                tuple(params),
             )
             owners = [str(r[0] or "").strip() for r in (cur.fetchall() or [])]
         finally:
@@ -2987,13 +3337,18 @@ class DatabaseManager:
         try:
             cur = conn.cursor()
             params: list[object] = [
+                # eff: trip_entries
                 str(start_date),
                 str(end_date),
-                str(owner_param),
+                # eff: trip_allocations (entries not found)
                 str(start_date),
                 str(end_date),
-                str(owner_param),
-                str(owner_param),
+                # split_groups: eff.trip_date between
+                str(start_date),
+                str(end_date),
+                # main WHERE ta.trip_date between
+                str(start_date),
+                str(end_date),
                 str(owner_param),
             ]
             customer_filter_sql = ""
@@ -3003,7 +3358,62 @@ class DatabaseManager:
 
             cur.execute(
                 f"""
-                WITH split_groups AS (
+                WITH eff AS (
+                    SELECT
+                        te.contract_id,
+                        te.route_params_id,
+                        te.trip_date,
+                        te.service_type,
+                        COALESCE(TRIM(te.time_block), '') AS time_block,
+                        COALESCE(te.line_no, 0) AS line_no,
+                        COALESCE(ta.vehicle_id, tp.vehicle_id) AS vehicle_id,
+                        COALESCE(ta.driver_id, tp.driver_id) AS driver_id,
+                        COALESCE(ta.qty, te.qty, 0) AS qty,
+                        COALESCE(ta.time_text, te.time_text, '') AS time_text,
+                        COALESCE(ta.note, '') AS note
+                    FROM trip_entries te
+                    LEFT JOIN trip_plan tp
+                      ON tp.contract_id = te.contract_id
+                     AND tp.route_params_id = te.route_params_id
+                     AND tp.service_type = te.service_type
+                     AND COALESCE(TRIM(tp.time_block), '') = COALESCE(TRIM(te.time_block), '')
+                     AND COALESCE(TRIM(tp.month), '') = SUBSTR(COALESCE(te.trip_date,''), 1, 7)
+                    LEFT JOIN trip_allocations ta
+                      ON ta.contract_id = te.contract_id
+                     AND ta.route_params_id = te.route_params_id
+                     AND ta.trip_date = te.trip_date
+                     AND ta.service_type = te.service_type
+                     AND COALESCE(TRIM(ta.time_block), '') = COALESCE(TRIM(te.time_block), '')
+                     AND COALESCE(ta.line_no, 0) = COALESCE(te.line_no, 0)
+                    WHERE te.trip_date BETWEEN ? AND ?
+
+                    UNION ALL
+
+                    SELECT
+                        ta.contract_id,
+                        ta.route_params_id,
+                        ta.trip_date,
+                        ta.service_type,
+                        COALESCE(TRIM(ta.time_block), '') AS time_block,
+                        COALESCE(ta.line_no, 0) AS line_no,
+                        ta.vehicle_id,
+                        ta.driver_id,
+                        COALESCE(ta.qty, 0) AS qty,
+                        COALESCE(ta.time_text, '') AS time_text,
+                        COALESCE(ta.note, '') AS note
+                    FROM trip_allocations ta
+                    LEFT JOIN trip_entries te
+                      ON te.contract_id = ta.contract_id
+                     AND te.route_params_id = ta.route_params_id
+                     AND te.trip_date = ta.trip_date
+                     AND te.service_type = ta.service_type
+                     AND COALESCE(TRIM(te.time_block), '') = COALESCE(TRIM(ta.time_block), '')
+                     AND COALESCE(te.line_no, 0) = COALESCE(ta.line_no, 0)
+                    WHERE te.contract_id IS NULL
+                      AND ta.trip_date BETWEEN ? AND ?
+                ),
+
+                split_groups AS (
                     SELECT
                         contract_id,
                         route_params_id,
@@ -3011,7 +3421,7 @@ class DatabaseManager:
                         service_type,
                         COALESCE(TRIM(time_block), '') AS time_block,
                         1 AS has_split
-                    FROM trip_allocations
+                    FROM eff
                     WHERE trip_date BETWEEN ? AND ?
                     GROUP BY contract_id, route_params_id, trip_date, service_type, COALESCE(TRIM(time_block), '')
                     HAVING MAX(COALESCE(line_no,0)) > 0
@@ -3019,8 +3429,8 @@ class DatabaseManager:
                 SELECT
                     COALESCE(cu.title, '') AS firma,
                     (COALESCE(rp.route_name, '') || CASE WHEN COALESCE(rp.stops,'') <> '' THEN (' | ' || COALESCE(rp.stops,'')) ELSE '' END) AS guzergah,
-                    COALESCE(CASE WHEN v.id IS NULL THEN COALESCE(?, '') ELSE v.arac_sahibi END, '') AS owner,
-                    COALESCE(e.ad_soyad,'') AS sofor,
+                    COALESCE(v.arac_sahibi,'') AS owner,
+                    COALESCE(e.ad_soyad, CAST(ta.driver_id AS TEXT), '') AS sofor,
                     COALESCE(v.plate_number,'') AS plaka,
                     COALESCE(rp.movement_type, '') AS hareket,
                     SUM(CASE WHEN COALESCE(sg.has_split,0)=1 THEN (COALESCE(ta.qty,0) / 2.0) ELSE COALESCE(ta.qty,0) END) AS qty_sum,
@@ -3028,7 +3438,7 @@ class DatabaseManager:
                     rp.id AS route_params_id,
                     ta.contract_id AS contract_id,
                     COALESCE(ta.service_type,'') AS service_type
-                FROM trip_allocations ta
+                FROM eff ta
                 LEFT JOIN split_groups sg
                   ON sg.contract_id = ta.contract_id
                  AND sg.route_params_id = ta.route_params_id
@@ -3037,38 +3447,28 @@ class DatabaseManager:
                  AND sg.time_block = COALESCE(TRIM(ta.time_block), '')
                 LEFT JOIN route_params rp ON rp.id = ta.route_params_id
                 LEFT JOIN vehicles v ON (v.id = ta.vehicle_id OR v.vehicle_code = CAST(ta.vehicle_id AS TEXT))
-                LEFT JOIN employees e ON e.personel_kodu = CAST(ta.driver_id AS TEXT)
+                LEFT JOIN employees e ON (
+                    TRIM(COALESCE(e.personel_kodu,'')) = TRIM(CAST(ta.driver_id AS TEXT))
+                    OR LTRIM(TRIM(COALESCE(e.personel_kodu,'')), '0') = LTRIM(TRIM(CAST(ta.driver_id AS TEXT)), '0')
+                )
                 LEFT JOIN contracts co ON co.id = ta.contract_id
                 LEFT JOIN customers cu ON cu.id = co.customer_id
                 WHERE ta.trip_date BETWEEN ? AND ?
+                  AND v.id IS NOT NULL
+                  AND COALESCE(v.arac_sahibi,'') <> ''
+                  AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TASERON%'
+                  AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ARAC%'
                   AND (
-                        (
-                            v.id IS NOT NULL
-                            AND COALESCE(v.arac_sahibi,'') <> ''
-                            AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TASERON%'
-                            AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_turu,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ARAC%'
-                            AND (
-                                REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_sahibi,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C')
-                                =
-                                REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(? ,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C')
-                            )
-                        )
-                        OR (
-                            v.id IS NULL
-                            AND COALESCE(e.ad_soyad,'') <> ''
-                            AND (
-                                REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(e.ad_soyad,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C')
-                                =
-                                REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(? ,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C')
-                            )
-                        )
+                        REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(v.arac_sahibi,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C')
+                        =
+                        REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(? ,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C')
                   )
                   AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(rp.movement_type,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') NOT LIKE '%CENAZE%'
                   {customer_filter_sql}
                 GROUP BY
                     COALESCE(cu.title, ''),
                     (COALESCE(rp.route_name, '') || CASE WHEN COALESCE(rp.stops,'') <> '' THEN (' | ' || COALESCE(rp.stops,'')) ELSE '' END),
-                    COALESCE(CASE WHEN v.id IS NULL THEN COALESCE(?, '') ELSE v.arac_sahibi END, ''),
+                    COALESCE(v.arac_sahibi,''),
                     COALESCE(e.ad_soyad,''),
                     COALESCE(v.plate_number,''),
                     COALESCE(rp.movement_type, ''),
@@ -3216,6 +3616,8 @@ class DatabaseManager:
                 str(end_date),
                 str(start_date),
                 str(end_date),
+                str(start_date),
+                str(end_date),
             ]
             customer_filter_sql = ""
             if customer_id is not None:
@@ -3224,53 +3626,85 @@ class DatabaseManager:
 
             cur.execute(
                 f"""
-                WITH split_groups AS (
+                WITH eff AS (
+                    SELECT
+                        te.contract_id,
+                        te.route_params_id,
+                        te.trip_date,
+                        te.service_type,
+                        COALESCE(TRIM(te.time_block), '') AS time_block,
+                        COALESCE(te.line_no, 0) AS line_no,
+                        COALESCE(ta.vehicle_id, tp.vehicle_id) AS vehicle_id,
+                        COALESCE(ta.driver_id, tp.driver_id) AS driver_id,
+                        COALESCE(ta.qty, te.qty, 0) AS qty,
+                        COALESCE(ta.time_text, te.time_text, '') AS time_text,
+                        COALESCE(ta.note, '') AS note
+                    FROM trip_entries te
+                    LEFT JOIN trip_plan tp
+                      ON tp.contract_id = te.contract_id
+                     AND tp.route_params_id = te.route_params_id
+                     AND tp.service_type = te.service_type
+                     AND COALESCE(TRIM(tp.time_block), '') = COALESCE(TRIM(te.time_block), '')
+                     AND COALESCE(TRIM(tp.month), '') = SUBSTR(COALESCE(te.trip_date,''), 1, 7)
+                    LEFT JOIN trip_allocations ta
+                      ON ta.contract_id = te.contract_id
+                     AND ta.route_params_id = te.route_params_id
+                     AND ta.trip_date = te.trip_date
+                     AND ta.service_type = te.service_type
+                     AND COALESCE(TRIM(ta.time_block), '') = COALESCE(TRIM(te.time_block), '')
+                     AND COALESCE(ta.line_no, 0) = COALESCE(te.line_no, 0)
+                    WHERE te.trip_date BETWEEN ? AND ?
+
+                    UNION ALL
+
+                    SELECT
+                        ta.contract_id,
+                        ta.route_params_id,
+                        ta.trip_date,
+                        ta.service_type,
+                        COALESCE(TRIM(ta.time_block), '') AS time_block,
+                        COALESCE(ta.line_no, 0) AS line_no,
+                        ta.vehicle_id,
+                        ta.driver_id,
+                        COALESCE(ta.qty, 0) AS qty,
+                        COALESCE(ta.time_text, '') AS time_text,
+                        COALESCE(ta.note, '') AS note
+                    FROM trip_allocations ta
+                    LEFT JOIN trip_entries te
+                      ON te.contract_id = ta.contract_id
+                     AND te.route_params_id = ta.route_params_id
+                     AND te.trip_date = ta.trip_date
+                     AND te.service_type = ta.service_type
+                     AND COALESCE(TRIM(te.time_block), '') = COALESCE(TRIM(ta.time_block), '')
+                     AND COALESCE(te.line_no, 0) = COALESCE(ta.line_no, 0)
+                    WHERE te.contract_id IS NULL
+                      AND ta.trip_date BETWEEN ? AND ?
+                ),
+
+                split_groups AS (
                     SELECT
                         contract_id,
                         route_params_id,
                         trip_date,
                         service_type,
-                        time_block,
+                        COALESCE(TRIM(time_block), '') AS time_block,
                         1 AS has_split
-                    FROM (
-                        SELECT
-                            contract_id,
-                            route_params_id,
-                            trip_date,
-                            service_type,
-                            COALESCE(TRIM(time_block), '') AS time_block,
-                            MAX(COALESCE(line_no,0)) AS max_ln
-                        FROM trip_entries
-                        WHERE trip_date BETWEEN ? AND ?
-                        GROUP BY contract_id, route_params_id, trip_date, service_type, COALESCE(TRIM(time_block), '')
-
-                        UNION ALL
-
-                        SELECT
-                            contract_id,
-                            route_params_id,
-                            trip_date,
-                            service_type,
-                            COALESCE(TRIM(time_block), '') AS time_block,
-                            MAX(COALESCE(line_no,0)) AS max_ln
-                        FROM trip_allocations
-                        WHERE trip_date BETWEEN ? AND ?
-                        GROUP BY contract_id, route_params_id, trip_date, service_type, COALESCE(TRIM(time_block), '')
-                    ) u
-                    WHERE COALESCE(u.max_ln,0) > 0
-                    GROUP BY contract_id, route_params_id, trip_date, service_type, time_block
+                    FROM eff
+                    WHERE trip_date BETWEEN ? AND ?
+                    GROUP BY contract_id, route_params_id, trip_date, service_type, COALESCE(TRIM(time_block), '')
+                    HAVING MAX(COALESCE(line_no,0)) > 0
                 )
                 SELECT
                     COALESCE(cu.title, '') AS firma,
                     (COALESCE(rp.route_name, '') || CASE WHEN COALESCE(rp.stops,'') <> '' THEN (' | ' || COALESCE(rp.stops,'')) ELSE '' END) AS guzergah,
-                    COALESCE(v.arac_sahibi, COALESCE(e.ad_soyad,''), '') AS sahis,
+                    COALESCE(v.arac_sahibi, COALESCE(e.ad_soyad, CAST(ta.driver_id AS TEXT), ''), '') AS sahis,
                     COALESCE(rp.movement_type, '') AS hareket,
                     SUM(CASE WHEN COALESCE(sg.has_split,0)=1 THEN (COALESCE(ta.qty,0) / 2.0) ELSE COALESCE(ta.qty,0) END) AS qty_sum,
                     MAX(COALESCE(ta.trip_date, '')) AS last_trip_date,
                     rp.id AS route_params_id,
                     ta.contract_id AS contract_id,
                     COALESCE(ta.service_type,'') AS service_type
-                FROM trip_allocations ta
+                FROM eff ta
                 LEFT JOIN split_groups sg
                   ON sg.contract_id = ta.contract_id
                  AND sg.route_params_id = ta.route_params_id
@@ -3279,7 +3713,10 @@ class DatabaseManager:
                  AND sg.time_block = COALESCE(TRIM(ta.time_block), '')
                 LEFT JOIN route_params rp ON rp.id = ta.route_params_id
                 LEFT JOIN vehicles v ON (v.id = ta.vehicle_id OR v.vehicle_code = CAST(ta.vehicle_id AS TEXT))
-                LEFT JOIN employees e ON e.personel_kodu = CAST(ta.driver_id AS TEXT)
+                LEFT JOIN employees e ON (
+                    TRIM(COALESCE(e.personel_kodu,'')) = TRIM(CAST(ta.driver_id AS TEXT))
+                    OR LTRIM(TRIM(COALESCE(e.personel_kodu,'')), '0') = LTRIM(TRIM(CAST(ta.driver_id AS TEXT)), '0')
+                )
                 LEFT JOIN contracts co ON co.id = ta.contract_id
                 LEFT JOIN customers cu ON cu.id = co.customer_id
                 WHERE ta.trip_date BETWEEN ? AND ?
@@ -3291,7 +3728,7 @@ class DatabaseManager:
                         )
                         OR (
                             v.id IS NULL
-                            AND COALESCE(e.ad_soyad,'') <> ''
+                            AND COALESCE(e.ad_soyad, CAST(ta.driver_id AS TEXT), '') <> ''
                             AND NOT (
                                 REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(e.ad_soyad,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ASIL%'
                                 AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(e.ad_soyad,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TUR%'
@@ -3437,7 +3874,16 @@ class DatabaseManager:
             return []
         try:
             cur = conn.cursor()
-            params: list[object] = [str(start_date), str(end_date), str(start_date), str(end_date)]
+            params: list[object] = [
+                str(start_date),
+                str(end_date),
+                str(start_date),
+                str(end_date),
+                str(start_date),
+                str(end_date),
+                str(start_date),
+                str(end_date),
+            ]
             customer_filter_sql = ""
             if customer_id is not None:
                 customer_filter_sql = " AND cu.id = ? "
@@ -3445,7 +3891,62 @@ class DatabaseManager:
 
             cur.execute(
                 f"""
-                WITH split_groups AS (
+                WITH eff AS (
+                    SELECT
+                        te.contract_id,
+                        te.route_params_id,
+                        te.trip_date,
+                        te.service_type,
+                        COALESCE(TRIM(te.time_block), '') AS time_block,
+                        COALESCE(te.line_no, 0) AS line_no,
+                        COALESCE(ta.vehicle_id, tp.vehicle_id) AS vehicle_id,
+                        COALESCE(ta.driver_id, tp.driver_id) AS driver_id,
+                        COALESCE(ta.qty, te.qty, 0) AS qty,
+                        COALESCE(ta.time_text, te.time_text, '') AS time_text,
+                        COALESCE(ta.note, '') AS note
+                    FROM trip_entries te
+                    LEFT JOIN trip_plan tp
+                      ON tp.contract_id = te.contract_id
+                     AND tp.route_params_id = te.route_params_id
+                     AND tp.service_type = te.service_type
+                     AND COALESCE(TRIM(tp.time_block), '') = COALESCE(TRIM(te.time_block), '')
+                     AND COALESCE(TRIM(tp.month), '') = SUBSTR(COALESCE(te.trip_date,''), 1, 7)
+                    LEFT JOIN trip_allocations ta
+                      ON ta.contract_id = te.contract_id
+                     AND ta.route_params_id = te.route_params_id
+                     AND ta.trip_date = te.trip_date
+                     AND ta.service_type = te.service_type
+                     AND COALESCE(TRIM(ta.time_block), '') = COALESCE(TRIM(te.time_block), '')
+                     AND COALESCE(ta.line_no, 0) = COALESCE(te.line_no, 0)
+                    WHERE te.trip_date BETWEEN ? AND ?
+
+                    UNION ALL
+
+                    SELECT
+                        ta.contract_id,
+                        ta.route_params_id,
+                        ta.trip_date,
+                        ta.service_type,
+                        COALESCE(TRIM(ta.time_block), '') AS time_block,
+                        COALESCE(ta.line_no, 0) AS line_no,
+                        ta.vehicle_id,
+                        ta.driver_id,
+                        COALESCE(ta.qty, 0) AS qty,
+                        COALESCE(ta.time_text, '') AS time_text,
+                        COALESCE(ta.note, '') AS note
+                    FROM trip_allocations ta
+                    LEFT JOIN trip_entries te
+                      ON te.contract_id = ta.contract_id
+                     AND te.route_params_id = ta.route_params_id
+                     AND te.trip_date = ta.trip_date
+                     AND te.service_type = ta.service_type
+                     AND COALESCE(TRIM(te.time_block), '') = COALESCE(TRIM(ta.time_block), '')
+                     AND COALESCE(te.line_no, 0) = COALESCE(ta.line_no, 0)
+                    WHERE te.contract_id IS NULL
+                      AND ta.trip_date BETWEEN ? AND ?
+                ),
+
+                split_groups AS (
                     SELECT
                         contract_id,
                         route_params_id,
@@ -3453,7 +3954,7 @@ class DatabaseManager:
                         service_type,
                         COALESCE(TRIM(time_block), '') AS time_block,
                         1 AS has_split
-                    FROM trip_entries
+                    FROM eff
                     WHERE trip_date BETWEEN ? AND ?
                     GROUP BY contract_id, route_params_id, trip_date, service_type, COALESCE(TRIM(time_block), '')
                     HAVING MAX(COALESCE(line_no,0)) > 0
@@ -3461,7 +3962,7 @@ class DatabaseManager:
                 SELECT
                     COALESCE(cu.title, '') AS firma,
                     (COALESCE(rp.route_name, '') || CASE WHEN COALESCE(rp.stops,'') <> '' THEN (' | ' || COALESCE(rp.stops,'')) ELSE '' END) AS guzergah,
-                    COALESCE(v.arac_sahibi, COALESCE(e.ad_soyad,''), '') AS sahis,
+                    COALESCE(v.arac_sahibi, COALESCE(e.ad_soyad, CAST(ta.driver_id AS TEXT), ''), '') AS sahis,
                     COALESCE(v.plate_number, '') AS plaka,
                     COALESCE(rp.movement_type, '') AS hareket,
                     SUM(CASE WHEN COALESCE(sg.has_split,0)=1 THEN (COALESCE(ta.qty,0) / 2.0) ELSE COALESCE(ta.qty,0) END) AS qty_sum,
@@ -3469,7 +3970,7 @@ class DatabaseManager:
                     rp.id AS route_params_id,
                     ta.contract_id AS contract_id,
                     COALESCE(ta.service_type,'') AS service_type
-                FROM trip_allocations ta
+                FROM eff ta
                 LEFT JOIN split_groups sg
                   ON sg.contract_id = ta.contract_id
                  AND sg.route_params_id = ta.route_params_id
@@ -3478,7 +3979,10 @@ class DatabaseManager:
                  AND sg.time_block = COALESCE(TRIM(ta.time_block), '')
                 LEFT JOIN route_params rp ON rp.id = ta.route_params_id
                 LEFT JOIN vehicles v ON (v.id = ta.vehicle_id OR v.vehicle_code = CAST(ta.vehicle_id AS TEXT))
-                LEFT JOIN employees e ON e.personel_kodu = CAST(ta.driver_id AS TEXT)
+                LEFT JOIN employees e ON (
+                    TRIM(COALESCE(e.personel_kodu,'')) = TRIM(CAST(ta.driver_id AS TEXT))
+                    OR LTRIM(TRIM(COALESCE(e.personel_kodu,'')), '0') = LTRIM(TRIM(CAST(ta.driver_id AS TEXT)), '0')
+                )
                 LEFT JOIN contracts co ON co.id = ta.contract_id
                 LEFT JOIN customers cu ON cu.id = co.customer_id
                 WHERE ta.trip_date BETWEEN ? AND ?
@@ -3490,7 +3994,7 @@ class DatabaseManager:
                         )
                         OR (
                             v.id IS NULL
-                            AND COALESCE(e.ad_soyad,'') <> ''
+                            AND COALESCE(e.ad_soyad, CAST(ta.driver_id AS TEXT), '') <> ''
                             AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(e.ad_soyad,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%ASIL%'
                             AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(COALESCE(e.ad_soyad,'')),'Ş','S'),'İ','I'),'Ğ','G'),'Ü','U'),'Ö','O'),'Ç','C') LIKE '%TUR%'
                         )
@@ -3500,7 +4004,7 @@ class DatabaseManager:
                 GROUP BY
                     COALESCE(cu.title, ''),
                     (COALESCE(rp.route_name, '') || CASE WHEN COALESCE(rp.stops,'') <> '' THEN (' | ' || COALESCE(rp.stops,'')) ELSE '' END),
-                    COALESCE(v.arac_sahibi, COALESCE(e.ad_soyad,''), ''),
+                    COALESCE(v.arac_sahibi, COALESCE(e.ad_soyad, CAST(ta.driver_id AS TEXT), ''), ''),
                     COALESCE(v.plate_number, ''),
                     COALESCE(rp.movement_type, ''),
                     rp.id,

@@ -23,10 +23,7 @@
     </rect>
    </property>
    <property name="frameShape">
-    <enum>QFrame::Shape::NoFrame</enum>
-   </property>
-   <property name="frameShadow">
-    <enum>QFrame::Shadow::Plain</enum>
+    <enum>QFrame::NoFrame</enum>
    </property>
    <widget class="QLabel" name="label">
     <property name="geometry">
@@ -152,10 +149,7 @@
     </rect>
    </property>
    <property name="frameShape">
-    <enum>QFrame::Shape::NoFrame</enum>
-   </property>
-   <property name="frameShadow">
-    <enum>QFrame::Shadow::Plain</enum>
+    <enum>QFrame::NoFrame</enum>
    </property>
    <widget class="QComboBox" name="cmb_customer">
     <property name="geometry">
@@ -230,10 +224,7 @@
     </rect>
    </property>
    <property name="frameShape">
-    <enum>QFrame::Shape::NoFrame</enum>
-   </property>
-   <property name="frameShadow">
-    <enum>QFrame::Shadow::Plain</enum>
+    <enum>QFrame::NoFrame</enum>
    </property>
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="1">
@@ -474,9 +465,6 @@
           <widget class="QLabel" name="lbl_arac_sahibi">
            <property name="text">
             <string>YÜKLENİCİ SEÇ :</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
            </property>
           </widget>
          </item>

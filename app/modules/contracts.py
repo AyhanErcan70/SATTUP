@@ -1059,12 +1059,26 @@ class ContractsApp(QWidget):
         h.setSectionResizeMode(6, QHeaderView.ResizeMode.Stretch)
 
         def _movement_to_category(mv: str) -> str:
-            s = str(mv or "").strip().lower()
+            s = str(mv or "").strip()
+            # Turkish-safe lowercase for correct detection of 'ÇİFT', 'GİRİŞ', etc.
+            s = s.replace("I", "ı").replace("İ", "i").lower()
             if "mesai" in s:
                 return "MESAI"
             if "paket" in s or (("sabah" in s) and ("akşam" in s or "aksam" in s)):
                 return "PAKET_SERVIS"
-            if "cift" in s or "çift" in s:
+            # ÇİFT: explicit 'çift' or operational labels like GRŞ/ÇKŞ, GİRİŞ/ÇIKIŞ.
+            if (
+                ("cift" in s)
+                or ("çift" in s)
+                or ("grs" in s)
+                or ("grş" in s)
+                or ("giris" in s)
+                or ("giriş" in s)
+                or ("cikis" in s)
+                or ("çıkış" in s)
+                or ("cks" in s)
+                or ("çkş" in s)
+            ):
                 return "CIFT_SERVIS"
             return "TEK_SERVIS"
 
@@ -1292,14 +1306,23 @@ class ContractsApp(QWidget):
                         fresh_routes = []
                     # Build name->id map for matching
                     name_to_rid: dict[tuple[str, str], int] = {}
+                    valid_rids: set[int] = set()
                     for fr in fresh_routes or []:
                         try:
-                            name_to_rid[(str(fr[1] or "").strip(), str(fr[4] or "").strip())] = int(fr[0])
+                            rid_f = int(fr[0])
+                            valid_rids.add(int(rid_f))
+                            name_to_rid[(str(fr[1] or "").strip(), str(fr[4] or "").strip())] = int(rid_f)
                         except Exception:
                             pass
                     for orig_rid, pc, pr, spr, rname, mv in price_out:
                         # Prefer stable existing rid, else match by (route_name, movement_type)
                         save_rid = orig_rid
+                        try:
+                            if save_rid is not None and int(save_rid) not in valid_rids:
+                                save_rid = None
+                        except Exception:
+                            save_rid = None
+
                         if save_rid is None:
                             try:
                                 save_rid = name_to_rid.get((str(rname or "").strip(), str(mv or "").strip()))

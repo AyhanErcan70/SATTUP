@@ -1,0 +1,2701 @@
+{
+  "db": "c:\\Users\\ayhan\\SATTUP\\database\\asil_system.db",
+  "tables": {
+    "arac_bakim": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "vehicle_code",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "bakim_tarihi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "bakim_km",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "bakim_turu",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "firma_adi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "yapilan_islemler",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "maliyet",
+          "type": "REAL",
+          "notnull": false,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "fis_no",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "sonraki_bakim_tarihi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "muhasebe_durum",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [
+        {
+          "from": "vehicle_code",
+          "to_table": "vehicles",
+          "to_column": "vehicle_code",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION"
+        }
+      ],
+      "indexes": []
+    },
+    "bulk_puantaj_manual_rows": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "contract_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "month",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "service_type",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "sort_order",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "guzergah",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "vehicle_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "driver_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "movement_type",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "time_text",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "unit_price",
+          "type": "REAL",
+          "notnull": false,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "day_qty_json",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "name": "idx_bulk_puantaj_manual_rows_ctx",
+          "unique": false,
+          "origin": "c",
+          "columns": [
+            "contract_id",
+            "month",
+            "service_type"
+          ],
+          "partial": false
+        }
+      ]
+    },
+    "constants": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "group_name",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "value",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "parent_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [
+        {
+          "from": "parent_id",
+          "to_table": "constants",
+          "to_column": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION"
+        }
+      ],
+      "indexes": []
+    },
+    "contract_links": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "main_contract_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "subcontract_contract_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "is_active",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": "1",
+          "pk": false
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [
+        {
+          "from": "subcontract_contract_id",
+          "to_table": "contracts",
+          "to_column": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION"
+        },
+        {
+          "from": "main_contract_id",
+          "to_table": "contracts",
+          "to_column": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_contract_links_sub",
+          "unique": false,
+          "origin": "c",
+          "columns": [
+            "subcontract_contract_id"
+          ],
+          "partial": false
+        },
+        {
+          "name": "idx_contract_links_main",
+          "unique": false,
+          "origin": "c",
+          "columns": [
+            "main_contract_id"
+          ],
+          "partial": false
+        },
+        {
+          "name": "sqlite_autoindex_contract_links_1",
+          "unique": true,
+          "origin": "u",
+          "columns": [
+            "main_contract_id",
+            "subcontract_contract_id"
+          ],
+          "partial": false
+        }
+      ]
+    },
+    "contract_pricing_model_history": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "contract_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "effective_from",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "pricing_model",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "note",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "name": "idx_cpmh_key",
+          "unique": false,
+          "origin": "c",
+          "columns": [
+            "contract_id",
+            "effective_from"
+          ],
+          "partial": false
+        },
+        {
+          "name": "sqlite_autoindex_contract_pricing_model_history_1",
+          "unique": true,
+          "origin": "u",
+          "columns": [
+            "contract_id",
+            "effective_from"
+          ],
+          "partial": false
+        }
+      ]
+    },
+    "contract_special_items": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "contract_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "period",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "service_type",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "title",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "date_from",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "date_to",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "time_text",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "distance_km",
+          "type": "REAL",
+          "notnull": true,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "qty_days",
+          "type": "REAL",
+          "notnull": true,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "unit_price",
+          "type": "REAL",
+          "notnull": true,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "total_amount",
+          "type": "REAL",
+          "notnull": true,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "note",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "name": "idx_csi_key",
+          "unique": false,
+          "origin": "c",
+          "columns": [
+            "contract_id",
+            "period",
+            "service_type"
+          ],
+          "partial": false
+        }
+      ]
+    },
+    "contracts": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "customer_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "contract_number",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "isin_tanimi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "contract_type",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "odeme_usulu",
+          "type": "TEXT",
+          "notnull": false,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "ucret_tipi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "start_date",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "end_date",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "is_active",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": "1",
+          "pk": false
+        },
+        {
+          "name": "uzatma",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "toplam_tutar",
+          "type": "REAL",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "kdv_orani",
+          "type": "REAL",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "price_matrix_json",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "arac_adedi",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "esnek_sefer",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "vardiya",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "mesai",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "ek_ozel",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [
+        {
+          "from": "customer_id",
+          "to_table": "customers",
+          "to_column": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "sqlite_autoindex_contracts_1",
+          "unique": true,
+          "origin": "u",
+          "columns": [
+            "contract_number"
+          ],
+          "partial": false
+        }
+      ]
+    },
+    "customers": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "customer_code",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "title",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "tax_office",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "tax_number",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "address",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "phone",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "email",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "is_active",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": "1",
+          "pk": false
+        },
+        {
+          "name": "musteri_turu",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "kisilik",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "sektor",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "yetkili",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "gorevi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "il",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "ilce",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "adres1",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "adres2",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "bakiye",
+          "type": "REAL",
+          "notnull": false,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "iban",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "vergi_dairesi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "pricing_model",
+          "type": "TEXT",
+          "notnull": false,
+          "default": "'VARDIYALI'",
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "name": "sqlite_autoindex_customers_1",
+          "unique": true,
+          "origin": "u",
+          "columns": [
+            "customer_code"
+          ],
+          "partial": false
+        }
+      ]
+    },
+    "driver_documents": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "personel_kodu",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "ehliyet_sinifi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "ehliyet_tarihi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "src_durumu",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "src_turu",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "src_tarihi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "psikoteknik_durumu",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "psikoteknik_tarihi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "sertifika_durumu",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "sertifika_metni",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "resim_yolu",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [
+        {
+          "from": "personel_kodu",
+          "to_table": "employees",
+          "to_column": "personel_kodu",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "sqlite_autoindex_driver_documents_1",
+          "unique": true,
+          "origin": "u",
+          "columns": [
+            "personel_kodu"
+          ],
+          "partial": false
+        }
+      ]
+    },
+    "employees": {
+      "columns": [
+        {
+          "name": "personel_kodu",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "personel_turu",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "tckn",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "ad_soyad",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "anne_adi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "baba_adi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "dogum_yeri",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "dogum_tarihi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "gsm",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "email",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "gorevi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "kan_grubu",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "il",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "ilce",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "adres1",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "adres2",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "banka_adi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "iban",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "notlar1",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "notlar2",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "is_active",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": "1",
+          "pk": false
+        },
+        {
+          "name": "photo_path",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "name": "sqlite_autoindex_employees_1",
+          "unique": true,
+          "origin": "pk",
+          "columns": [
+            "personel_kodu"
+          ],
+          "partial": false
+        }
+      ]
+    },
+    "hakedis": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "contract_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "period",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "service_type",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "route_params_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "status",
+          "type": "TEXT",
+          "notnull": false,
+          "default": "'TASLAK'",
+          "pk": false
+        },
+        {
+          "name": "total_amount",
+          "type": "REAL",
+          "notnull": false,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "deduction_amount",
+          "type": "REAL",
+          "notnull": false,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "net_amount",
+          "type": "REAL",
+          "notnull": false,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "notes",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "approved_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "invoiced_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "name": "idx_hakedis_key",
+          "unique": false,
+          "origin": "c",
+          "columns": [
+            "contract_id",
+            "period",
+            "service_type",
+            "route_params_id"
+          ],
+          "partial": false
+        },
+        {
+          "name": "sqlite_autoindex_hakedis_1",
+          "unique": true,
+          "origin": "u",
+          "columns": [
+            "contract_id",
+            "period",
+            "service_type",
+            "route_params_id"
+          ],
+          "partial": false
+        }
+      ]
+    },
+    "hakedis_deductions": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "hakedis_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "deduction_type",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "amount",
+          "type": "REAL",
+          "notnull": false,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "description",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "name": "idx_hakedis_deductions_parent",
+          "unique": false,
+          "origin": "c",
+          "columns": [
+            "hakedis_id"
+          ],
+          "partial": false
+        }
+      ]
+    },
+    "hakedis_docs": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "hakedis_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "doc_type",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "file_name",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "file_path",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "uploaded_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "note",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "description",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "name": "idx_hakedis_docs_hakedis",
+          "unique": false,
+          "origin": "c",
+          "columns": [
+            "hakedis_id"
+          ],
+          "partial": false
+        },
+        {
+          "name": "idx_hakedis_docs_parent",
+          "unique": false,
+          "origin": "c",
+          "columns": [
+            "hakedis_id"
+          ],
+          "partial": false
+        }
+      ]
+    },
+    "hakedis_items": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "hakedis_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "item_date",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "route_params_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "vehicle_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "driver_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "work_type",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "quantity",
+          "type": "REAL",
+          "notnull": false,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "unit_price",
+          "type": "REAL",
+          "notnull": false,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "amount",
+          "type": "REAL",
+          "notnull": false,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "description",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "source_trip_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "name": "idx_hakedis_items_parent",
+          "unique": false,
+          "origin": "c",
+          "columns": [
+            "hakedis_id"
+          ],
+          "partial": false
+        }
+      ]
+    },
+    "period_close": {
+      "columns": [
+        {
+          "name": "month",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "closed",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "closed_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "closed_by_user_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "note",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "name": "sqlite_autoindex_period_close_1",
+          "unique": true,
+          "origin": "pk",
+          "columns": [
+            "month"
+          ],
+          "partial": false
+        }
+      ]
+    },
+    "route_params": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "contract_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "contract_number",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "start_date",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "end_date",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "service_type",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "route_name",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "start_point",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "stops",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "distance_km",
+          "type": "REAL",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "movement_type",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "vehicle_capacity",
+          "type": "REAL",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [
+        {
+          "from": "contract_id",
+          "to_table": "contracts",
+          "to_column": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION"
+        }
+      ],
+      "indexes": []
+    },
+    "trip_allocations": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "contract_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "route_params_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "trip_date",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "service_type",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "time_block",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "line_no",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "driver_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "vehicle_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "qty",
+          "type": "REAL",
+          "notnull": true,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "time_text",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "note",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "name": "idx_trip_allocations_key2",
+          "unique": false,
+          "origin": "c",
+          "columns": [
+            "contract_id",
+            "route_params_id",
+            "trip_date",
+            "service_type",
+            "time_block",
+            "line_no"
+          ],
+          "partial": false
+        },
+        {
+          "name": "idx_trip_allocations_key",
+          "unique": false,
+          "origin": "c",
+          "columns": [
+            "contract_id",
+            "trip_date",
+            "service_type",
+            "time_block"
+          ],
+          "partial": false
+        },
+        {
+          "name": "idx_trip_allocations_contract_date",
+          "unique": false,
+          "origin": "c",
+          "columns": [
+            "contract_id",
+            "trip_date"
+          ],
+          "partial": false
+        },
+        {
+          "name": "sqlite_autoindex_trip_allocations_1",
+          "unique": true,
+          "origin": "u",
+          "columns": [
+            "contract_id",
+            "route_params_id",
+            "trip_date",
+            "service_type",
+            "time_block",
+            "line_no"
+          ],
+          "partial": false
+        }
+      ]
+    },
+    "trip_entries": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "contract_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "route_params_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "trip_date",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "service_type",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "time_block",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "line_no",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "qty",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "time_text",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "note",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "name": "idx_trip_entries_contract_date",
+          "unique": false,
+          "origin": "c",
+          "columns": [
+            "contract_id",
+            "trip_date"
+          ],
+          "partial": false
+        },
+        {
+          "name": "sqlite_autoindex_trip_entries_1",
+          "unique": true,
+          "origin": "u",
+          "columns": [
+            "contract_id",
+            "route_params_id",
+            "trip_date",
+            "service_type",
+            "time_block",
+            "line_no"
+          ],
+          "partial": false
+        }
+      ]
+    },
+    "trip_period_lock": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "contract_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "month",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "service_type",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "locked",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "locked_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "locked_by_user_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "unlocked_by_user_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "unlocked_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "unlock_reason",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "name": "sqlite_autoindex_trip_period_lock_1",
+          "unique": true,
+          "origin": "u",
+          "columns": [
+            "contract_id",
+            "month",
+            "service_type"
+          ],
+          "partial": false
+        }
+      ]
+    },
+    "trip_plan": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "contract_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "route_params_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "month",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "service_type",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "time_block",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "vehicle_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "driver_id",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "note",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "name": "sqlite_autoindex_trip_plan_1",
+          "unique": true,
+          "origin": "u",
+          "columns": [
+            "contract_id",
+            "route_params_id",
+            "month",
+            "service_type",
+            "time_block"
+          ],
+          "partial": false
+        }
+      ]
+    },
+    "trip_prices": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "contract_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "route_params_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "month",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "service_type",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "time_block",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "price",
+          "type": "REAL",
+          "notnull": true,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "pricing_category",
+          "type": "TEXT",
+          "notnull": false,
+          "default": "''",
+          "pk": false
+        },
+        {
+          "name": "effective_from",
+          "type": "TEXT",
+          "notnull": false,
+          "default": "''",
+          "pk": false
+        },
+        {
+          "name": "subcontractor_price",
+          "type": "REAL",
+          "notnull": true,
+          "default": "0",
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "name": "idx_trip_prices_effective",
+          "unique": false,
+          "origin": "c",
+          "columns": [
+            "contract_id",
+            "service_type",
+            "route_params_id",
+            "pricing_category",
+            "effective_from"
+          ],
+          "partial": false
+        },
+        {
+          "name": "idx_trip_prices_key",
+          "unique": false,
+          "origin": "c",
+          "columns": [
+            "contract_id",
+            "month",
+            "service_type"
+          ],
+          "partial": false
+        },
+        {
+          "name": "sqlite_autoindex_trip_prices_1",
+          "unique": true,
+          "origin": "u",
+          "columns": [
+            "contract_id",
+            "route_params_id",
+            "month",
+            "service_type",
+            "time_block"
+          ],
+          "partial": false
+        }
+      ]
+    },
+    "trip_time_blocks": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "contract_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "month",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "service_type",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "custom1",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "custom2",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "name": "sqlite_autoindex_trip_time_blocks_1",
+          "unique": true,
+          "origin": "u",
+          "columns": [
+            "contract_id",
+            "month",
+            "service_type"
+          ],
+          "partial": false
+        }
+      ]
+    },
+    "trips": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "contract_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "vehicle_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "user_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "trip_date",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "route_info",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "status",
+          "type": "TEXT",
+          "notnull": false,
+          "default": "'Planned'",
+          "pk": false
+        }
+      ],
+      "foreign_keys": [
+        {
+          "from": "user_id",
+          "to_table": "users",
+          "to_column": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION"
+        },
+        {
+          "from": "vehicle_id",
+          "to_table": "vehicles",
+          "to_column": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION"
+        },
+        {
+          "from": "contract_id",
+          "to_table": "contracts",
+          "to_column": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION"
+        }
+      ],
+      "indexes": []
+    },
+    "users": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "username",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "password",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "full_name",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "role",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "is_active",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": "1",
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "name": "sqlite_autoindex_users_1",
+          "unique": true,
+          "origin": "u",
+          "columns": [
+            "username"
+          ],
+          "partial": false
+        }
+      ]
+    },
+    "vehicles": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": true
+        },
+        {
+          "name": "plate_number",
+          "type": "TEXT",
+          "notnull": true,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "brand",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "model",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "capacity",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "fuel_type",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "daily_cost",
+          "type": "REAL",
+          "notnull": false,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "is_active",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": "1",
+          "pk": false
+        },
+        {
+          "name": "vehicle_code",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "arac_turu",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "hizmet_turu",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "kategori",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "yil",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "muayene_tarihi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "sigorta_tarihi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "koltuk_tarihi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "kasko_tarihi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "calisma_ruhsati_tarihi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "guzergah_izin_tarihi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "arac_takip",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "arac_cam",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": "0",
+          "pk": false
+        },
+        {
+          "name": "arac_sahibi",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "photo_path",
+          "type": "TEXT",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        },
+        {
+          "name": "supplier_customer_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default": null,
+          "pk": false
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "name": "idx_vehicles_vehicle_code",
+          "unique": true,
+          "origin": "c",
+          "columns": [
+            "vehicle_code"
+          ],
+          "partial": false
+        },
+        {
+          "name": "sqlite_autoindex_vehicles_1",
+          "unique": true,
+          "origin": "u",
+          "columns": [
+            "plate_number"
+          ],
+          "partial": false
+        }
+      ]
+    }
+  }
+}
