@@ -32,10 +32,7 @@
    <item row="0" column="0">
     <widget class="QFrame" name="middle_n_frame">
      <property name="frameShape">
-      <enum>QFrame::Shape::NoFrame</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Shadow::Plain</enum>
+      <enum>QFrame::NoFrame</enum>
      </property>
      <layout class="QGridLayout" name="gridLayout">
       <item row="0" column="0">
@@ -64,7 +61,7 @@
            <string>MÜŞTERİ / CARİ SEÇİNİZ..</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignCenter</set>
+           <set>Qt::AlignCenter</set>
           </property>
          </widget>
         </item>
@@ -88,11 +85,6 @@
             <height>28</height>
            </size>
           </property>
-          <item>
-           <property name="text">
-            <string>zzz</string>
-           </property>
-          </item>
          </widget>
         </item>
         <item>
@@ -119,7 +111,7 @@
            <string>İŞ ANLAŞMASI / SÖZLEŞME SEÇİNİZ..</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignCenter</set>
+           <set>Qt::AlignCenter</set>
           </property>
          </widget>
         </item>
@@ -144,10 +136,7 @@
            </size>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Shape::Box</enum>
-          </property>
-          <property name="frameShadow">
-           <enum>QFrame::Shadow::Plain</enum>
+           <enum>QFrame::NoFrame</enum>
           </property>
          </widget>
         </item>
@@ -175,7 +164,7 @@
            <string>İŞ KALEMİ (HAT) + HAREKET TÜRÜ SEÇİNİZ..</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignCenter</set>
+           <set>Qt::AlignCenter</set>
           </property>
          </widget>
         </item>
@@ -203,10 +192,7 @@
            <string notr="true">background-color: rgb(208, 208, 208);</string>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Shape::Box</enum>
-          </property>
-          <property name="frameShadow">
-           <enum>QFrame::Shadow::Plain</enum>
+           <enum>QFrame::NoFrame</enum>
           </property>
           <property name="alternatingRowColors">
            <bool>true</bool>
@@ -227,22 +213,19 @@
    <item row="0" column="1">
     <widget class="QFrame" name="top_frame">
      <property name="frameShape">
-      <enum>QFrame::Shape::NoFrame</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Shadow::Plain</enum>
+      <enum>QFrame::NoFrame</enum>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
       <item row="0" column="0">
        <widget class="QTableWidget" name="table_rotalar">
         <property name="focusPolicy">
-         <enum>Qt::FocusPolicy::NoFocus</enum>
+         <enum>Qt::NoFocus</enum>
         </property>
         <property name="selectionMode">
-         <enum>QAbstractItemView::SelectionMode::NoSelection</enum>
+         <enum>QAbstractItemView::NoSelection</enum>
         </property>
         <property name="selectionBehavior">
-         <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+         <enum>QAbstractItemView::SelectItems</enum>
         </property>
         <attribute name="horizontalHeaderDefaultSectionSize">
          <number>150</number>
@@ -250,10 +233,10 @@
         <attribute name="horizontalHeaderStretchLastSection">
          <bool>false</bool>
         </attribute>
-        <attribute name="verticalHeaderMinimumSectionSize">
+        <attribute name="verticalHeaderDefaultSectionSize">
          <number>20</number>
         </attribute>
-        <attribute name="verticalHeaderDefaultSectionSize">
+        <attribute name="verticalHeaderMinimumSectionSize">
          <number>20</number>
         </attribute>
         <column>
@@ -281,10 +264,7 @@
       <item row="1" column="0">
        <widget class="QFrame" name="bottom_frame">
         <property name="frameShape">
-         <enum>QFrame::Shape::NoFrame</enum>
-        </property>
-        <property name="frameShadow">
-         <enum>QFrame::Shadow::Plain</enum>
+         <enum>QFrame::NoFrame</enum>
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout">
          <item>

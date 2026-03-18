@@ -72,3 +72,20 @@ git config --global user.email "you@example.com"
 - Main modules open
 - Data is present as expected
 - `git status` is clean (except intentional changes)
+
+## 9) Period validation (Puantaj -> Hakediş)
+To run an end-to-end consistency check for a period (e.g. January):
+
+```powershell
+.\.venv\Scripts\python.exe .\tools\validate_period_flow.py --month 2026-01
+```
+
+Optional:
+
+```powershell
+# Use a specific DB file
+.\.venv\Scripts\python.exe .\tools\validate_period_flow.py --month 2026-01 --db .\database\asil_system_TEST_ALYAN_2026_01.db
+
+# Also run a deep check for a specific contract_id
+.\.venv\Scripts\python.exe .\tools\validate_period_flow.py --month 2026-01 --contract-id 1
+```

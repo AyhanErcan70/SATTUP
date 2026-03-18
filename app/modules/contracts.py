@@ -1217,12 +1217,26 @@ class ContractsApp(QWidget):
 
         def add_row():
             r = tbl.rowCount()
-            tbl.insertRow(r)
+            try:
+                sel_rows = sorted({it.row() for it in tbl.selectedItems()})
+                if sel_rows:
+                    r = int(sel_rows[-1] + 1)
+            except Exception:
+                r = tbl.rowCount()
+            if r < 0:
+                r = 0
+            if r > tbl.rowCount():
+                r = tbl.rowCount()
+            tbl.insertRow(int(r))
             for c in range(tbl.columnCount()):
                 it = QTableWidgetItem("")
                 if c in (2, 3, 4, 5):
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-                tbl.setItem(r, c, it)
+                tbl.setItem(int(r), c, it)
+            try:
+                tbl.setCurrentCell(int(r), 0)
+            except Exception:
+                pass
 
         def del_row():
             selected = sorted({it.row() for it in tbl.selectedItems()}, reverse=True)
@@ -1260,6 +1274,7 @@ class ContractsApp(QWidget):
                         "movement_type": str(hareket or "").strip(),
                         "distance_km": self._parse_money(km_txt),
                         "vehicle_capacity": self._parse_money(kps_txt),
+                        "sort_order": int(r),
                     }
                 )
                 # Collect price info for saving

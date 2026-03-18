@@ -51,6 +51,18 @@ class RoutesApp(QWidget):
         self._setup_connections()
         self._load_customers()
 
+    def _kalem_status_prefix(self, has_stops: bool) -> str:
+        try:
+            return "✓ " if bool(has_stops) else "□ "
+        except Exception:
+            return ""
+
+    def _kalem_display_text(self, route_name: str, movement_type: str, has_stops: bool) -> str:
+        rn = str(route_name or "").strip()
+        mt = str(movement_type or "").strip()
+        base = f"{rn} - {mt}" if mt else rn
+        return f"{self._kalem_status_prefix(bool(has_stops))}{base}" if base else base
+
     def _split_legacy_route_name(self, route_name: str, movement_type: str) -> tuple[str, str]:
         rn = str(route_name or "").strip()
         mt = str(movement_type or "").strip()
@@ -84,6 +96,7 @@ class RoutesApp(QWidget):
                     start_point TEXT,
                     stops TEXT,
                     distance_km REAL,
+                    sort_order INTEGER,
                     created_at TEXT,
                     FOREIGN KEY (contract_id) REFERENCES contracts (id)
                 )
@@ -96,6 +109,8 @@ class RoutesApp(QWidget):
                 cols = {row[1] for row in cursor.fetchall()}
                 if "movement_type" not in cols:
                     cursor.execute("ALTER TABLE route_params ADD COLUMN movement_type TEXT")
+                if "sort_order" not in cols:
+                    cursor.execute("ALTER TABLE route_params ADD COLUMN sort_order INTEGER")
             except Exception:
                 pass
             conn.commit()
@@ -358,6 +373,8 @@ class RoutesApp(QWidget):
         except Exception:
             rows = []
 
+        first_match_rid = None
+        first_match_stops = ""
         for r_id, r_stops, r_mt, r_rn in rows:
             mt_db_raw = str(r_mt or "").strip()
             rn_db_raw = str(r_rn or "").strip()
@@ -368,10 +385,57 @@ class RoutesApp(QWidget):
                 continue
             if mt_in and mt_db != mt_in:
                 continue
-            rid = int(r_id)
-            stops = str(r_stops or "")
-            break
+            # Prefer a row that already has stops filled.
+            if first_match_rid is None:
+                try:
+                    first_match_rid = int(r_id)
+                except Exception:
+                    first_match_rid = None
+                first_match_stops = str(r_stops or "")
+            s0 = str(r_stops or "")
+            if str(s0).strip():
+                rid = int(r_id)
+                stops = s0
+                break
+
+        if rid is None and first_match_rid is not None:
+            rid = int(first_match_rid)
+            stops = str(first_match_stops or "")
         return rid, stops
+
+    def _set_kalem_item_status(self, route_name: str, movement_type: str, has_stops: bool):
+        try:
+            rn = str(route_name or "").strip()
+            mt = str(movement_type or "").strip()
+        except Exception:
+            rn, mt = "", ""
+        if not rn:
+            return
+        try:
+            color = QColor(0, 128, 0) if bool(has_stops) else QColor(200, 0, 0)
+        except Exception:
+            return
+
+        try:
+            for rr in range(self._kalem_model.rowCount()):
+                it = self._kalem_model.item(rr)
+                if it is None:
+                    continue
+                raw = it.data(Qt.ItemDataRole.UserRole) or ""
+                try:
+                    obj = json.loads(raw) if raw else {}
+                except Exception:
+                    obj = {}
+                rn0 = str((obj or {}).get("route_name") or "").strip()
+                mt0 = str((obj or {}).get("movement_type") or "").strip()
+                if rn0 == rn and mt0 == mt:
+                    it.setForeground(color)
+                    try:
+                        it.setText(self._kalem_display_text(rn0, mt0, bool(has_stops)))
+                    except Exception:
+                        pass
+        except Exception:
+            return
 
     def _load_kalemler_from_contract(self):
         """Seçili sözleşmedeki aday güzergahları list_kalemler'e yükler."""
@@ -413,34 +477,44 @@ class RoutesApp(QWidget):
                     hareket = _extract_movement_type(e or {})
                     km = (e or {}).get("km")
                     if guz:
-                        kalem_list.append({"route_name": guz, "movement_type": hareket, "km": km})
                         if hareket:
                             k = guz.strip().lower()
                             inferred_mt_by_route.setdefault(k, set()).add(hareket.strip())
         except Exception:
-            kalem_list = []
+            inferred_mt_by_route = {}
 
-        if not kalem_list:
+        # Listeyi her zaman route_params üzerinden yükle ki sonradan eklenen satırlar en altta kalsın
+        try:
+            conn = self.db.connect()
+            cursor = conn.cursor()
             try:
-                conn = self.db.connect()
-                cursor = conn.cursor()
                 cursor.execute(
                     """
-                    SELECT COALESCE(route_name,''), COALESCE(movement_type,'')
+                    SELECT id, COALESCE(route_name,''), COALESCE(movement_type,''), distance_km
+                    FROM route_params
+                    WHERE contract_id = ?
+                    ORDER BY COALESCE(sort_order, id) ASC, id ASC
+                    """,
+                    (contract_id,),
+                )
+            except Exception:
+                cursor.execute(
+                    """
+                    SELECT id, COALESCE(route_name,''), COALESCE(movement_type,''), distance_km
                     FROM route_params
                     WHERE contract_id = ?
                     ORDER BY id ASC
                     """,
                     (contract_id,),
                 )
-                rows = cursor.fetchall()
-                conn.close()
-                for rname, mtype in rows:
-                    rn = str(rname or "").strip()
-                    if rn:
-                        kalem_list.append({"route_name": rn, "movement_type": str(mtype or "").strip(), "km": None})
-            except Exception:
-                kalem_list = []
+            rows = cursor.fetchall()
+            conn.close()
+            for _rid, rname, mtype, km in rows:
+                rn = str(rname or "").strip()
+                if rn:
+                    kalem_list.append({"route_name": rn, "movement_type": str(mtype or "").strip(), "km": km})
+        except Exception:
+            kalem_list = []
 
         # Legacy düzeltme: route_params.movement_type boş ise ve sözleşme fiyat matrisinde
         # bu hat için tek bir hareket türü net şekilde varsa otomatik doldur.
@@ -448,15 +522,26 @@ class RoutesApp(QWidget):
             try:
                 conn = self.db.connect()
                 cursor = conn.cursor()
-                cursor.execute(
-                    """
-                    SELECT id, COALESCE(route_name,''), COALESCE(movement_type,'')
-                    FROM route_params
-                    WHERE contract_id = ?
-                    ORDER BY id ASC
-                    """,
-                    (contract_id,),
-                )
+                try:
+                    cursor.execute(
+                        """
+                        SELECT id, COALESCE(route_name,''), COALESCE(movement_type,'')
+                        FROM route_params
+                        WHERE contract_id = ?
+                        ORDER BY COALESCE(sort_order, id) ASC, id ASC
+                        """,
+                        (contract_id,),
+                    )
+                except Exception:
+                    cursor.execute(
+                        """
+                        SELECT id, COALESCE(route_name,''), COALESCE(movement_type,'')
+                        FROM route_params
+                        WHERE contract_id = ?
+                        ORDER BY id ASC
+                        """,
+                        (contract_id,),
+                    )
                 rp_rows = cursor.fetchall() or []
                 updated = False
                 for rid, rname, mtype in rp_rows:
@@ -486,41 +571,32 @@ class RoutesApp(QWidget):
                 except Exception:
                     pass
 
-        # (hat + hareket_türü) bazlı tekilleştirme (sıralama korunur)
-        uniq = []
-        seen = set()
-        for k in kalem_list:
-            rn = str((k or {}).get("route_name") or "").strip()
-            mt = str((k or {}).get("movement_type") or "").strip()
-            key = (rn.lower(), mt.lower())
-            if not rn or key in seen:
-                continue
-            seen.add(key)
-            uniq.append({"route_name": rn, "movement_type": mt, "km": (k or {}).get("km")})
-        kalem_list = uniq
-
         def _norm_name(s: str) -> str:
             s2 = str(s or "").strip().casefold()
             s2 = re.sub(r"\s+", " ", s2)
             s2 = re.sub(r"[^0-9a-zA-ZğüşöçıİĞÜŞÖÇ]", "", s2)
             return s2
 
+        # existing_keys should represent kalemler that already have stops saved.
         existing_keys = set()
         try:
             conn = self.db.connect()
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT COALESCE(route_name,''), COALESCE(movement_type,'')
+                SELECT COALESCE(route_name,''), COALESCE(movement_type,''), COALESCE(stops,'')
                 FROM route_params
                 WHERE contract_id = ?
                 """,
                 (contract_id,),
             )
-            for rname, mtype in cursor.fetchall() or []:
+            for rname, mtype, stops in cursor.fetchall() or []:
                 rn0 = str(rname or "").strip()
                 mt0 = str(mtype or "").strip()
+                st0 = str(stops or "").strip()
                 if not rn0:
+                    continue
+                if not st0:
                     continue
                 # Legacy: route_name içine " - " ile hareket türü gömülmüş olabilir
                 if not mt0 and " - " in rn0:
@@ -541,12 +617,16 @@ class RoutesApp(QWidget):
         for k in kalem_list:
             rn = str((k or {}).get("route_name") or "").strip()
             mt = str((k or {}).get("movement_type") or "").strip()
-            disp = f"{rn} - {mt}" if mt else rn
-            it = QStandardItem(disp)
+            has_stops = False
+            try:
+                has_stops = (_norm_name(rn), _norm_name(mt)) in existing_keys
+            except Exception:
+                has_stops = False
+            it = QStandardItem(self._kalem_display_text(rn, mt, bool(has_stops)))
             it.setEditable(False)
 
             try:
-                if (_norm_name(rn), _norm_name(mt)) in existing_keys:
+                if bool(has_stops):
                     it.setForeground(QColor(0, 128, 0))
                 else:
                     it.setForeground(QColor(200, 0, 0))
@@ -622,6 +702,7 @@ class RoutesApp(QWidget):
         )
         if db_stops:
             existing_stops = db_stops
+        has_saved_stops = bool(str(existing_stops or "").strip())
 
         if existing_rid is not None:
             for r in range(tbl.rowCount()):
@@ -636,7 +717,7 @@ class RoutesApp(QWidget):
 
         if btn_save is not None:
             try:
-                btn_save.setText("GÜNCELLE" if existing_row is not None else "KAYDET")
+                btn_save.setText("GÜNCELLE" if has_saved_stops else "KAYDET")
             except Exception:
                 pass
 
@@ -694,6 +775,11 @@ class RoutesApp(QWidget):
                 cell = QTableWidgetItem("")
                 tbl.setItem(r, 2, cell)
             cell.setText(stops)
+            # Update kalem status color immediately for UX.
+            try:
+                self._set_kalem_item_status(str(route_name or "").strip(), str(movement_type or "").strip(), bool(str(stops or "").strip()))
+            except Exception:
+                pass
             dlg.accept()
 
         def do_delete():
@@ -701,6 +787,11 @@ class RoutesApp(QWidget):
             if existing_row is not None:
                 tbl.removeRow(existing_row)
                 existing_row = None
+            # Mark kalem as not having saved stops.
+            try:
+                self._set_kalem_item_status(str(route_name or "").strip(), str(movement_type or "").strip(), False)
+            except Exception:
+                pass
             dlg.accept()
 
         if btn_save is not None:
@@ -736,15 +827,26 @@ class RoutesApp(QWidget):
         try:
             conn = self.db.connect()
             cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT id, COALESCE(service_type,''), COALESCE(route_name,''), COALESCE(movement_type,''), COALESCE(stops,''), distance_km
-                FROM route_params
-                WHERE contract_id = ?
-                ORDER BY id ASC
-                """,
-                (int(self._selected_contract_id),),
-            )
+            try:
+                cursor.execute(
+                    """
+                    SELECT id, COALESCE(service_type,''), COALESCE(route_name,''), COALESCE(movement_type,''), COALESCE(stops,''), distance_km
+                    FROM route_params
+                    WHERE contract_id = ?
+                    ORDER BY COALESCE(sort_order, id) ASC, id ASC
+                    """,
+                    (int(self._selected_contract_id),),
+                )
+            except Exception:
+                cursor.execute(
+                    """
+                    SELECT id, COALESCE(service_type,''), COALESCE(route_name,''), COALESCE(movement_type,''), COALESCE(stops,''), distance_km
+                    FROM route_params
+                    WHERE contract_id = ?
+                    ORDER BY id ASC
+                    """,
+                    (int(self._selected_contract_id),),
+                )
             rows = cursor.fetchall()
             conn.close()
         except Exception:
@@ -928,10 +1030,10 @@ class RoutesApp(QWidget):
                     cursor.execute(
                         """
                         UPDATE route_params
-                        SET service_type = ?, route_name = ?, movement_type = ?, stops = ?, distance_km = ?
+                        SET service_type = ?, route_name = ?, movement_type = ?, stops = ?, distance_km = ?, sort_order = ?
                         WHERE id = ?
                         """,
-                        (stype, rname, (mtype or "").strip(), stops, km_val, int(rid)),
+                        (stype, rname, (mtype or "").strip(), stops, km_val, int(r), int(rid)),
                     )
                 else:
                     cursor.execute(
@@ -945,10 +1047,10 @@ class RoutesApp(QWidget):
                         INSERT INTO route_params (
                             contract_id, contract_number, start_date, end_date,
                             service_type, route_name, movement_type, start_point, stops, distance_km,
-                            created_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            sort_order, created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                        (contract_id, cno, sdate, edate, stype, rname, (mtype or "").strip(), "", stops, km_val, now),
+                        (contract_id, cno, sdate, edate, stype, rname, (mtype or "").strip(), "", stops, km_val, int(r), now),
                     )
                     new_id = cursor.lastrowid
                     if it0 is not None and new_id:

@@ -35,6 +35,8 @@ class TripsGridApp(QWidget):
         self.db = db_manager if db_manager else DatabaseManager()
 
         self._selected_contract_id = None
+        self._auto_service_type_for_contract = {}
+        self._auto_service_type_current = None
         self._selected_route_map = {}
         self._vehicle_map = {}
         self._driver_map = {}
@@ -62,6 +64,18 @@ class TripsGridApp(QWidget):
             QTimer.singleShot(0, self._reload_grid)
         except Exception:
             pass
+
+    def _kalem_status_prefix(self, is_planned: bool) -> str:
+        try:
+            return "✓ " if bool(is_planned) else "□ "
+        except Exception:
+            return ""
+
+    def _kalem_display_text(self, base_text: str, is_planned: bool) -> str:
+        t = str(base_text or "").strip()
+        if not t:
+            return t
+        return f"{self._kalem_status_prefix(bool(is_planned))}{t}"
 
     def _service_type_values(self, service_type: str):
         raw = (service_type or "").strip()
@@ -183,6 +197,66 @@ class TripsGridApp(QWidget):
         for rid, tb, vid, did, note in rows:
             plan[(str(rid), str(tb or ""))] = {"vehicle_id": vid, "driver_id": did, "note": note}
         return plan
+
+    def _detect_service_type_for_contract(self, contract_id: int):
+        self._ensure_route_params_table()
+        try:
+            cid = int(contract_id)
+        except Exception:
+            return None
+        if cid <= 0:
+            return None
+
+        cached = self._auto_service_type_for_contract.get(cid)
+        if cached not in (None, ""):
+            return cached
+
+        vals = []
+        conn = None
+        try:
+            conn = self.db.connect()
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT DISTINCT COALESCE(service_type,'')
+                FROM route_params
+                WHERE contract_id=? AND COALESCE(route_name,'') <> ''
+                ORDER BY COALESCE(service_type,'')
+                """,
+                (cid,),
+            )
+            vals = [str(r[0] or "").strip() for r in (cur.fetchall() or [])]
+        except Exception:
+            vals = []
+        finally:
+            try:
+                if conn is not None:
+                    conn.close()
+            except Exception:
+                pass
+
+        vals = [x for x in vals if x]
+        if not vals:
+            self._auto_service_type_for_contract[cid] = None
+            return None
+
+        if len(vals) == 1:
+            self._auto_service_type_for_contract[cid] = vals[0]
+            return vals[0]
+
+        chosen, ok = QInputDialog.getItem(
+            self,
+            "Hizmet Tipi",
+            "Bu sözleşmede birden fazla hizmet tipi var. Seçiniz:",
+            vals,
+            0,
+            False,
+        )
+        sel = str(chosen or "").strip() if ok else ""
+        if not sel:
+            sel = vals[0]
+        self._auto_service_type_for_contract[cid] = sel
+        return sel
 
     def _parse_time(self, s: str):
         m = re.match(r"^(\d{1,2}):(\d{2})$", (s or "").strip())
@@ -474,6 +548,8 @@ class TripsGridApp(QWidget):
                 cols = {row[1] for row in cursor.fetchall()}
                 if "movement_type" not in cols:
                     cursor.execute("ALTER TABLE route_params ADD COLUMN movement_type TEXT")
+                if "sort_order" not in cols:
+                    cursor.execute("ALTER TABLE route_params ADD COLUMN sort_order INTEGER")
             except Exception:
                 pass
             conn.commit()
@@ -513,6 +589,10 @@ class TripsGridApp(QWidget):
 
     def _on_customer_changed(self):
         self._selected_contract_id = None
+        try:
+            self._auto_service_type_current = None
+        except Exception:
+            pass
         if hasattr(self, "cmb_sozlesme"):
             self.cmb_sozlesme.blockSignals(True)
             self.cmb_sozlesme.clear()
@@ -543,6 +623,12 @@ class TripsGridApp(QWidget):
 
     def _on_contract_changed(self):
         self._selected_contract_id = self._resolve_contract_id()
+        try:
+            self._auto_service_type_current = None
+            if not hasattr(self, "cmb_service_type") and self._selected_contract_id not in (None, ""):
+                self._auto_service_type_current = self._detect_service_type_for_contract(int(self._selected_contract_id))
+        except Exception:
+            self._auto_service_type_current = None
         self._reload_grid()
 
     def _fmt_date_tr(self, iso_date: str) -> str:
@@ -566,6 +652,14 @@ class TripsGridApp(QWidget):
 
     def _service_type(self):
         if not hasattr(self, "cmb_service_type"):
+            if self._auto_service_type_current not in (None, ""):
+                return self._auto_service_type_current
+            if self._selected_contract_id not in (None, ""):
+                try:
+                    self._auto_service_type_current = self._detect_service_type_for_contract(int(self._selected_contract_id))
+                    return self._auto_service_type_current
+                except Exception:
+                    return None
             return None
         v = self.cmb_service_type.currentData()
         if v is None:
@@ -592,10 +686,10 @@ class TripsGridApp(QWidget):
             conn = self.db.connect()
             cursor = conn.cursor()
             q = (
-                "SELECT id, COALESCE(route_name,''), COALESCE(stops,''), COALESCE(movement_type,''), distance_km "
+                "SELECT id, COALESCE(route_name,''), COALESCE(stops,''), COALESCE(movement_type,''), distance_km, sort_order "
                 "FROM route_params "
                 f"WHERE contract_id = ? AND service_type IN ({placeholders}) AND COALESCE(route_name,'') <> '' "
-                "ORDER BY id ASC"
+                "ORDER BY COALESCE(sort_order, id) ASC, id ASC"
             )
             cursor.execute(q, tuple([int(contract_id)] + st_values))
             rows = cursor.fetchall()
@@ -614,13 +708,14 @@ class TripsGridApp(QWidget):
                     f"Hata: {str(e)}",
                 )
 
-        for rid, rname, stops_txt, movement_type, km in rows:
+        for rid, rname, stops_txt, movement_type, km, sort_order in rows:
             rid_s = str(rid)
             self._selected_route_map[rid_s] = {
                 "route_name": (rname or ""),
                 "stops": (stops_txt or ""),
                 "movement_type": (movement_type or ""),
                 "distance_km": km,
+                "sort_order": sort_order,
             }
             parts = [p for p in [str(rname or ""), str(stops_txt or ""), str(movement_type or "")] if str(p).strip()]
             disp = " | ".join(parts)
@@ -947,7 +1042,10 @@ class TripsGridApp(QWidget):
                     del_rows = []
                     for r in range(self.tbl_grid.rowCount()):
                         it_rota = self.tbl_grid.item(r, c_rota)
-                        rid2 = it_rota.data(Qt.ItemDataRole.UserRole + 1) if it_rota else None
+                        if it_rota is None:
+                            continue
+
+                        rid2 = it_rota.data(Qt.ItemDataRole.UserRole + 1)
                         if str(rid2 or "") == str(route_id):
                             del_rows.append(r)
                     for r in sorted(del_rows, reverse=True):
@@ -1304,6 +1402,14 @@ class TripsGridApp(QWidget):
         service_type = self._service_type()
         month = self._month_key()
 
+        try:
+            self.tbl_grid.clearSpans()
+        except Exception:
+            pass
+        try:
+            self.tbl_grid.clearContents()
+        except Exception:
+            pass
         self.tbl_grid.setRowCount(0)
         self._selected_route_map = {}
         self._kalem_model.clear()
@@ -1347,7 +1453,8 @@ class TripsGridApp(QWidget):
             rota_disp = " | ".join(rota_parts)
             try:
                 if it is not None and rota_disp:
-                    it.setText(rota_disp)
+                    is_planned = bool(rid_s and rid_s in planned_rids)
+                    it.setText(self._kalem_display_text(rota_disp, is_planned))
             except Exception:
                 pass
             try:
@@ -1362,13 +1469,21 @@ class TripsGridApp(QWidget):
             self._group_tbl_grid_by_rota()
             return
 
-        for (rid, tb), rec in plan_map.items():
-            route_rec = self._selected_route_map.get(str(rid), {})
+        rows_to_add = []
+        for (rid, tb), rec in (plan_map or {}).items():
+            rid_s0 = str(rid)
+            route_rec = self._selected_route_map.get(rid_s0, {})
             rname = str(route_rec.get("route_name") or "")
             stops_txt = str(route_rec.get("stops") or "")
             mtype = str(route_rec.get("movement_type") or "")
             rota_parts = [p for p in [rname, stops_txt, mtype] if str(p).strip()]
             rota_disp = " | ".join(rota_parts)
+
+            try:
+                so = route_rec.get("sort_order")
+                sort_order = int(so) if so not in (None, "") else 10**9
+            except Exception:
+                sort_order = 10**9
 
             tb_s = str(tb or "")
             g_txt, c_txt = self._split_time_block(str(tb_s))
@@ -1379,10 +1494,10 @@ class TripsGridApp(QWidget):
             cap = self._vehicle_capacity_map.get(str(vid or ""), 0)
             dname = self._driver_map.get(str(did or ""), "")
 
-            rows_to_add = []
             rows_to_add.append(
                 {
-                    "rid": str(rid),
+                    "sort_order": sort_order,
+                    "rid": rid_s0,
                     "tb_s": tb_s,
                     "g_txt": g_txt,
                     "c_txt": c_txt,
@@ -1395,42 +1510,48 @@ class TripsGridApp(QWidget):
                 }
             )
 
-            rows_to_add.sort(key=lambda x: (str(x.get("rota_disp") or ""), str(x.get("tb_s") or "")))
+        rows_to_add.sort(
+            key=lambda x: (
+                int(x.get("sort_order") if x.get("sort_order") is not None else 10**9),
+                str(x.get("rota_disp") or ""),
+                str(x.get("tb_s") or ""),
+            )
+        )
 
-            for rec in rows_to_add:
-                rr = self.tbl_grid.rowCount()
-                self.tbl_grid.insertRow(rr)
+        for rec in rows_to_add:
+            rr = self.tbl_grid.rowCount()
+            self.tbl_grid.insertRow(rr)
 
-                it_g = QTableWidgetItem(str(rec.get("g_txt") or ""))
-                it_c = QTableWidgetItem(str(rec.get("c_txt") or ""))
-                it_v = QTableWidgetItem(str(rec.get("plate") or ""))
-                it_k = QTableWidgetItem(str(rec.get("cap") if rec.get("cap") is not None else ""))
-                it_d = QTableWidgetItem(str(rec.get("dname") or ""))
-                it_rota = QTableWidgetItem(str(rec.get("rota_disp") or ""))
-                items = [it_rota, it_g, it_c, it_v, it_d]
-                if self._tbl_grid_cols.get("kpst") is not None:
-                    items = [it_rota, it_g, it_c, it_v, it_k, it_d]
-                for it in items:
-                    it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            it_g = QTableWidgetItem(str(rec.get("g_txt") or ""))
+            it_c = QTableWidgetItem(str(rec.get("c_txt") or ""))
+            it_v = QTableWidgetItem(str(rec.get("plate") or ""))
+            it_k = QTableWidgetItem(str(rec.get("cap") if rec.get("cap") is not None else ""))
+            it_d = QTableWidgetItem(str(rec.get("dname") or ""))
+            it_rota = QTableWidgetItem(str(rec.get("rota_disp") or ""))
+            items = [it_rota, it_g, it_c, it_v, it_d]
+            if self._tbl_grid_cols.get("kpst") is not None:
+                items = [it_rota, it_g, it_c, it_v, it_k, it_d]
+            for it in items:
+                it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
 
-                # Data-roles: route_id / time_block / vehicle_id / driver_id
-                rid_s = str(rec.get("rid") or "")
-                tb_s = str(rec.get("tb_s") or "")
-                vid = rec.get("vid")
-                did = rec.get("did")
-                for it in items:
-                    it.setData(Qt.ItemDataRole.UserRole + 1, rid_s)
-                    it.setData(Qt.ItemDataRole.UserRole + 2, tb_s)
-                    it.setData(Qt.ItemDataRole.UserRole + 3, (None if vid is None else str(vid)))
-                    it.setData(Qt.ItemDataRole.UserRole + 4, (None if did is None else str(did)))
+            # Data-roles: route_id / time_block / vehicle_id / driver_id
+            rid_s = str(rec.get("rid") or "")
+            tb_s = str(rec.get("tb_s") or "")
+            vid = rec.get("vid")
+            did = rec.get("did")
+            for it in items:
+                it.setData(Qt.ItemDataRole.UserRole + 1, rid_s)
+                it.setData(Qt.ItemDataRole.UserRole + 2, tb_s)
+                it.setData(Qt.ItemDataRole.UserRole + 3, (None if vid is None else str(vid)))
+                it.setData(Qt.ItemDataRole.UserRole + 4, (None if did is None else str(did)))
 
-                self.tbl_grid.setItem(rr, int(self._tbl_grid_cols.get("rota", 0)), it_rota)
-                self.tbl_grid.setItem(rr, int(self._tbl_grid_cols.get("giris", 1)), it_g)
-                self.tbl_grid.setItem(rr, int(self._tbl_grid_cols.get("cikis", 2)), it_c)
-                self.tbl_grid.setItem(rr, int(self._tbl_grid_cols.get("plaka", 3)), it_v)
-                if self._tbl_grid_cols.get("kpst") is not None:
-                    self.tbl_grid.setItem(rr, int(self._tbl_grid_cols.get("kpst")), it_k)
-                self.tbl_grid.setItem(rr, int(self._tbl_grid_cols.get("sofor", 4)), it_d)
+            self.tbl_grid.setItem(rr, int(self._tbl_grid_cols.get("rota", 0)), it_rota)
+            self.tbl_grid.setItem(rr, int(self._tbl_grid_cols.get("giris", 1)), it_g)
+            self.tbl_grid.setItem(rr, int(self._tbl_grid_cols.get("cikis", 2)), it_c)
+            self.tbl_grid.setItem(rr, int(self._tbl_grid_cols.get("plaka", 3)), it_v)
+            if self._tbl_grid_cols.get("kpst") is not None:
+                self.tbl_grid.setItem(rr, int(self._tbl_grid_cols.get("kpst")), it_k)
+            self.tbl_grid.setItem(rr, int(self._tbl_grid_cols.get("sofor", 4)), it_d)
 
         self._group_tbl_grid_by_rota()
 

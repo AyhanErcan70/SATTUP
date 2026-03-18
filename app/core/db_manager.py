@@ -4878,6 +4878,7 @@ class DatabaseManager:
                     stops TEXT,
                     distance_km REAL,
                     vehicle_capacity REAL,
+                    sort_order INTEGER,
                     created_at TEXT,
                     FOREIGN KEY (contract_id) REFERENCES contracts (id)
                 )
@@ -4891,6 +4892,8 @@ class DatabaseManager:
                     cursor.execute("ALTER TABLE route_params ADD COLUMN movement_type TEXT")
                 if "vehicle_capacity" not in cols:
                     cursor.execute("ALTER TABLE route_params ADD COLUMN vehicle_capacity REAL")
+                if "sort_order" not in cols:
+                    cursor.execute("ALTER TABLE route_params ADD COLUMN sort_order INTEGER")
             except Exception:
                 pass
             conn.commit()
@@ -4929,6 +4932,11 @@ class DatabaseManager:
                 route_name = str((r or {}).get("route_name") or "").strip()
                 movement_type = str((r or {}).get("movement_type") or "").strip()
                 try:
+                    sort_order = (r or {}).get("sort_order")
+                    sort_order = None if sort_order is None or str(sort_order).strip() == "" else int(sort_order)
+                except Exception:
+                    sort_order = None
+                try:
                     distance_km = float((r or {}).get("distance_km") or 0)
                 except Exception:
                     distance_km = 0.0
@@ -4952,7 +4960,7 @@ class DatabaseManager:
                         """
                         UPDATE route_params
                         SET contract_number=?, start_date=?, end_date=?,
-                            route_name=?, movement_type=?, stops=?, distance_km=?, vehicle_capacity=?
+                            route_name=?, movement_type=?, stops=?, distance_km=?, vehicle_capacity=?, sort_order=?
                         WHERE id=? AND contract_id=? AND service_type=?
                         """,
                         (
@@ -4964,6 +4972,7 @@ class DatabaseManager:
                             "",
                             float(distance_km or 0.0),
                             vehicle_capacity,
+                            sort_order,
                             int(rid_int),
                             ctx_contract_id,
                             ctx_service_type,
@@ -4975,8 +4984,8 @@ class DatabaseManager:
                         """
                         INSERT INTO route_params (
                             contract_id, contract_number, start_date, end_date, service_type,
-                            route_name, movement_type, stops, distance_km, vehicle_capacity, created_at
-                        ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                            route_name, movement_type, stops, distance_km, vehicle_capacity, sort_order, created_at
+                        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
                         """,
                         (
                             ctx_contract_id,
@@ -4989,6 +4998,7 @@ class DatabaseManager:
                             "",
                             float(distance_km or 0.0),
                             vehicle_capacity,
+                            sort_order,
                             now,
                         ),
                     )
@@ -5043,7 +5053,7 @@ class DatabaseManager:
                            COALESCE(vehicle_capacity,0)
                     FROM route_params
                     WHERE contract_id = ? AND service_type = ?
-                    ORDER BY id ASC
+                    ORDER BY COALESCE(sort_order, id) ASC, id ASC
                     """,
                     (int(contract_id), (service_type or "").strip()),
                 )

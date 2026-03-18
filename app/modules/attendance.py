@@ -2125,6 +2125,12 @@ class BulkAttendanceDialog(QDialog):
                     continue
 
                 if rid2 > 0 and tb2:
+                    try:
+                        gs2 = int(self._split_group_size(int(rr)) or 1)
+                    except Exception:
+                        gs2 = 1
+                    if int(gs2 or 1) <= 0:
+                        gs2 = 1
                     for day in range(1, int(self.days_in_month) + 1):
                         cc = int(self._day_start) + (int(day) - 1)
                         itx = self.table.item(int(rr), int(cc))
@@ -2139,14 +2145,20 @@ class BulkAttendanceDialog(QDialog):
                         # planned service (plan_time_block). Use plan_time_block to de-duplicate so
                         # day quantities are not double-counted in TOPLAMLAR.
                         kq_tb = str(ptb2 or tb2)
+                        try:
+                            if self._norm_tr_text(mv_key) == self._norm_tr_text("TEK") and (not self._is_planned_time_label(str(kq_tb))):
+                                kq_tb = ""
+                        except Exception:
+                            pass
                         kq = (int(rid2), str(kq_tb), str(trip_date))
                         if kq in seen_qty_keys:
                             continue
                         seen_qty_keys.add(kq)
-                        qty_sum += float(v)
+                        v_eff = float(v) / float(gs2)
+                        qty_sum += float(v_eff)
                         if mv_key:
-                            movement_qty[mv_key] = float(movement_qty.get(mv_key, 0.0)) + float(v)
-                            grand_movement_qty[mv_key] = float(grand_movement_qty.get(mv_key, 0.0)) + float(v)
+                            movement_qty[mv_key] = float(movement_qty.get(mv_key, 0.0)) + float(v_eff)
+                            grand_movement_qty[mv_key] = float(grand_movement_qty.get(mv_key, 0.0)) + float(v_eff)
 
                         # Price should follow the same de-dup logic as quantity for split rows.
                         # Otherwise split lines cause double counting in TOPLAMLAR total amount.
@@ -2155,13 +2167,49 @@ class BulkAttendanceDialog(QDialog):
                             unit_price = float(self._parse_tr_float((p_it.text() if p_it is not None else "") or "0"))
                         except Exception:
                             unit_price = 0.0
-                        price_sum += float(v) * float(unit_price)
+                        price_sum += float(v_eff) * float(unit_price)
 
                 rr += 1
 
             if rr > start:
                 grand_qty += float(qty_sum or 0.0)
                 grand_price += float(price_sum or 0.0)
+
+                try:
+                    import os as _os
+
+                    if str(_os.environ.get("SATTUP_DEBUG_TOPLAMLAR") or "").strip() == "1":
+                        lines: list[str] = []
+                        for rrr in range(int(start), int(rr)):
+                            mdbg = self._row_meta[int(rrr)] if int(rrr) < len(self._row_meta) else None
+                            if bool((mdbg or {}).get("is_summary")):
+                                continue
+                            try:
+                                rid_dbg = int((mdbg or {}).get("route_params_id") or 0)
+                            except Exception:
+                                rid_dbg = 0
+                            tb_dbg = str((mdbg or {}).get("time_block") or "").strip()
+                            ptb_dbg = str((mdbg or {}).get("plan_time_block") or "").strip()
+                            try:
+                                ln_dbg = int((mdbg or {}).get("line_no") or 0)
+                            except Exception:
+                                ln_dbg = 0
+                            try:
+                                q_dbg = int(self._row_day_qty_sum(int(rrr)))
+                            except Exception:
+                                q_dbg = 0
+                            mv_dbg = _cell_txt(int(rrr), int(self._col_movement))
+                            tt_dbg = _cell_txt(int(rrr), int(self._col_time_text))
+                            lines.append(
+                                f"row={int(rrr)} rid={rid_dbg} tb='{tb_dbg}' plan_tb='{ptb_dbg}' ln={ln_dbg} day_sum={q_dbg} mv='{mv_dbg}' time_text='{tt_dbg}'"
+                            )
+                        QMessageBox.information(
+                            self,
+                            "TOPLAMLAR Debug",
+                            f"Araç='{vehicle}' Şoför='{driver}'\nqty_sum={qty_sum} price_sum={price_sum}\n\n" + "\n".join(lines),
+                        )
+                except Exception:
+                    pass
 
                 # Insert intermediate TOPLAMLAR rows when this (vehicle,driver) block contains
                 # TEK and/or ÇİFT movement types.
@@ -3856,7 +3904,15 @@ class BulkAttendanceDialog(QDialog):
 
             plan_tb = (str(plan_time_block).strip() if plan_time_block is not None else "")
             if not plan_tb:
-                plan_tb = str(time_block or "").strip()
+                tb_raw = str(time_block or "").strip().upper()
+                try:
+                    m_gc = re.match(r"^([GC])(\d)$", tb_raw)
+                except Exception:
+                    m_gc = None
+                if m_gc:
+                    plan_tb = f"G{m_gc.group(2)}"
+                else:
+                    plan_tb = str(time_block or "").strip()
 
             try:
                 self.table.setRowHeight(row, 25)
