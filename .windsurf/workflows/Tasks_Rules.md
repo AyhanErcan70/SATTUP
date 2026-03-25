@@ -1,7 +1,3 @@
----
-description: Proje bağlamı, hedefler, modüller ve mevcut aşama notları
----
-
 # 🚌 S.A.T.T.U.P – Sakarya Asil Tur Taşımacılık Uygulaması Projesi
 
 **S.A.T.T.U.P** (Sakarya Asil Tur Taşımacılık Uygulaması Projesi),  
@@ -17,6 +13,7 @@ tek bir arayüz üzerinden kolayca yönetilmesini hedefler.
 ---
 
 ## 🎯 GitHub deposu
+
 https://github.com/AyhanErcan70/SATTUP
 default branch: main
 Visibility repository: Public

@@ -5,6 +5,7 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QDialog, QWidget, QMessageBox, QTableWidgetItem, QHeaderView
 from app.core.db_manager import DatabaseManager
 from config import get_ui_path
+import os
 import json
 from datetime import datetime
 
@@ -406,7 +407,9 @@ class ContractsApp(QWidget):
         self._tarife_setup_price_table()
 
         def _movement_to_category(mv: str) -> str:
-            s = str(mv or "").strip().lower()
+            s = str(mv or "").strip()
+            # Turkish-safe lowercase for correct detection (İ/I casing can break substring checks)
+            s = s.replace("I", "ı").replace("İ", "i").lower()
             if "mesai" in s:
                 return "MESAI"
             if "paket" in s or (("sabah" in s) and ("akşam" in s or "aksam" in s)):
@@ -1008,10 +1011,10 @@ class ContractsApp(QWidget):
         except Exception:
             eff = None
         period = (str(ctx_period).strip() if ctx_period is not None else "")
-        if period and "-" in period:
-            eff_period = f"{period[:7]}-01"
-            if not eff or str(eff)[:7] != str(period)[:7]:
-                eff = eff_period
+        # effective_from should follow the Tarife tab date selector. Only fall back to period/start_date
+        # when no explicit effective_from is available.
+        if (not eff) and period and "-" in period:
+            eff = f"{period[:7]}-01"
         if not eff:
             eff = (str(start_date or "").strip()[:10] if start_date else "")
         eff = str(eff or "").strip()
@@ -1248,7 +1251,7 @@ class ContractsApp(QWidget):
 
         def save_rows():
             out = []
-            price_out = []  # (rid, pricing_category, price, sub_price, route_name, movement_type)
+            price_out = []  # (rid, sort_order, pricing_category, price, sub_price, route_name, movement_type)
             entered_by_name: dict[tuple[str, str], tuple[float, float]] = {}
             for r in range(tbl.rowCount()):
                 it_hat = tbl.item(r, 0)
@@ -1284,7 +1287,7 @@ class ContractsApp(QWidget):
                 if hat and pc_cur:
                     entered_by_name[(str(hat).strip(), str(pc_cur).strip().upper())] = (float(pr_val or 0.0), float(spr_val or 0.0))
                 if (pr_val > 0 or spr_val > 0) and hareket:
-                    price_out.append((rid, pc_cur, pr_val, spr_val, str(hat or "").strip(), str(hareket or "").strip()))
+                    price_out.append((rid, int(r), pc_cur, pr_val, spr_val, str(hat or "").strip(), str(hareket or "").strip()))
 
             if not contract_id:
                 QMessageBox.warning(self, "Uyarı", "Sözleşme bulunamadı. Lütfen sözleşmeyi kaydedip tekrar deneyiniz.")
@@ -1313,34 +1316,51 @@ class ContractsApp(QWidget):
                         self.db.delete_trip_tariff_prices_for_effective_from(int(contract_id), str(service_type).strip(), str(eff))
                     except Exception:
                         pass
-                    # Re-read route_params to get fresh IDs after replace
-                    fresh_routes = []
-                    try:
-                        fresh_routes = self.db.get_route_params_for_contract(int(contract_id), str(service_type))
-                    except Exception:
-                        fresh_routes = []
-                    # Build name->id map for matching
-                    name_to_rid: dict[tuple[str, str], int] = {}
+                    # Re-read route_params to get fresh IDs after replace (match by sort_order)
                     valid_rids: set[int] = set()
-                    for fr in fresh_routes or []:
+                    rid_by_sort_order: dict[int, int] = {}
+                    try:
+                        conn2 = self.db.connect()
+                        cur2 = conn2.cursor()
+                        cur2.execute(
+                            """
+                            SELECT id, COALESCE(sort_order, -1)
+                            FROM route_params
+                            WHERE contract_id = ? AND service_type = ?
+                            ORDER BY COALESCE(sort_order, id) ASC, id ASC
+                            """,
+                            (int(contract_id), str(service_type).strip()),
+                        )
+                        for rid_f, so in cur2.fetchall() or []:
+                            try:
+                                rid_i = int(rid_f)
+                                valid_rids.add(rid_i)
+                                so_i = int(so) if so is not None else -1
+                                if so_i >= 0:
+                                    rid_by_sort_order[so_i] = rid_i
+                            except Exception:
+                                continue
                         try:
-                            rid_f = int(fr[0])
-                            valid_rids.add(int(rid_f))
-                            name_to_rid[(str(fr[1] or "").strip(), str(fr[4] or "").strip())] = int(rid_f)
+                            conn2.close()
                         except Exception:
                             pass
-                    for orig_rid, pc, pr, spr, rname, mv in price_out:
-                        # Prefer stable existing rid, else match by (route_name, movement_type)
+                    except Exception:
+                        try:
+                            conn2.close()
+                        except Exception:
+                            pass
+
+                    for orig_rid, sort_order, pc, pr, spr, rname, mv in price_out:
+                        # Prefer stable existing rid, else match by sort_order (row index)
                         save_rid = orig_rid
                         try:
                             if save_rid is not None and int(save_rid) not in valid_rids:
                                 save_rid = None
                         except Exception:
                             save_rid = None
-
                         if save_rid is None:
                             try:
-                                save_rid = name_to_rid.get((str(rname or "").strip(), str(mv or "").strip()))
+                                save_rid = rid_by_sort_order.get(int(sort_order))
                             except Exception:
                                 save_rid = None
                         if save_rid is None:
