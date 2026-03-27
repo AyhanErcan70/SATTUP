@@ -32,6 +32,10 @@ class ContractsApp(QWidget):
         self._init_combos()
         self._init_price_table()
         self._init_tarife_tab()
+        try:
+            self._apply_role_gates()
+        except Exception:
+            pass
         self._setup_connections()
         self._assign_next_number()
         self.load_table()
@@ -39,6 +43,21 @@ class ContractsApp(QWidget):
         if hasattr(self, "tab_contracts"):
             try:
                 self.tab_contracts.setCurrentIndex(0)
+            except Exception:
+                pass
+
+    def _is_admin(self) -> bool:
+        try:
+            return str((self.user_data or {}).get("role") or "").strip().lower() == "admin"
+        except Exception:
+            return False
+
+    def _apply_role_gates(self):
+        # Hard delete operations are admin-only
+        is_admin = self._is_admin()
+        if hasattr(self, "btn_sil"):
+            try:
+                self.btn_sil.setEnabled(bool(is_admin))
             except Exception:
                 pass
 
@@ -1410,6 +1429,9 @@ class ContractsApp(QWidget):
         dlg.exec()
 
     def _delete_selected(self):
+        if not self._is_admin():
+            QMessageBox.warning(self, "Yetki Yok", "Bu işlemi yapmak için admin yetkisi gereklidir.")
+            return
         tbl = self._get_contracts_table()
         if tbl is None:
             return

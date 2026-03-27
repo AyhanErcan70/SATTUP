@@ -7,6 +7,8 @@ from PyQt6.QtCore import QDate
 from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import QMainWindow, QScrollArea, QSizePolicy, QGraphicsOpacityEffect, QLabel, QGraphicsColorizeEffect, QFrame, QMessageBox, QComboBox, QPushButton, QGraphicsBlurEffect
 from PyQt6.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout
+from PyQt6.QtWidgets import QInputDialog
+from PyQt6.QtWidgets import QProgressDialog
 from PyQt6.QtGui import QPixmap, QIcon, QColor, QFontMetrics
 from PyQt6.QtCore import QSize
 from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, QSequentialAnimationGroup, QEvent, QPoint, QRect, QParallelAnimationGroup, QUrl, QVariantAnimation
@@ -260,6 +262,11 @@ class MainMenuApp(QMainWindow):
         # Menü sistemini ateşle
         self.setup_menu()
 
+        try:
+            self._setup_admin_menu()
+        except Exception:
+            pass
+
         self._setup_sidebar_toggle()
         self._apply_menu_icons()
         self._ensure_active_indicator()
@@ -304,6 +311,12 @@ class MainMenuApp(QMainWindow):
             pass
 
     def _restore_active_month_from_settings(self) -> None:
+        # Test bypass: allow choosing past periods regardless of persisted selection.
+        try:
+            if str(os.environ.get("SATTUP_TEST_ALLOW_PAST_PERIOD") or "").strip() == "1":
+                return
+        except Exception:
+            pass
         # Eğer user_data zaten dolu geldiyse ona dokunma.
         if self._get_active_month():
             return
@@ -326,6 +339,24 @@ class MainMenuApp(QMainWindow):
             return False
 
     def _ensure_active_month_selected(self) -> bool:
+        # Test bypass: allow choosing any period (including closed) and ignore persisted selection.
+        allow_past = False
+        try:
+            allow_past = str(os.environ.get("SATTUP_TEST_ALLOW_PAST_PERIOD") or "").strip() == "1"
+        except Exception:
+            allow_past = False
+
+        if allow_past:
+            try:
+                self._settings().setValue("active_month", "")
+            except Exception:
+                pass
+            try:
+                if isinstance(self.user_data, dict):
+                    self.user_data["active_month"] = ""
+            except Exception:
+                pass
+
         # Kullanıcı bir kere seçtiyse tekrar sorma; ama ay kapatıldıysa yeni ay seçtirme.
         current = self._get_active_month()
         if current and self._active_month_is_closed(current):
@@ -351,7 +382,7 @@ class MainMenuApp(QMainWindow):
             return False
 
         # Seçilen ay kapalı ise tekrar seçtir.
-        if self._active_month_is_closed(selected_month):
+        if (not allow_past) and self._active_month_is_closed(selected_month):
             QMessageBox.warning(self, "Uyarı", f"Seçilen dönem kapalı: {selected_month}\nLütfen açık bir dönem seçiniz.")
             return self._ensure_active_month_selected()
 
@@ -1321,6 +1352,171 @@ class MainMenuApp(QMainWindow):
             self._update_session_toggle_button()
         except Exception:
             pass
+
+        try:
+            self._update_admin_menu_visibility()
+        except Exception:
+            pass
+
+    def _is_admin(self) -> bool:
+        try:
+            return str((self.user_data or {}).get("role") or "").strip().lower() == "admin"
+        except Exception:
+            return False
+
+    def _setup_admin_menu(self):
+        try:
+            bar = getattr(self, "menuBar", None)
+            if bar is None:
+                bar = self.menuBar()
+        except Exception:
+            bar = None
+        if bar is None:
+            return
+
+        try:
+            menu_admin = bar.addMenu("Admin")
+        except Exception:
+            return
+
+        self._menu_admin = menu_admin
+
+        act_reset = QtGui.QAction("Operasyonel Verileri Sıfırla", self)
+        try:
+            act_reset.triggered.connect(self._admin_reset_operational_data)
+        except Exception:
+            pass
+        try:
+            menu_admin.addAction(act_reset)
+        except Exception:
+            pass
+        self._admin_reset_action = act_reset
+
+        self._update_admin_menu_visibility()
+
+    def _update_admin_menu_visibility(self):
+        try:
+            m = getattr(self, "_menu_admin", None)
+            if m is None:
+                return
+            m.menuAction().setVisible(bool(self._session_active) and bool(self._is_admin()))
+        except Exception:
+            return
+
+    def _admin_reset_operational_data(self):
+        if not self._is_admin():
+            QMessageBox.warning(self, "Yetki Yok", "Bu işlemi yapmak için admin yetkisi gereklidir.")
+            return
+
+        msg = QMessageBox.question(
+            self,
+            "Onay",
+            "Operasyonel veriler sıfırlanacak (Sözleşmeler/Rota/Sefer/Puantaj/Hakediş).",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if msg != QMessageBox.StandardButton.Yes:
+            return
+
+        txt, ok = QInputDialog.getText(
+            self,
+            "Son Onay",
+            "Devam etmek için SIFIRLA yazınız:",
+        )
+        if not ok:
+            return
+        if str(txt or "").strip().upper() != "SIFIRLA":
+            QMessageBox.information(self, "Bilgi", "İşlem iptal edildi.")
+            return
+
+        act = getattr(self, "_admin_reset_action", None)
+        try:
+            if act is not None:
+                act.setEnabled(False)
+        except Exception:
+            pass
+
+        dlg = QProgressDialog("Operasyonel veriler sıfırlanıyor...", "", 0, 0, self)
+        dlg.setWindowTitle("Lütfen Bekleyin")
+        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
+        dlg.setCancelButton(None)
+        try:
+            dlg.setMinimumDuration(0)
+        except Exception:
+            pass
+        dlg.show()
+
+        class _Signals(QtCore.QObject):
+            finished = QtCore.pyqtSignal(bool)
+
+        class _ResetWorker(QtCore.QRunnable):
+            def __init__(self):
+                super().__init__()
+                self.signals = _Signals()
+
+            def run(self):
+                ok2 = False
+                try:
+                    from app.core.db_manager import DatabaseManager
+
+                    db = DatabaseManager()
+                    ok2 = bool(db.reset_operational_data())
+                except Exception:
+                    ok2 = False
+                try:
+                    self.signals.finished.emit(bool(ok2))
+                except Exception:
+                    pass
+
+        worker = _ResetWorker()
+
+        def _done(ok2: bool):
+            try:
+                dlg.close()
+            except Exception:
+                pass
+            try:
+                if act is not None:
+                    act.setEnabled(True)
+            except Exception:
+                pass
+
+            db_path = ""
+            try:
+                from app.core.db_manager import DatabaseManager
+
+                db_path = str(DatabaseManager().db_path)
+            except Exception:
+                db_path = ""
+            if ok2:
+                tail = f"\nDB: {db_path}" if db_path else ""
+                QMessageBox.information(self, "Başarılı", f"Operasyonel veriler sıfırlandı.{tail}")
+            else:
+                tail = f"\nDB: {db_path}" if db_path else ""
+                QMessageBox.critical(
+                    self,
+                    "Hata",
+                    f"Operasyonel veriler sıfırlanamadı. Terminal çıktısını kontrol ediniz.{tail}",
+                )
+
+        try:
+            worker.signals.finished.connect(_done)
+        except Exception:
+            pass
+
+        try:
+            QtCore.QThreadPool.globalInstance().start(worker)
+        except Exception:
+            # Fallback to sync if threadpool fails
+            try:
+                ok2 = False
+                from app.core.db_manager import DatabaseManager
+
+                db = DatabaseManager()
+                ok2 = bool(db.reset_operational_data())
+            except Exception:
+                ok2 = False
+            _done(bool(ok2))
 
     def request_login(self):
         try:

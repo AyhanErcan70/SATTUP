@@ -53,17 +53,32 @@ class TripsGridApp(QWidget):
             except Exception:
                 pass
 
+        try:
+            self._apply_role_gates()
+        except Exception:
+            pass
+
         self._tbl_grid_cols = {}
 
         self._setup_tables()
         self._setup_connections()
         self._load_static_filters()
-        self._load_customers()
+        self._reload_grid()
 
+    def _is_admin(self) -> bool:
         try:
-            QTimer.singleShot(0, self._reload_grid)
+            return str((self.user_data or {}).get("role") or "").strip().lower() == "admin"
         except Exception:
-            pass
+            return False
+
+    def _apply_role_gates(self):
+        # Hard delete (DB cleanup) operations are admin-only
+        is_admin = self._is_admin()
+        if hasattr(self, "btn_delete_all"):
+            try:
+                self.btn_delete_all.setEnabled(bool(is_admin))
+            except Exception:
+                pass
 
     def _kalem_status_prefix(self, is_planned: bool) -> str:
         try:
@@ -461,7 +476,11 @@ class TripsGridApp(QWidget):
             return False
 
         route_rec = self._selected_route_map.get(str(route_id), {})
-        route_name_txt = str(route_rec.get("route_name") or "").strip()
+        route_name_txt = str(route_rec.get("route_name") or "")
+        stops_txt = str(route_rec.get("stops") or "")
+        movement_type_txt = str(route_rec.get("movement_type") or "")
+        rota_disp_parts = [p for p in [route_name_txt, stops_txt, movement_type_txt] if str(p).strip()]
+        rota_disp = " | ".join(rota_disp_parts)
 
         msg = QMessageBox(self)
         msg.setWindowTitle("Uyarı")
@@ -1247,6 +1266,10 @@ class TripsGridApp(QWidget):
         if not hasattr(self, "tbl_grid"):
             return
 
+        if not self._is_admin():
+            QMessageBox.warning(self, "Yetki Yok", "Bu işlemi yapmak için admin yetkisi gereklidir.")
+            return
+
         msg = QMessageBox.question(
             self,
             "Onay",
@@ -1258,11 +1281,28 @@ class TripsGridApp(QWidget):
         self.tbl_grid.setRowCount(0)
 
         if self._selected_contract_id and self._service_type():
+            contract_id = int(self._selected_contract_id)
+            month = self._month_key()
+            service_type = str(self._service_type())
+
             self._delete_plan_for_context(
-                contract_id=int(self._selected_contract_id),
-                month=self._month_key(),
-                service_type=str(self._service_type()),
+                contract_id=contract_id,
+                month=month,
+                service_type=service_type,
             )
+
+            msg2 = QMessageBox.question(
+                self,
+                "Onay",
+                "Bu döneme ait puantaj kayıtları da silinsin mi?\n\nNot: Puantaj silinirse geri alınamaz.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if msg2 == QMessageBox.StandardButton.Yes:
+                try:
+                    deleted = int(self.db.delete_trip_puantaj_for_context(contract_id, service_type, month) or 0)
+                    QMessageBox.information(self, "Bilgi", f"Puantaj temizlendi. Silinen satır: {deleted}")
+                except Exception:
+                    pass
 
         self._reload_grid()
 

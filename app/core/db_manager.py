@@ -122,6 +122,558 @@ class DatabaseManager:
         finally:
             conn.close()
 
+    def _clone_table_schema(self, src_conn: sqlite3.Connection, dst_conn: sqlite3.Connection, table: str) -> bool:
+        try:
+            s_cur = src_conn.cursor()
+            s_cur.execute(
+                """
+                SELECT sql
+                FROM sqlite_master
+                WHERE type='table' AND name=?
+                """,
+                (str(table),),
+            )
+            row = s_cur.fetchone()
+            sql = (row or [None])[0]
+            if not sql:
+                return False
+
+            d_cur = dst_conn.cursor()
+            d_cur.execute(str(sql))
+            return True
+        except Exception:
+            return False
+
+    def create_full_backup(self, target_path: str) -> dict:
+        src = self.connect()
+        if not src:
+            return {"ok": False, "path": "", "error": "DB bağlantısı kurulamadı."}
+        try:
+            os.makedirs(os.path.dirname(str(target_path)), exist_ok=True)
+        except Exception:
+            pass
+
+        try:
+            dst = sqlite3.connect(str(target_path))
+        except Exception as e:
+            try:
+                src.close()
+            except Exception:
+                pass
+            return {"ok": False, "path": str(target_path), "error": str(e)}
+
+        try:
+            try:
+                src.backup(dst)
+            except Exception:
+                src.backup(dst, pages=0)
+            try:
+                dst.commit()
+            except Exception:
+                pass
+            return {"ok": True, "path": str(target_path), "error": ""}
+        except Exception as e:
+            return {"ok": False, "path": str(target_path), "error": str(e)}
+        finally:
+            try:
+                dst.close()
+            except Exception:
+                pass
+            try:
+                src.close()
+            except Exception:
+                pass
+
+    def create_monthly_backup(self, month: str, target_dir: str = "") -> dict:
+        m = str(month or "").strip()[:7]
+        if len(m) != 7 or m[4] != "-":
+            return {"ok": False, "path": "", "error": "Geçersiz dönem (YYYY-MM)."}
+
+        if not target_dir:
+            try:
+                target_dir = os.path.join(str(BASE_DIR), "database", "backups", "monthly")
+            except Exception:
+                target_dir = ""
+
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        fname = f"ops_{m}_{ts}.db"
+        out_path = os.path.join(str(target_dir), fname) if target_dir else fname
+
+        src = self.connect()
+        if not src:
+            return {"ok": False, "path": str(out_path), "error": "DB bağlantısı kurulamadı."}
+        try:
+            try:
+                os.makedirs(os.path.dirname(str(out_path)), exist_ok=True)
+            except Exception:
+                pass
+
+            dst = sqlite3.connect(str(out_path))
+        except Exception as e:
+            try:
+                src.close()
+            except Exception:
+                pass
+            return {"ok": False, "path": str(out_path), "error": str(e)}
+
+        try:
+            try:
+                self.create_trip_entries_tables()
+            except Exception:
+                pass
+            try:
+                self.migrate_trip_plan_table()
+            except Exception:
+                pass
+            try:
+                self.migrate_trip_period_lock_table()
+            except Exception:
+                pass
+            try:
+                self._ensure_trip_prices_table()
+            except Exception:
+                pass
+            try:
+                self._ensure_bulk_puantaj_manual_rows_table()
+            except Exception:
+                pass
+            try:
+                self.create_hakedis_tables()
+            except Exception:
+                pass
+
+            try:
+                dcur = dst.cursor()
+                dcur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS backup_meta (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        month TEXT,
+                        created_at TEXT,
+                        source_db_path TEXT
+                    )
+                    """
+                )
+                dcur.execute(
+                    "INSERT INTO backup_meta(month, created_at, source_db_path) VALUES (?, datetime('now'), ?) ",
+                    (str(m), str(self.db_path)),
+                )
+            except Exception:
+                pass
+
+            tables = [
+                "trip_entries",
+                "trip_allocations",
+                "trip_plan",
+                "trip_period_lock",
+                "period_close",
+                "bulk_puantaj_manual_rows",
+                "trip_prices",
+                "hakedis",
+                "hakedis_items",
+                "hakedis_deductions",
+                "hakedis_docs",
+            ]
+
+            existing = set()
+            try:
+                s_cur = src.cursor()
+                s_cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                existing = {str(r[0]) for r in (s_cur.fetchall() or []) if r and r[0]}
+            except Exception:
+                existing = set()
+
+            for t in tables:
+                if t not in existing:
+                    continue
+                self._clone_table_schema(src, dst, str(t))
+
+            s_cur = src.cursor()
+            d_cur = dst.cursor()
+
+            start_date = f"{m}-01"
+            end_date = f"{m}-31"
+
+            if "trip_entries" in existing:
+                s_cur.execute(
+                    """
+                    SELECT * FROM trip_entries
+                    WHERE trip_date BETWEEN ? AND ?
+                    """,
+                    (str(start_date), str(end_date)),
+                )
+                rows = s_cur.fetchall() or []
+                if rows:
+                    cols = [d[0] for d in (s_cur.description or [])]
+                    d_cur.executemany(
+                        f"INSERT INTO trip_entries({','.join(cols)}) VALUES ({','.join(['?']*len(cols))})",
+                        rows,
+                    )
+
+            if "trip_allocations" in existing:
+                s_cur.execute(
+                    """
+                    SELECT * FROM trip_allocations
+                    WHERE trip_date BETWEEN ? AND ?
+                    """,
+                    (str(start_date), str(end_date)),
+                )
+                rows = s_cur.fetchall() or []
+                if rows:
+                    cols = [d[0] for d in (s_cur.description or [])]
+                    d_cur.executemany(
+                        f"INSERT INTO trip_allocations({','.join(cols)}) VALUES ({','.join(['?']*len(cols))})",
+                        rows,
+                    )
+
+            if "trip_plan" in existing:
+                s_cur.execute("SELECT * FROM trip_plan WHERE month = ?", (str(m),))
+                rows = s_cur.fetchall() or []
+                if rows:
+                    cols = [d[0] for d in (s_cur.description or [])]
+                    d_cur.executemany(
+                        f"INSERT INTO trip_plan({','.join(cols)}) VALUES ({','.join(['?']*len(cols))})",
+                        rows,
+                    )
+
+            if "trip_period_lock" in existing:
+                s_cur.execute("SELECT * FROM trip_period_lock WHERE month = ?", (str(m),))
+                rows = s_cur.fetchall() or []
+                if rows:
+                    cols = [d[0] for d in (s_cur.description or [])]
+                    d_cur.executemany(
+                        f"INSERT INTO trip_period_lock({','.join(cols)}) VALUES ({','.join(['?']*len(cols))})",
+                        rows,
+                    )
+
+            if "period_close" in existing:
+                s_cur.execute("SELECT * FROM period_close WHERE month = ?", (str(m),))
+                rows = s_cur.fetchall() or []
+                if rows:
+                    cols = [d[0] for d in (s_cur.description or [])]
+                    d_cur.executemany(
+                        f"INSERT INTO period_close({','.join(cols)}) VALUES ({','.join(['?']*len(cols))})",
+                        rows,
+                    )
+
+            if "bulk_puantaj_manual_rows" in existing:
+                s_cur.execute("SELECT * FROM bulk_puantaj_manual_rows WHERE month = ?", (str(m),))
+                rows = s_cur.fetchall() or []
+                if rows:
+                    cols = [d[0] for d in (s_cur.description or [])]
+                    d_cur.executemany(
+                        f"INSERT INTO bulk_puantaj_manual_rows({','.join(cols)}) VALUES ({','.join(['?']*len(cols))})",
+                        rows,
+                    )
+
+            if "trip_prices" in existing:
+                s_cur.execute(
+                    """
+                    SELECT * FROM trip_prices
+                    WHERE effective_from <= ?
+                    """,
+                    (str(end_date),),
+                )
+                rows = s_cur.fetchall() or []
+                if rows:
+                    cols = [d[0] for d in (s_cur.description or [])]
+                    d_cur.executemany(
+                        f"INSERT INTO trip_prices({','.join(cols)}) VALUES ({','.join(['?']*len(cols))})",
+                        rows,
+                    )
+
+            hakedis_ids: list[int] = []
+            if "hakedis" in existing:
+                s_cur.execute("SELECT * FROM hakedis WHERE period = ?", (str(m),))
+                rows = s_cur.fetchall() or []
+                if rows:
+                    cols = [d[0] for d in (s_cur.description or [])]
+                    try:
+                        id_idx = cols.index("id")
+                    except Exception:
+                        id_idx = -1
+                    if id_idx >= 0:
+                        for r in rows:
+                            try:
+                                hakedis_ids.append(int(r[id_idx] or 0))
+                            except Exception:
+                                pass
+                    d_cur.executemany(
+                        f"INSERT INTO hakedis({','.join(cols)}) VALUES ({','.join(['?']*len(cols))})",
+                        rows,
+                    )
+
+            if hakedis_ids:
+                placeholders = ",".join(["?"] * len(hakedis_ids))
+                for child in ("hakedis_items", "hakedis_deductions", "hakedis_docs"):
+                    if child not in existing:
+                        continue
+                    s_cur.execute(f"SELECT * FROM {child} WHERE hakedis_id IN ({placeholders})", tuple(hakedis_ids))
+                    rows = s_cur.fetchall() or []
+                    if not rows:
+                        continue
+                    cols = [d[0] for d in (s_cur.description or [])]
+                    d_cur.executemany(
+                        f"INSERT INTO {child}({','.join(cols)}) VALUES ({','.join(['?']*len(cols))})",
+                        rows,
+                    )
+
+            dst.commit()
+            return {"ok": True, "path": str(out_path), "error": ""}
+        except Exception as e:
+            try:
+                dst.rollback()
+            except Exception:
+                pass
+            return {"ok": False, "path": str(out_path), "error": str(e)}
+        finally:
+            try:
+                dst.close()
+            except Exception:
+                pass
+            try:
+                src.close()
+            except Exception:
+                pass
+
+    def reset_operational_data(self) -> bool:
+        """Hard-delete all operational data while preserving master records.
+
+        Preserves: users/customers/vehicles/employees/drivers/constants/repairs etc.
+        Deletes: contracts and all dependent operational tables (routes, trips, puantaj, hakedis...).
+        """
+        conn = self.connect()
+        if not conn:
+            return False
+        try:
+            cur = conn.cursor()
+
+            try:
+                conn.execute("PRAGMA busy_timeout = 15000")
+            except Exception:
+                pass
+
+            try:
+                conn.execute("PRAGMA foreign_keys = OFF")
+            except Exception:
+                pass
+
+            try:
+                self.create_trip_entries_tables()
+            except Exception:
+                pass
+            try:
+                self.migrate_trip_plan_table()
+            except Exception:
+                pass
+            try:
+                self.migrate_trip_period_lock_table()
+            except Exception:
+                pass
+            try:
+                self._ensure_trip_prices_table()
+            except Exception:
+                pass
+            try:
+                self.create_hakedis_tables()
+            except Exception:
+                pass
+            try:
+                self._ensure_bulk_puantaj_manual_rows_table()
+            except Exception:
+                pass
+            try:
+                self._ensure_contract_special_items_table()
+            except Exception:
+                pass
+
+            existing_tables = set()
+            try:
+                cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                existing_tables = {str(r[0]) for r in (cur.fetchall() or []) if r and r[0]}
+            except Exception:
+                existing_tables = set()
+
+            cur.execute("BEGIN")
+
+            errors = []
+
+            # Hakediş alt tabloları
+            for tbl in (
+                "hakedis_docs",
+                "hakedis_deductions",
+                "hakedis_items",
+                "hakedis",
+            ):
+                try:
+                    if tbl in existing_tables:
+                        cur.execute(f"DELETE FROM {tbl}")
+                except Exception as e:
+                    errors.append((tbl, str(e)))
+                    try:
+                        print(f"reset_operational_data: DELETE {tbl} failed: {e}")
+                    except Exception:
+                        pass
+
+            # Puantaj / sefer plan
+            for tbl in (
+                "bulk_puantaj_manual_rows",
+                "trip_allocations",
+                "trip_entries",
+                "trip_plan",
+                "trip_time_blocks",
+                "trip_period_lock",
+                "period_close",
+                "trips",
+            ):
+                try:
+                    if tbl in existing_tables:
+                        cur.execute(f"DELETE FROM {tbl}")
+                except Exception as e:
+                    errors.append((tbl, str(e)))
+                    try:
+                        print(f"reset_operational_data: DELETE {tbl} failed: {e}")
+                    except Exception:
+                        pass
+
+            # Rota + sözleşme tarifeleri
+            for tbl in (
+                "trip_prices",
+                "contract_special_items",
+                "route_params",
+            ):
+                try:
+                    if tbl in existing_tables:
+                        cur.execute(f"DELETE FROM {tbl}")
+                except Exception as e:
+                    errors.append((tbl, str(e)))
+                    try:
+                        print(f"reset_operational_data: DELETE {tbl} failed: {e}")
+                    except Exception:
+                        pass
+
+            # Sözleşmeler
+            try:
+                if "contracts" in existing_tables:
+                    cur.execute("DELETE FROM contracts")
+            except Exception as e:
+                errors.append(("contracts", str(e)))
+                try:
+                    print(f"reset_operational_data: DELETE contracts failed: {e}")
+                except Exception:
+                    pass
+
+            if errors:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+                try:
+                    print(f"reset_operational_data failed on db: {self.db_path}")
+                    print(f"reset_operational_data errors: {errors}")
+                except Exception:
+                    pass
+                return False
+
+            conn.commit()
+
+            try:
+                print(f"reset_operational_data OK on db: {self.db_path}")
+                for t in ("trip_allocations", "trip_entries", "trip_plan", "trip_prices"):
+                    if t not in existing_tables:
+                        continue
+                    try:
+                        cur.execute(f"SELECT COUNT(1) FROM {t}")
+                        cnt = int((cur.fetchone() or [0])[0] or 0)
+                        print(f"reset_operational_data verify: {t}={cnt}")
+                    except Exception as _e:
+                        print(f"reset_operational_data verify: {t} ERR: {_e}")
+            except Exception:
+                pass
+            return True
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            try:
+                print(f"reset_operational_data error: {e}")
+            except Exception:
+                pass
+            return False
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    def delete_trip_puantaj_for_context(self, contract_id: int, service_type: str, month: str) -> int:
+        """Delete trip_entries + trip_allocations for (contract_id, service_type, month).
+
+        Returns total deleted row count.
+        """
+        try:
+            cid = int(contract_id or 0)
+        except Exception:
+            return 0
+        st = str(service_type or "").strip()
+        m = str(month or "").strip()[:7]
+        if cid <= 0 or (not st) or len(m) != 7:
+            return 0
+
+        start_date = f"{m}-01"
+        end_date = f"{m}-31"
+
+        try:
+            self.create_trip_entries_tables()
+        except Exception:
+            pass
+
+        conn = self.connect()
+        if not conn:
+            return 0
+        deleted = 0
+        try:
+            cur = conn.cursor()
+            cur.execute("BEGIN")
+            cur.execute(
+                """
+                DELETE FROM trip_allocations
+                WHERE contract_id = ?
+                  AND service_type = ?
+                  AND trip_date BETWEEN ? AND ?
+                """,
+                (int(cid), str(st), str(start_date), str(end_date)),
+            )
+            deleted += int(cur.rowcount or 0)
+            cur.execute(
+                """
+                DELETE FROM trip_entries
+                WHERE contract_id = ?
+                  AND service_type = ?
+                  AND trip_date BETWEEN ? AND ?
+                """,
+                (int(cid), str(st), str(start_date), str(end_date)),
+            )
+            deleted += int(cur.rowcount or 0)
+            conn.commit()
+            return int(deleted)
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            try:
+                print(f"delete_trip_puantaj_for_context error: {e}")
+            except Exception:
+                pass
+            return 0
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
     def replace_bulk_puantaj_manual_rows(
         self,
         contract_id: int,
@@ -4772,6 +5324,11 @@ class DatabaseManager:
             return False
         try:
             cursor = conn.cursor()
+            try:
+                if isinstance(data, dict) and "contract_number" in data:
+                    data["contract_number"] = str(data.get("contract_number") or "").strip()
+            except Exception:
+                pass
             if is_update:
                 placeholders = ", ".join([f"{key} = ?" for key in data.keys() if key != "contract_number"])
                 values = [v for k, v in data.items() if k != "contract_number"]
@@ -5169,9 +5726,77 @@ class DatabaseManager:
             return False
         try:
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM contracts WHERE contract_number = ?", (number,))
+            num = str(number or "").strip()
+            cursor.execute(
+                "SELECT id, contract_number FROM contracts WHERE contract_number = ? LIMIT 1",
+                (num,),
+            )
+            row = cursor.fetchone()
+            if row is None:
+                cursor.execute(
+                    "SELECT id, contract_number FROM contracts WHERE TRIM(contract_number) = ? LIMIT 1",
+                    (num,),
+                )
+                row = cursor.fetchone()
+            if row is None:
+                return False
+            contract_id = int(row[0])
+
+            cursor.execute("BEGIN")
+
+            try:
+                cursor.execute("DELETE FROM trip_plan WHERE contract_id = ?", (contract_id,))
+            except Exception:
+                pass
+            try:
+                cursor.execute("DELETE FROM trip_time_blocks WHERE contract_id = ?", (contract_id,))
+            except Exception:
+                pass
+            try:
+                cursor.execute("DELETE FROM trip_period_lock WHERE contract_id = ?", (contract_id,))
+            except Exception:
+                pass
+
+            try:
+                cursor.execute("DELETE FROM trip_prices WHERE contract_id = ?", (contract_id,))
+            except Exception:
+                pass
+
+            try:
+                cursor.execute("DELETE FROM contract_special_items WHERE contract_id = ?", (contract_id,))
+            except Exception:
+                pass
+            try:
+                cursor.execute("DELETE FROM bulk_puantaj_manual_rows WHERE contract_id = ?", (contract_id,))
+            except Exception:
+                pass
+            try:
+                cursor.execute("DELETE FROM hakedis WHERE contract_id = ?", (contract_id,))
+            except Exception:
+                pass
+
+            try:
+                cursor.execute("DELETE FROM trip_allocations WHERE contract_id = ?", (contract_id,))
+            except Exception:
+                pass
+            try:
+                cursor.execute("DELETE FROM trip_entries WHERE contract_id = ?", (contract_id,))
+            except Exception:
+                pass
+
+            try:
+                cursor.execute("DELETE FROM trips WHERE contract_id = ?", (contract_id,))
+            except Exception:
+                pass
+
+            try:
+                cursor.execute("DELETE FROM route_params WHERE contract_id = ?", (contract_id,))
+            except Exception:
+                pass
+
+            cursor.execute("DELETE FROM contracts WHERE id = ?", (contract_id,))
             conn.commit()
-            return cursor.rowcount > 0
+            return True
         except Exception as e:
             print(f"Sözleşme Silme Hatası: {e}")
             return False

@@ -288,7 +288,28 @@ class AttendanceApp(QWidget):
             QMessageBox.critical(self, "Hata", "Ay kapatma işlemi kaydedilemedi.")
             return
 
-        QMessageBox.information(self, "Bilgi", f"Ay kapatıldı: {month}")
+        bak = {"ok": False, "path": "", "error": ""}
+        try:
+            bak = self.db.create_monthly_backup(str(month))
+        except Exception:
+            bak = {"ok": False, "path": "", "error": ""}
+
+        if bool(bak.get("ok")):
+            QMessageBox.information(
+                self,
+                "Bilgi",
+                f"Ay kapatıldı: {month}\nAylık yedek oluşturuldu:\n{str(bak.get('path') or '')}",
+            )
+        else:
+            tail = ""
+            try:
+                if str(bak.get("path") or "").strip():
+                    tail += f"\nHedef: {str(bak.get('path') or '')}"
+                if str(bak.get("error") or "").strip():
+                    tail += f"\nHata: {str(bak.get('error') or '')}"
+            except Exception:
+                tail = ""
+            QMessageBox.warning(self, "Uyarı", f"Ay kapatıldı: {month}\nAylık yedek oluşturulamadı.{tail}")
 
     def _apply_compact_table_combo(self, cmb: QComboBox, bg_color: str | None = None):
         try:

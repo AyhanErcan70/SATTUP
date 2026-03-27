@@ -27,11 +27,31 @@ class RoutesApp(QWidget):
         self.db = DatabaseManager()
         self.user_data = user_data or {}
 
+        try:
+            self._apply_role_gates()
+        except Exception:
+            pass
+
         self._selected_contract_id = None
         self._selected_contract_number = ""
         self._selected_contract_start = ""
         self._selected_contract_end = ""
         self._selected_contract_type = ""
+
+    def _is_admin(self) -> bool:
+        try:
+            return str((self.user_data or {}).get("role") or "").strip().lower() == "admin"
+        except Exception:
+            return False
+
+    def _apply_role_gates(self):
+        # Hard delete operations are admin-only
+        is_admin = self._is_admin()
+        if hasattr(self, "btn_sil"):
+            try:
+                self.btn_sil.setEnabled(bool(is_admin))
+            except Exception:
+                pass
 
         self._contract_route_km_map = {}
 
@@ -1076,6 +1096,9 @@ class RoutesApp(QWidget):
         self._load_kalemler_from_contract()
 
     def _delete_selected_rows_from_db(self):
+        if not self._is_admin():
+            QMessageBox.warning(self, "Yetki Yok", "Bu işlemi yapmak için admin yetkisi gereklidir.")
+            return
         tbl = self._table_rotalar_widget()
         if tbl is None:
             return
