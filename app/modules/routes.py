@@ -5,7 +5,7 @@ import re
 from PyQt6 import uic
 from PyQt6.QtCore import Qt, QDate
 from PyQt6.QtGui import QColor, QStandardItem, QStandardItemModel
-from PyQt6.QtWidgets import QDialog, QMessageBox, QTableWidgetItem, QWidget, QHeaderView
+from PyQt6.QtWidgets import QDialog, QMessageBox, QTableWidgetItem, QWidget, QHeaderView, QFileDialog, QPushButton
 
 from app.core.db_manager import DatabaseManager
 from config import get_ui_path
@@ -70,6 +70,391 @@ class RoutesApp(QWidget):
         self._init_buttons()
         self._setup_connections()
         self._load_customers()
+
+        try:
+            self._setup_excel_import_button()
+        except Exception:
+            pass
+
+    def _setup_excel_import_button(self):
+        if not hasattr(self, "btn_kaydet"):
+            return
+        if not hasattr(self, "table_rotalar") and not hasattr(self, "table_rota"):
+            return
+
+        try:
+            btn = QPushButton("EXCELDEN YÜKLE", self)
+            btn.setMinimumSize(150, 35)
+            btn.setMaximumSize(150, 35)
+            btn.clicked.connect(self._import_table_rotalar_from_excel)
+        except Exception:
+            return
+
+        try:
+            btn_export = QPushButton("EXCEL ŞABLONU İNDİR", self)
+            btn_export.setMinimumSize(170, 35)
+            btn_export.setMaximumSize(170, 35)
+            btn_export.clicked.connect(self._export_table_rotalar_to_excel)
+        except Exception:
+            btn_export = None
+
+        try:
+            host = self.btn_kaydet.parentWidget()
+            lay = host.layout() if host is not None else None
+            if lay is not None:
+                if btn_export is not None:
+                    lay.insertWidget(2, btn_export)
+                    lay.insertWidget(3, btn)
+                else:
+                    lay.insertWidget(2, btn)
+        except Exception:
+            return
+
+    def _export_table_rotalar_to_excel(self):
+        try:
+            import openpyxl
+        except Exception as e:
+            QMessageBox.critical(self, "Hata", f"openpyxl yüklenemedi:\n{str(e)}")
+            return
+
+        tbl = getattr(self, "table_rotalar", None) or getattr(self, "table_rota", None)
+        if tbl is None:
+            QMessageBox.warning(self, "Uyarı", "Tablo bulunamadı!")
+            return
+
+        default_name = "rota_sablon.xlsx"
+        try:
+            if self._selected_contract_number:
+                default_name = f"rota_sablon_{self._selected_contract_number}.xlsx"
+        except Exception:
+            pass
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Excel Şablonu Kaydet",
+            default_name,
+            "Excel Dosyası (*.xlsx)",
+        )
+        if not file_path:
+            return
+        if not str(file_path).lower().endswith(".xlsx"):
+            file_path = f"{file_path}.xlsx"
+
+        try:
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Rota Şablon"
+
+            headers = ["ID", "HİZMET TİPİ", "GÜZERGAH", "HAREKET TÜRÜ", "DURAK NOKTALARI", "MESAFE (KM)"]
+            ws.append(headers)
+
+            for r in range(tbl.rowCount()):
+                it0 = tbl.item(r, 0)
+                it1 = tbl.item(r, 1)
+                it2 = tbl.item(r, 2)
+                it3 = tbl.item(r, 3)
+
+                rid_val = ""
+                try:
+                    if it0 is not None:
+                        rid0 = it0.data(Qt.ItemDataRole.UserRole + 101)
+                        if rid0 is not None and str(rid0).strip() != "":
+                            rid_val = int(rid0)
+                except Exception:
+                    rid_val = ""
+
+                stype = (it0.text().strip() if it0 is not None else "")
+
+                rn = ""
+                mv = ""
+                if it1 is not None:
+                    try:
+                        rn = str(it1.data(Qt.ItemDataRole.UserRole + 201) or "").strip()
+                    except Exception:
+                        rn = ""
+                    try:
+                        mv = str(it1.data(Qt.ItemDataRole.UserRole + 202) or "").strip()
+                    except Exception:
+                        mv = ""
+                    if not rn:
+                        rn = it1.text().strip()
+                        try:
+                            if " - " in rn and not mv:
+                                p1, p2 = rn.split(" - ", 1)
+                                if p1.strip() and p2.strip():
+                                    rn, mv = p1.strip(), p2.strip()
+                        except Exception:
+                            pass
+
+                stops = (it2.text().strip() if it2 is not None else "")
+                km = (it3.text().strip() if it3 is not None else "")
+
+                if not any([stype, rn, mv, stops, km]):
+                    continue
+
+                ws.append([rid_val, stype, rn, mv, stops, km])
+
+            wb.save(file_path)
+        except Exception as e:
+            QMessageBox.critical(self, "Hata", f"Excel yazılamadı:\n{str(e)}")
+            return
+
+        QMessageBox.information(self, "Bilgi", "Excel şablonu oluşturuldu.")
+
+    def _import_table_rotalar_from_excel(self):
+        try:
+            import openpyxl
+        except Exception as e:
+            QMessageBox.critical(self, "Hata", f"openpyxl yüklenemedi:\n{str(e)}")
+            return
+
+        tbl = getattr(self, "table_rotalar", None) or getattr(self, "table_rota", None)
+        if tbl is None:
+            QMessageBox.warning(self, "Uyarı", "Tablo bulunamadı!")
+            return
+
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Excel'den Yükle",
+            "",
+            "Excel Dosyası (*.xlsx)",
+        )
+        if not file_path:
+            return
+
+        msg = QMessageBox(self)
+        msg.setIcon(QMessageBox.Icon.Question)
+        msg.setWindowTitle("Excel'den Yükle")
+        msg.setText("Mevcut satırlar silinip Excel verisi mi yüklensin?")
+        msg.setInformativeText("\nEvet: Sil + Yükle\nHayır: Sona Ekle\nİptal: Vazgeç")
+        btn_yes = msg.addButton("Evet", QMessageBox.ButtonRole.YesRole)
+        btn_no = msg.addButton("Hayır", QMessageBox.ButtonRole.NoRole)
+        btn_cancel = msg.addButton("İptal", QMessageBox.ButtonRole.RejectRole)
+        msg.setDefaultButton(btn_yes)
+        msg.exec()
+        clicked = msg.clickedButton()
+        if clicked == btn_cancel:
+            return
+        mode_yes = clicked == btn_yes
+
+        try:
+            wb = openpyxl.load_workbook(file_path)
+            ws = wb.active
+        except Exception as e:
+            QMessageBox.critical(self, "Hata", f"Excel açılamadı:\n{str(e)}")
+            return
+
+        def _norm_hdr(s: str) -> str:
+            try:
+                t = str(s or "").strip().casefold()
+                t = re.sub(r"\s+", " ", t)
+                t = (
+                    t.replace("ğ", "g")
+                    .replace("ü", "u")
+                    .replace("ş", "s")
+                    .replace("ı", "i")
+                    .replace("ö", "o")
+                    .replace("ç", "c")
+                )
+                return t
+            except Exception:
+                return ""
+
+        raw_headers = []
+        try:
+            for cell in ws[1]:
+                raw_headers.append(str(cell.value).strip() if cell.value is not None else "")
+        except Exception:
+            raw_headers = []
+
+        if not raw_headers:
+            QMessageBox.warning(self, "Uyarı", "Excel dosyasında başlık satırı bulunamadı.")
+            return
+
+        header_idx = {_norm_hdr(h): i for i, h in enumerate(raw_headers)}
+
+        def _get(row_vals, *names, default=""):
+            for nm in names:
+                i = header_idx.get(_norm_hdr(nm))
+                if i is not None and i < len(row_vals):
+                    v = row_vals[i]
+                    return "" if v is None else str(v).strip()
+            return default
+
+        if mode_yes:
+            tbl.setRowCount(0)
+
+        def _norm_key(s: str) -> str:
+            try:
+                t = str(s or "").strip().casefold()
+                t = re.sub(r"\s+", " ", t)
+                t = (
+                    t.replace("ğ", "g")
+                    .replace("ü", "u")
+                    .replace("ş", "s")
+                    .replace("ı", "i")
+                    .replace("ö", "o")
+                    .replace("ç", "c")
+                )
+                t = re.sub(r"[^0-9a-zA-Z ]", "", t)
+                return t.strip()
+            except Exception:
+                return ""
+
+        # Existing rows for this contract
+        existing_id_map: dict[tuple[str, str], list[int]] = {}
+        existing_ids: set[int] = set()
+        try:
+            if self._selected_contract_id:
+                conn = self.db.connect()
+                cur = conn.cursor()
+                cur.execute(
+                    """
+                    SELECT id, COALESCE(route_name,''), COALESCE(movement_type,'')
+                    FROM route_params
+                    WHERE contract_id = ?
+                    """,
+                    (int(self._selected_contract_id),),
+                )
+                for rid, rn, mv in cur.fetchall() or []:
+                    k = (_norm_key(rn), _norm_key(mv))
+                    if k[0]:
+                        try:
+                            existing_id_map.setdefault(k, []).append(int(rid))
+                            existing_ids.add(int(rid))
+                        except Exception:
+                            pass
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+        except Exception:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+        # If some rows can't be matched to existing kalemler, default to skip to avoid breaking list-based workflow.
+        allow_new = False
+        ask_allow_new = True
+        warned_ambiguous = False
+
+        imported = 0
+        skipped = 0
+        tbl.blockSignals(True)
+        try:
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                row_vals = list(row)
+                stype = _get(row_vals, "HİZMET TİPİ", "HIZMET TIPI", "HIZMET")
+                rid_txt = _get(row_vals, "ID", "ROUTE_PARAMS_ID", "ROUTE ID", "ROTA ID")
+                guz = _get(row_vals, "GÜZERGAH", "GUZERGAH", "İŞ KALEMİ", "IS KALEMI", "HAT")
+                hareket = _get(row_vals, "HAREKET TÜRÜ", "HAREKET TURU", "HAREKET")
+                durak = _get(row_vals, "DURAK NOKTALARI", "DURAKLAR", "DURAK")
+                km = _get(row_vals, "MESAFE (KM)", "KM", "MESAFE")
+                if not any([stype, guz, durak, km]):
+                    continue
+
+                rn = str(guz or "").strip()
+                mv = str(hareket or "").strip()
+                # Support combined text: "ROTA - HAREKET"
+                try:
+                    if (not mv) and " - " in rn:
+                        p1, p2 = rn.split(" - ", 1)
+                        if p1.strip() and p2.strip():
+                            rn, mv = p1.strip(), p2.strip()
+                except Exception:
+                    pass
+
+                match_key = (_norm_key(rn), _norm_key(mv))
+
+                matched_id = None
+                # Prefer explicit ID from template when present
+                try:
+                    if rid_txt and str(rid_txt).strip() != "":
+                        rid_int = int(float(str(rid_txt).strip().replace(",", ".")))
+                        if rid_int in existing_ids:
+                            matched_id = rid_int
+                except Exception:
+                    matched_id = None
+
+                if matched_id is None:
+                    ids = existing_id_map.get(match_key) or []
+                    if len(ids) == 1:
+                        matched_id = ids[0]
+                    elif len(ids) > 1:
+                        # Ambiguous without ID: safer to skip unless user explicitly allows new.
+                        if not warned_ambiguous:
+                            warned_ambiguous = True
+                            QMessageBox.warning(
+                                self,
+                                "Uyarı",
+                                "Excel satırlarında aynı Güzergah + Hareket Türü birden fazla kez bulunuyor veya sistemde bu anahtar birden fazla kayıtla eşleşiyor. "
+                                "Bu durumda doğru eşleştirme için şablondaki ID kolonunu kullanınız.",
+                            )
+                if matched_id is None and ask_allow_new:
+                    msg2 = QMessageBox(self)
+                    msg2.setIcon(QMessageBox.Icon.Question)
+                    msg2.setWindowTitle("Excel'den Yükle")
+                    msg2.setText("Excel'den gelen bazı satırlar mevcut iş kalemleri ile eşleşmiyor.")
+                    msg2.setInformativeText(
+                        "\nBu satırlar yeni iş kalemi olarak mı eklensin?\n\n"
+                        "Evet: Yeni iş kalemi olarak ekle (listeyi artırır)\n"
+                        "Hayır: Bu satırları atla (önerilen)"
+                    )
+                    b_yes = msg2.addButton("Evet", QMessageBox.ButtonRole.YesRole)
+                    b_no = msg2.addButton("Hayır", QMessageBox.ButtonRole.NoRole)
+                    msg2.setDefaultButton(b_no)
+                    msg2.exec()
+                    allow_new = msg2.clickedButton() == b_yes
+                    ask_allow_new = False
+
+                if matched_id is None and not allow_new:
+                    skipped += 1
+                    continue
+
+                r = tbl.rowCount()
+                tbl.insertRow(r)
+                raw_st = (self._selected_contract_type or "").strip()
+                try:
+                    disp_st = self._display_service_type(raw_st)
+                except Exception:
+                    disp_st = ""
+
+                it0 = QTableWidgetItem(str(stype or disp_st or ""))
+                it0.setFlags(it0.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                it0.setData(Qt.ItemDataRole.UserRole + 102, raw_st)
+                if matched_id is not None:
+                    it0.setData(Qt.ItemDataRole.UserRole + 101, int(matched_id))
+
+                disp = f"{rn} - {mv}" if (mv or "").strip() else rn
+                it1 = QTableWidgetItem(disp)
+                it1.setFlags(it1.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                it1.setData(Qt.ItemDataRole.UserRole + 201, rn)
+                it1.setData(Qt.ItemDataRole.UserRole + 202, mv)
+
+                it2 = QTableWidgetItem(str(durak or ""))
+                it3 = QTableWidgetItem(str(km or ""))
+                it3.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+
+                tbl.setItem(r, 0, it0)
+                tbl.setItem(r, 1, it1)
+                tbl.setItem(r, 2, it2)
+                tbl.setItem(r, 3, it3)
+
+                # Update kalem status color immediately if this row matches an existing kalem.
+                if matched_id is not None:
+                    try:
+                        self._set_kalem_item_status(str(rn or "").strip(), str(mv or "").strip(), bool(str(durak or "").strip()))
+                    except Exception:
+                        pass
+                imported += 1
+        finally:
+            tbl.blockSignals(False)
+
+        if skipped:
+            QMessageBox.information(self, "Bilgi", f"Excel'den {imported} satır yüklendi. ({skipped} satır eşleşmediği için atlandı)")
+        else:
+            QMessageBox.information(self, "Bilgi", f"Excel'den {imported} satır yüklendi.")
 
     def _kalem_status_prefix(self, has_stops: bool) -> str:
         try:
@@ -1331,7 +1716,7 @@ class RoutesApp(QWidget):
                 SELECT route_name, start_point, stops, distance_km, service_type
                 FROM route_params
                 WHERE contract_id = ?
-                ORDER BY id ASC
+                ORDER BY COALESCE(sort_order, id) ASC, id ASC
                 """,
                 (int(contract_id),),
             )
@@ -1380,7 +1765,7 @@ class RoutesApp(QWidget):
                 SELECT id, contract_number, start_date, end_date, service_type, route_name, start_point, stops, distance_km
                 FROM route_params
                 WHERE contract_id = ?
-                ORDER BY id ASC
+                ORDER BY COALESCE(sort_order, id) ASC, id ASC
                 """,
                 (int(self._selected_contract_id),),
             )

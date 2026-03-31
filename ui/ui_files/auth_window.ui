@@ -25,7 +25,6 @@
   <property name="windowTitle">
    <string>Oturum Açma Paneli</string>
   </property>
-  
   <property name="sizeGripEnabled">
    <bool>false</bool>
   </property>
@@ -35,16 +34,16 @@
   <layout class="QGridLayout" name="gridLayout_4">
    <item row="0" column="0">
     <widget class="QWidget" name="logo_wid" native="true">
-     
+     <property name="styleSheet">
+      <string notr="true">border-image: url(:/resimler/logo.png);
+</string>
+     </property>
     </widget>
    </item>
    <item row="0" column="1">
     <widget class="QFrame" name="frame">
      <property name="frameShape">
-      <enum>QFrame::Shape::NoFrame</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Shadow::Raised</enum>
+      <enum>QFrame::NoFrame</enum>
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
       <property name="leftMargin">
@@ -70,7 +69,7 @@
         <property name="verticalSpacing">
          <number>6</number>
         </property>
-        <item row="4" column="1" alignment="Qt::AlignmentFlag::AlignLeft">
+        <item row="4" column="1">
          <widget class="QPushButton" name="btn_cancel">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -95,7 +94,7 @@
           </property>
          </widget>
         </item>
-        <item row="4" column="0" alignment="Qt::AlignmentFlag::AlignRight">
+        <item row="4" column="0">
          <widget class="QPushButton" name="btn_login">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -115,13 +114,12 @@
             <height>35</height>
            </size>
           </property>
-          
           <property name="text">
            <string>GİRİŞ</string>
           </property>
          </widget>
         </item>
-        <item row="0" column="0" colspan="2" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignBottom">
+        <item row="0" column="0" colspan="2">
          <widget class="QLabel" name="lbl_welcome">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -145,6 +143,7 @@
            <font>
             <family>Grenada</family>
             <pointsize>17</pointsize>
+            <weight>50</weight>
             <italic>false</italic>
             <bold>false</bold>
            </font>
@@ -152,12 +151,9 @@
           <property name="text">
            <string>HOŞGELDİNİZ</string>
           </property>
-          <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignCenter</set>
-          </property>
          </widget>
         </item>
-        <item row="1" column="0" colspan="2" alignment="Qt::AlignmentFlag::AlignBottom">
+        <item row="1" column="0" colspan="2">
          <widget class="QLabel" name="lbl_login">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -181,6 +177,7 @@
            <font>
             <family>Microsoft Sans Serif</family>
             <pointsize>8</pointsize>
+            <weight>75</weight>
             <italic>false</italic>
             <bold>true</bold>
            </font>
@@ -188,12 +185,9 @@
           <property name="text">
            <string>Lütfen Oturum Açınız..</string>
           </property>
-          <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignCenter</set>
-          </property>
          </widget>
         </item>
-        <item row="2" column="0" colspan="2" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignBottom">
+        <item row="2" column="0" colspan="2">
          <widget class="QLineEdit" name="txt_user">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -221,7 +215,7 @@
           </property>
          </widget>
         </item>
-        <item row="3" column="0" colspan="2" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignTop">
+        <item row="3" column="0" colspan="2">
          <widget class="QLineEdit" name="txt_pass">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -245,7 +239,7 @@
            <string>1234</string>
           </property>
           <property name="echoMode">
-           <enum>QLineEdit::EchoMode::Password</enum>
+           <enum>QLineEdit::Normal</enum>
           </property>
           <property name="placeholderText">
            <string>Şifre ...</string>

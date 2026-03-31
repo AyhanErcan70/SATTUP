@@ -1,7 +1,9 @@
 import sqlite3
 import os
 import json
+import threading
 from datetime import datetime, timedelta
+from time import sleep
 from typing import Optional
 from config import DB_PATH, BASE_DIR
 
@@ -32,8 +34,16 @@ def _tr_collate(a: str, b: str) -> int:
     return 0
 
 class DatabaseManager:
+    _bootstrapped = False
+    _write_lock = threading.RLock()
+
     def __init__(self):
         self.db_path = DB_PATH
+        if bool(DatabaseManager._bootstrapped):
+            return
+
+        DatabaseManager._bootstrapped = True
+
         self.create_tables()
         self.migrate_contracts_table()
         self.migrate_trip_plan_table()
@@ -50,10 +60,22 @@ class DatabaseManager:
         self.create_driver_documents_table()
         self.create_constants_table()
     
-    def connect(self):
+    def connect(self, timeout: float = 5, busy_timeout_ms: int = 5000):
         try:
             # check_same_thread=False ekliyoruz ki farklı modüllerden erişirken sorun çıkmasın
-            conn = sqlite3.connect(self.db_path, check_same_thread=False)
+            conn = sqlite3.connect(self.db_path, check_same_thread=False, timeout=float(timeout or 0))
+            try:
+                conn.execute(f"PRAGMA busy_timeout = {int(busy_timeout_ms or 0)}")
+            except Exception:
+                pass
+            try:
+                conn.execute("PRAGMA journal_mode=WAL")
+            except Exception:
+                pass
+            try:
+                conn.execute("PRAGMA synchronous=NORMAL")
+            except Exception:
+                pass
             try:
                 conn.create_collation("TRNOCASE", _tr_collate)
             except Exception:
@@ -682,180 +704,241 @@ class DatabaseManager:
         rows: list[dict],
     ) -> bool:
         self._ensure_bulk_puantaj_manual_rows_table()
-        conn = self.connect()
-        if not conn:
-            return False
-        try:
-            cur = conn.cursor()
-            cur.execute(
-                "DELETE FROM bulk_puantaj_manual_rows WHERE contract_id=? AND month=? AND service_type=?",
-                (int(contract_id), str(month), str(service_type)),
-            )
-            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            for i, rec in enumerate(rows or []):
-                if not isinstance(rec, dict):
-                    continue
+        last_err = None
+        for attempt in range(6):
+            conn = self.connect()
+            if not conn:
+                last_err = RuntimeError("Veritabanı bağlantısı kurulamadı")
+                break
+            try:
+                cur = conn.cursor()
+                try:
+                    cur.execute("BEGIN IMMEDIATE")
+                except Exception:
+                    pass
+
                 cur.execute(
-                    """
-                    INSERT INTO bulk_puantaj_manual_rows (
-                        contract_id, month, service_type, sort_order,
-                        guzergah, vehicle_id, driver_id, movement_type, time_text,
-                        unit_price, day_qty_json, created_at, updated_at
-                    )
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
-                    """,
-                    (
-                        int(contract_id),
-                        str(month),
-                        str(service_type),
-                        int(rec.get("sort_order") if rec.get("sort_order") is not None else i),
-                        str(rec.get("guzergah") or ""),
-                        (None if rec.get("vehicle_id") is None else str(rec.get("vehicle_id"))),
-                        (None if rec.get("driver_id") is None else str(rec.get("driver_id"))),
-                        str(rec.get("movement_type") or ""),
-                        str(rec.get("time_text") or ""),
-                        float(rec.get("unit_price") or 0.0),
-                        str(rec.get("day_qty_json") or ""),
-                        now,
-                        now,
-                    ),
+                    "DELETE FROM bulk_puantaj_manual_rows WHERE contract_id=? AND month=? AND service_type=?",
+                    (int(contract_id), str(month), str(service_type)),
                 )
-            conn.commit()
-            return True
-        except Exception:
-            try:
-                conn.rollback()
-            except Exception:
-                pass
-            return False
-        finally:
-            try:
+                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                for i, rec in enumerate(rows or []):
+                    if not isinstance(rec, dict):
+                        continue
+                    cur.execute(
+                        """
+                        INSERT INTO bulk_puantaj_manual_rows (
+                            contract_id, month, service_type, sort_order,
+                            guzergah, vehicle_id, driver_id, movement_type, time_text,
+                            unit_price, day_qty_json, created_at, updated_at
+                        )
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                        """,
+                        (
+                            int(contract_id),
+                            str(month),
+                            str(service_type),
+                            int(rec.get("sort_order") if rec.get("sort_order") is not None else i),
+                            str(rec.get("guzergah") or ""),
+                            (None if rec.get("vehicle_id") is None else str(rec.get("vehicle_id"))),
+                            (None if rec.get("driver_id") is None else str(rec.get("driver_id"))),
+                            str(rec.get("movement_type") or ""),
+                            str(rec.get("time_text") or ""),
+                            float(rec.get("unit_price") or 0.0),
+                            str(rec.get("day_qty_json") or ""),
+                            now,
+                            now,
+                        ),
+                    )
+                conn.commit()
                 conn.close()
-            except Exception:
-                pass
+                last_err = None
+                break
+            except Exception as e:
+                last_err = e
+                msg = ""
+                try:
+                    msg = str(e or "")
+                except Exception:
+                    msg = ""
+                try:
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+                if "locked" in msg.lower() and attempt < 5:
+                    try:
+                        sleep(0.15 * float(attempt + 1))
+                    except Exception:
+                        pass
+                    continue
+                break
+
+        return bool(last_err is None)
 
     def create_tables(self):
-        conn = self.connect()
-        if conn:
-            cursor = conn.cursor()
-            
-            # 1. USERS (Personeller/Kullanıcılar)
-            cursor.execute("""CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT NOT NULL UNIQUE,
-                password TEXT NOT NULL,
-                full_name TEXT,
-                role TEXT,
-                is_active INTEGER DEFAULT 1
-            )""")
+        last_err = None
+        for attempt in range(6):
+            conn = self.connect()
+            if not conn:
+                last_err = RuntimeError("Veritabanı bağlantısı kurulamadı")
+                break
+            try:
+                cursor = conn.cursor()
+                
+                # 1. USERS (Personeller/Kullanıcılar)
+                cursor.execute("""CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT NOT NULL UNIQUE,
+                    password TEXT NOT NULL,
+                    full_name TEXT,
+                    role TEXT,
+                    is_active INTEGER DEFAULT 1
+                )""")
 
-            # 2. CUSTOMERS (Müşteriler)
-            cursor.execute("""CREATE TABLE IF NOT EXISTS customers (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                customer_code TEXT UNIQUE,
-                title TEXT NOT NULL,
-                tax_office TEXT,
-                tax_number TEXT,
-                address TEXT,
-                phone TEXT,
-                email TEXT,
-                is_active INTEGER DEFAULT 1
-            )""")
+                # 2. CUSTOMERS (Müşteriler)
+                cursor.execute("""CREATE TABLE IF NOT EXISTS customers (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    customer_code TEXT UNIQUE,
+                    title TEXT NOT NULL,
+                    tax_office TEXT,
+                    tax_number TEXT,
+                    address TEXT,
+                    phone TEXT,
+                    email TEXT,
+                    is_active INTEGER DEFAULT 1
+                )""")
 
-            # 3. VEHICLES (Araçlar)
-            cursor.execute("""CREATE TABLE IF NOT EXISTS vehicles (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                plate_number TEXT UNIQUE NOT NULL,
-                brand TEXT,
-                model TEXT,
-                capacity INTEGER,
-                fuel_type TEXT,
-                daily_cost REAL DEFAULT 0,
-                is_active INTEGER DEFAULT 1
-            )""")
+                # 3. VEHICLES (Araçlar)
+                cursor.execute("""CREATE TABLE IF NOT EXISTS vehicles (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    plate_number TEXT UNIQUE NOT NULL,
+                    brand TEXT,
+                    model TEXT,
+                    capacity INTEGER,
+                    fuel_type TEXT,
+                    daily_cost REAL DEFAULT 0,
+                    is_active INTEGER DEFAULT 1
+                )""")
 
-            # 4. CONTRACTS (Sözleşmeler)
-            cursor.execute("""CREATE TABLE IF NOT EXISTS contracts (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                customer_id INTEGER,
-                contract_number TEXT UNIQUE,
-                start_date TEXT,
-                end_date TEXT,
-                contract_type TEXT,
-                is_active INTEGER DEFAULT 1,
-                FOREIGN KEY (customer_id) REFERENCES customers (id)
-            )""")
+                # 4. CONTRACTS (Sözleşmeler)
+                cursor.execute("""CREATE TABLE IF NOT EXISTS contracts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    customer_id INTEGER,
+                    contract_number TEXT UNIQUE,
+                    start_date TEXT,
+                    end_date TEXT,
+                    contract_type TEXT,
+                    is_active INTEGER DEFAULT 1,
+                    FOREIGN KEY (customer_id) REFERENCES customers (id)
+                )""")
 
-            # 5. TRIPS (Seferler - Operasyonun Kalbi)
-            cursor.execute("""CREATE TABLE IF NOT EXISTS trips (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                contract_id INTEGER,
-                vehicle_id INTEGER,
-                user_id INTEGER,
-                trip_date TEXT,
-                route_info TEXT,
-                status TEXT DEFAULT 'Planned',
-                FOREIGN KEY (contract_id) REFERENCES contracts (id),
-                FOREIGN KEY (vehicle_id) REFERENCES vehicles (id),
-                FOREIGN KEY (user_id) REFERENCES users (id)
-            )""")
+                # 5. TRIPS (Seferler - Operasyonun Kalbi)
+                cursor.execute("""CREATE TABLE IF NOT EXISTS trips (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    contract_id INTEGER,
+                    vehicle_id INTEGER,
+                    user_id INTEGER,
+                    trip_date TEXT,
+                    route_info TEXT,
+                    status TEXT DEFAULT 'Planned',
+                    FOREIGN KEY (contract_id) REFERENCES contracts (id),
+                    FOREIGN KEY (vehicle_id) REFERENCES vehicles (id),
+                    FOREIGN KEY (user_id) REFERENCES users (id)
+                )""")
 
-            cursor.execute("""CREATE TABLE IF NOT EXISTS trip_plan (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                contract_id INTEGER NOT NULL,
-                route_params_id INTEGER NOT NULL,
-                month TEXT NOT NULL,
-                service_type TEXT NOT NULL,
-                time_block TEXT NOT NULL,
-                vehicle_id TEXT,
-                driver_id TEXT,
-                note TEXT,
-                created_at TEXT,
-                updated_at TEXT,
-                UNIQUE (contract_id, route_params_id, month, service_type, time_block)
-            )""")
+                cursor.execute("""CREATE TABLE IF NOT EXISTS trip_plan (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    contract_id INTEGER NOT NULL,
+                    route_params_id INTEGER NOT NULL,
+                    month TEXT NOT NULL,
+                    service_type TEXT NOT NULL,
+                    time_block TEXT NOT NULL,
+                    vehicle_id TEXT,
+                    driver_id TEXT,
+                    note TEXT,
+                    created_at TEXT,
+                    updated_at TEXT,
+                    UNIQUE (contract_id, route_params_id, month, service_type, time_block)
+                )""")
 
-            cursor.execute("""CREATE TABLE IF NOT EXISTS trip_time_blocks (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                contract_id INTEGER NOT NULL,
-                month TEXT NOT NULL,
-                service_type TEXT NOT NULL,
-                custom1 TEXT,
-                custom2 TEXT,
-                created_at TEXT,
-                updated_at TEXT,
-                UNIQUE (contract_id, month, service_type)
-            )""")
+                cursor.execute("""CREATE TABLE IF NOT EXISTS trip_time_blocks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    contract_id INTEGER NOT NULL,
+                    month TEXT NOT NULL,
+                    service_type TEXT NOT NULL,
+                    custom1 TEXT,
+                    custom2 TEXT,
+                    created_at TEXT,
+                    updated_at TEXT,
+                    UNIQUE (contract_id, month, service_type)
+                )""")
 
-            cursor.execute("""CREATE TABLE IF NOT EXISTS trip_period_lock (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                contract_id INTEGER NOT NULL,
-                month TEXT NOT NULL,
-                service_type TEXT NOT NULL,
-                locked INTEGER NOT NULL DEFAULT 0,
-                locked_at TEXT,
-                UNIQUE (contract_id, month, service_type)
-            )""")
+                cursor.execute("""CREATE TABLE IF NOT EXISTS trip_period_lock (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    contract_id INTEGER NOT NULL,
+                    month TEXT NOT NULL,
+                    service_type TEXT NOT NULL,
+                    locked INTEGER NOT NULL DEFAULT 0,
+                    locked_at TEXT,
+                    UNIQUE (contract_id, month, service_type)
+                )""")
 
-            cursor.execute(
-                """CREATE TABLE IF NOT EXISTS period_close (
-                month TEXT PRIMARY KEY,
-                closed INTEGER NOT NULL DEFAULT 0,
-                closed_at TEXT,
-                closed_by_user_id INTEGER,
-                note TEXT
-            )"""
-            )
-            cursor.execute("SELECT COUNT(*) FROM users")
-            if cursor.fetchone()[0] == 0:
-                cursor.execute("""
-                    INSERT INTO users (username, password, full_name, role, is_active)
-                    VALUES ('admin', '1234', 'SATTUP Admin', 'admin', 1)
-                """)
-                print("Bilgi: İlk admin kullanıcısı (admin/1234) oluşturuldu.")
+                cursor.execute(
+                    """CREATE TABLE IF NOT EXISTS period_close (
+                    month TEXT PRIMARY KEY,
+                    closed INTEGER NOT NULL DEFAULT 0,
+                    closed_at TEXT,
+                    closed_by_user_id INTEGER,
+                    note TEXT
+                )"""
+                )
+                cursor.execute("SELECT COUNT(*) FROM users")
+                if cursor.fetchone()[0] == 0:
+                    cursor.execute("""
+                        INSERT INTO users (username, password, full_name, role, is_active)
+                        VALUES ('admin', '1234', 'SATTUP Admin', 'admin', 1)
+                    """)
+                    print("Bilgi: İlk admin kullanıcısı (admin/1234) oluşturuldu.")
 
-            conn.commit()
-            conn.close()
+                conn.commit()
+                conn.close()
+                last_err = None
+                break
+            except Exception as e:
+                last_err = e
+                msg = ""
+                try:
+                    msg = str(e or "")
+                except Exception:
+                    msg = ""
+                try:
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+                if "locked" in msg.lower() and attempt < 5:
+                    try:
+                        sleep(0.2 * float(attempt + 1))
+                    except Exception:
+                        pass
+                    continue
+                break
+
+        if last_err is not None:
+            raise last_err
 
     def get_period_close(self, month: str):
         conn = self.connect()
@@ -2107,7 +2190,13 @@ class DatabaseManager:
             cur.execute("UPDATE hakedis SET route_params_id=0 WHERE route_params_id IS NULL")
             conn.commit()
         except Exception as e:
-            print(f"_migrate_hakedis_route_params_default error: {e}")
+            # Startup can race with other DB operations; avoid spamming console on transient locks.
+            try:
+                msg = str(e or "")
+            except Exception:
+                msg = ""
+            if "locked" not in msg.lower():
+                print(f"_migrate_hakedis_route_params_default error: {e}")
             try:
                 conn.rollback()
             except Exception:
@@ -5435,6 +5524,7 @@ class DatabaseManager:
                     stops TEXT,
                     distance_km REAL,
                     vehicle_capacity REAL,
+                    note TEXT,
                     sort_order INTEGER,
                     created_at TEXT,
                     FOREIGN KEY (contract_id) REFERENCES contracts (id)
@@ -5449,8 +5539,32 @@ class DatabaseManager:
                     cursor.execute("ALTER TABLE route_params ADD COLUMN movement_type TEXT")
                 if "vehicle_capacity" not in cols:
                     cursor.execute("ALTER TABLE route_params ADD COLUMN vehicle_capacity REAL")
+                if "note" not in cols:
+                    cursor.execute("ALTER TABLE route_params ADD COLUMN note TEXT")
                 if "sort_order" not in cols:
                     cursor.execute("ALTER TABLE route_params ADD COLUMN sort_order INTEGER")
+            except Exception:
+                pass
+
+            try:
+                cursor.execute(
+                    "SELECT id, contract_id, COALESCE(service_type,'') FROM route_params WHERE sort_order IS NULL ORDER BY contract_id, COALESCE(service_type,''), id"
+                )
+                rows = cursor.fetchall() or []
+                if rows:
+                    last_key = None
+                    seq = -1
+                    for rid, cid, st in rows:
+                        key = (int(cid or 0), str(st or "").strip())
+                        if key != last_key:
+                            last_key = key
+                            seq = 0
+                        else:
+                            seq += 1
+                        cursor.execute(
+                            "UPDATE route_params SET sort_order = ? WHERE id = ? AND sort_order IS NULL",
+                            (int(seq), int(rid)),
+                        )
             except Exception:
                 pass
             conn.commit()
@@ -5488,6 +5602,7 @@ class DatabaseManager:
             for r in rows or []:
                 route_name = str((r or {}).get("route_name") or "").strip()
                 movement_type = str((r or {}).get("movement_type") or "").strip()
+                note = str((r or {}).get("note") or "").strip()
                 try:
                     sort_order = (r or {}).get("sort_order")
                     sort_order = None if sort_order is None or str(sort_order).strip() == "" else int(sort_order)
@@ -5517,7 +5632,7 @@ class DatabaseManager:
                         """
                         UPDATE route_params
                         SET contract_number=?, start_date=?, end_date=?,
-                            route_name=?, movement_type=?, stops=?, distance_km=?, vehicle_capacity=?, sort_order=?
+                            route_name=?, movement_type=?, stops=?, distance_km=?, vehicle_capacity=?, note=?, sort_order=?
                         WHERE id=? AND contract_id=? AND service_type=?
                         """,
                         (
@@ -5529,6 +5644,7 @@ class DatabaseManager:
                             "",
                             float(distance_km or 0.0),
                             vehicle_capacity,
+                            note,
                             sort_order,
                             int(rid_int),
                             ctx_contract_id,
@@ -5541,8 +5657,8 @@ class DatabaseManager:
                         """
                         INSERT INTO route_params (
                             contract_id, contract_number, start_date, end_date, service_type,
-                            route_name, movement_type, stops, distance_km, vehicle_capacity, sort_order, created_at
-                        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                            route_name, movement_type, stops, distance_km, vehicle_capacity, note, sort_order, created_at
+                        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
                         """,
                         (
                             ctx_contract_id,
@@ -5555,6 +5671,7 @@ class DatabaseManager:
                             "",
                             float(distance_km or 0.0),
                             vehicle_capacity,
+                            note,
                             sort_order,
                             now,
                         ),
@@ -5607,7 +5724,8 @@ class DatabaseManager:
                            COALESCE(stops,''),
                            COALESCE(distance_km,0),
                            COALESCE(movement_type,''),
-                           COALESCE(vehicle_capacity,0)
+                           COALESCE(vehicle_capacity,0),
+                           COALESCE(note,'')
                     FROM route_params
                     WHERE contract_id = ? AND service_type = ?
                     ORDER BY COALESCE(sort_order, id) ASC, id ASC

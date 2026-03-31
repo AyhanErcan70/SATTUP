@@ -6,12 +6,17 @@ import config
 
 # 1. Bytecode (.pycache) oluşumunu engelle
 sys.dont_write_bytecode = True
-
 # 2. Modülleri bulabilmek için 'app' klasörünü sistem yoluna ekle
 sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
 
+os.environ.setdefault(
+    "QT_LOGGING_RULES",
+    "qt.multimedia.ffmpeg=false;qt.multimedia.*=false;qt.qpa.*=false",
+)
+
 from config import BASE_DIR
 from PyQt6.QtWidgets import QApplication, QDialog
+from PyQt6.QtCore import qInstallMessageHandler
 from app.core.db_manager import DatabaseManager
 from app.modules.main_menu import MainMenuApp
 
@@ -20,6 +25,30 @@ from app.modules.licence_manager import SattupLicence
 
 # Register Qt resources early
 import ui.icons.context_rc
+
+def _qt_message_handler(msg_type, context, message):
+    try:
+        msg = str(message or "")
+    except Exception:
+        msg = ""
+    if "QFont::setPointSize: Point size <= 0" in msg:
+        return
+    if "QGradient::setColorAt: Color position must be specified" in msg:
+        return
+    if "QObject::disconnect: wildcard call disconnects from destroyed signal" in msg:
+        return
+    if "QFFmpeg::" in msg and "QObject::disconnect" in msg:
+        return
+    if msg.startswith("qt.multimedia.ffmpeg") or msg.startswith("Using Qt multimedia"):
+        return
+    if msg.startswith("Input #") or msg.startswith("Stream #"):
+        return
+    try:
+        sys.stderr.write(msg + "\n")
+    except Exception:
+        pass
+
+qInstallMessageHandler(_qt_message_handler)
 
 # --- LİSANS YARDIMCI FONKSİYONLARI ---
 

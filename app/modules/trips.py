@@ -9,10 +9,12 @@ from PyQt6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
     QDialog,
+    QFileDialog,
     QHeaderView,
     QInputDialog,
     QMenu,
     QMessageBox,
+    QPushButton,
     QTableWidgetItem,
     QWidget,
 )
@@ -63,7 +65,346 @@ class TripsGridApp(QWidget):
         self._setup_tables()
         self._setup_connections()
         self._load_static_filters()
+        try:
+            pass
+        except Exception:
+            pass
         self._reload_grid()
+
+    def _setup_excel_import_button(self):
+        return
+        if not hasattr(self, "btn_kaydet"):
+            return
+        if not hasattr(self, "tbl_grid") and not hasattr(self, "table_sefer"):
+            return
+
+        try:
+            btn = QPushButton("EXCELDEN YÜKLE", self)
+            btn.setMinimumSize(140, 35)
+            btn.setMaximumSize(140, 35)
+            btn.clicked.connect(self._import_table_sefer_from_excel)
+        except Exception:
+            return
+
+        try:
+            btn_export = QPushButton("EXCEL ŞABLONU İNDİR", self)
+            btn_export.setMinimumSize(170, 35)
+            btn_export.setMaximumSize(170, 35)
+            btn_export.clicked.connect(self._export_table_sefer_to_excel)
+        except Exception:
+            btn_export = None
+
+        try:
+            host = self.btn_kaydet.parentWidget()
+            lay = host.layout() if host is not None else None
+            if lay is not None:
+                # bottom bar is a grid layout: [KAYDET][SATIR SIL][TUM SEFERLERI SIL][spacer]
+                if btn_export is not None:
+                    lay.addWidget(btn_export, 0, 4)
+                    lay.addWidget(btn, 0, 5)
+                else:
+                    lay.addWidget(btn, 0, 4)
+        except Exception:
+            return
+
+    def _export_table_sefer_to_excel(self):
+        try:
+            import openpyxl
+        except Exception as e:
+            QMessageBox.critical(self, "Hata", f"openpyxl yüklenemedi:\n{str(e)}")
+            return
+
+        tbl = getattr(self, "tbl_grid", None) or getattr(self, "table_sefer", None)
+        if tbl is None:
+            QMessageBox.warning(self, "Uyarı", "Tablo bulunamadı!")
+            return
+
+        default_name = "sefer_sablon.xlsx"
+        try:
+            m = str(self._month_key() or "").strip()
+            if m:
+                default_name = f"sefer_sablon_{m}.xlsx"
+        except Exception:
+            pass
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Excel Şablonu Kaydet",
+            default_name,
+            "Excel Dosyası (*.xlsx)",
+        )
+        if not file_path:
+            return
+        if not str(file_path).lower().endswith(".xlsx"):
+            file_path = f"{file_path}.xlsx"
+
+        cols = self._resolve_tbl_grid_columns()
+        c_rota = int(cols.get("rota", 0))
+        c_g = int(cols.get("giris", 1))
+        c_c = int(cols.get("cikis", 2))
+        c_p = int(cols.get("plaka", 3))
+        c_k = cols.get("kpst")
+        c_s = int(cols.get("sofor", 4))
+
+        try:
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Sefer Şablon"
+
+            headers = [
+                "ROUTE_PARAMS_ID",
+                "TIME_BLOCK",
+                "ROTA",
+                "GİRİŞ",
+                "ÇIKIŞ",
+                "ARAÇ PLAKASI",
+                "KPST.",
+                "ŞOFÖR",
+            ]
+            ws.append(headers)
+
+            if tbl.rowCount() == 0:
+                # Export routes as empty template rows
+                for rid_s, rec in (self._selected_route_map or {}).items():
+                    try:
+                        rid_val = int(rid_s)
+                    except Exception:
+                        continue
+                    route_name = str((rec or {}).get("route_name") or "").strip()
+                    stops_txt = str((rec or {}).get("stops") or "").strip()
+                    mtype_txt = str((rec or {}).get("movement_type") or "").strip()
+                    parts = [p for p in [route_name, stops_txt, mtype_txt] if p]
+                    rota_txt = " | ".join(parts) if parts else route_name
+                    ws.append([rid_val, "", rota_txt, "", "", "", "", ""])
+            else:
+                for r in range(tbl.rowCount()):
+                    it_rota = tbl.item(r, c_rota)
+                    rid_val = ""
+                    tb_val = ""
+                    try:
+                        if it_rota is not None:
+                            rid0 = it_rota.data(Qt.ItemDataRole.UserRole + 1)
+                            tb0 = it_rota.data(Qt.ItemDataRole.UserRole + 2)
+                            if rid0 is not None and str(rid0).strip() != "":
+                                rid_val = int(rid0)
+                            if tb0 is not None and str(tb0).strip() != "":
+                                tb_val = str(tb0).strip()
+                    except Exception:
+                        rid_val = ""
+                        tb_val = ""
+
+                    rota_txt = (it_rota.text().strip() if it_rota is not None else "")
+                    g_txt = (tbl.item(r, c_g).text().strip() if tbl.item(r, c_g) is not None else "")
+                    c_txt = (tbl.item(r, c_c).text().strip() if tbl.item(r, c_c) is not None else "")
+                    p_txt = (tbl.item(r, c_p).text().strip() if tbl.item(r, c_p) is not None else "")
+                    s_txt = (tbl.item(r, c_s).text().strip() if tbl.item(r, c_s) is not None else "")
+                    k_txt = ""
+                    try:
+                        if c_k is not None and tbl.item(r, int(c_k)) is not None:
+                            k_txt = tbl.item(r, int(c_k)).text().strip()
+                    except Exception:
+                        k_txt = ""
+
+                    if not any([rid_val, tb_val, rota_txt, g_txt, c_txt, p_txt, s_txt, k_txt]):
+                        continue
+                    if not tb_val and (g_txt or c_txt):
+                        tb_val = f"{g_txt}-{c_txt}".strip("-")
+
+                    ws.append([rid_val, tb_val, rota_txt, g_txt, c_txt, p_txt, k_txt, s_txt])
+
+            wb.save(file_path)
+        except Exception as e:
+            QMessageBox.critical(self, "Hata", f"Excel yazılamadı:\n{str(e)}")
+            return
+
+        QMessageBox.information(self, "Bilgi", "Excel şablonu oluşturuldu.")
+
+    def _import_table_sefer_from_excel(self):
+
+        try:
+            import openpyxl
+        except Exception as e:
+            QMessageBox.critical(self, "Hata", f"openpyxl yüklenemedi:\n{str(e)}")
+            return
+
+        tbl = getattr(self, "tbl_grid", None) or getattr(self, "table_sefer", None)
+        if tbl is None:
+            QMessageBox.warning(self, "Uyarı", "Tablo bulunamadı!")
+            return
+
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Excel'den Yükle",
+            "",
+            "Excel Dosyası (*.xlsx)",
+        )
+        if not file_path:
+            return
+
+        msg = QMessageBox(self)
+        msg.setIcon(QMessageBox.Icon.Question)
+        msg.setWindowTitle("Excel'den Yükle")
+        msg.setText("Mevcut satırlar silinip Excel verisi mi yüklensin?")
+        msg.setInformativeText("\nEvet: Sil + Yükle\nHayır: Sona Ekle\nİptal: Vazgeç")
+        btn_yes = msg.addButton("Evet", QMessageBox.ButtonRole.YesRole)
+        btn_no = msg.addButton("Hayır", QMessageBox.ButtonRole.NoRole)
+        btn_cancel = msg.addButton("İptal", QMessageBox.ButtonRole.RejectRole)
+        msg.setDefaultButton(btn_yes)
+        msg.exec()
+        clicked = msg.clickedButton()
+        if clicked == btn_cancel:
+            return
+        mode_yes = clicked == btn_yes
+
+        try:
+            wb = openpyxl.load_workbook(file_path)
+            ws = wb.active
+        except Exception as e:
+            QMessageBox.critical(self, "Hata", f"Excel açılamadı:\n{str(e)}")
+            return
+
+        def _norm_hdr(s: str) -> str:
+            try:
+                t = str(s or "").strip().casefold()
+                t = re.sub(r"\s+", " ", t)
+                t = (
+                    t.replace("ğ", "g")
+                    .replace("ü", "u")
+                    .replace("ş", "s")
+                    .replace("ı", "i")
+                    .replace("ö", "o")
+                    .replace("ç", "c")
+                )
+                return t
+            except Exception:
+                return ""
+
+        raw_headers = []
+        try:
+            for cell in ws[1]:
+                raw_headers.append(str(cell.value).strip() if cell.value is not None else "")
+        except Exception:
+            raw_headers = []
+
+        if not raw_headers:
+            QMessageBox.warning(self, "Uyarı", "Excel dosyasında başlık satırı bulunamadı.")
+            return
+
+        header_idx = {_norm_hdr(h): i for i, h in enumerate(raw_headers)}
+
+        def _get(row_vals, *names, default=""):
+            for nm in names:
+                i = header_idx.get(_norm_hdr(nm))
+                if i is not None and i < len(row_vals):
+                    v = row_vals[i]
+                    return "" if v is None else str(v).strip()
+            return default
+
+        if mode_yes:
+            tbl.setRowCount(0)
+
+        cols = self._resolve_tbl_grid_columns()
+        c_rota = int(cols.get("rota", 0))
+        c_g = int(cols.get("giris", 1))
+        c_c = int(cols.get("cikis", 2))
+        c_p = int(cols.get("plaka", 3))
+        c_k = cols.get("kpst")
+        c_s = int(cols.get("sofor", 4))
+
+        # Make sure lookups are loaded for plate/driver -> ids
+        self._load_vehicle_driver_maps()
+        plate_to_vid = {str(v).strip(): str(k).strip() for k, v in (self._vehicle_map or {}).items() if str(v).strip()}
+        driver_to_did = {str(v).strip().casefold(): str(k).strip() for k, v in (self._driver_map or {}).items() if str(v).strip()}
+
+        existing_route_ids: set[str] = set()
+        try:
+            existing_route_ids = set(str(k) for k in (self._selected_route_map or {}).keys())
+        except Exception:
+            existing_route_ids = set()
+
+        imported = 0
+        skipped = 0
+        tbl.blockSignals(True)
+        try:
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                row_vals = list(row)
+                rid_txt = _get(row_vals, "ROUTE_PARAMS_ID", "ROTA ID", "ROUTE ID", "ROUTE_PARAMS", "ID")
+                tb_txt = _get(row_vals, "TIME_BLOCK", "TIME BLOCK", "SAAT ARALIĞI")
+                rota = _get(row_vals, "ROTA", "GÜZERGAH", "GUZERGAH")
+                giris = _get(row_vals, "GİRİŞ", "GIRIS", "GİRİŞ SAATİ", "GIRIS SAATI")
+                cikis = _get(row_vals, "ÇIKIŞ", "CIKIS", "ÇIKIŞ SAATİ", "CIKIS SAATI")
+                arac = _get(row_vals, "ARAÇ", "ARAC", "PLAKA", "ARAÇ PLAKASI", "ARAC PLAKASI")
+                kpst = _get(row_vals, "KPST.", "KPST", "KAPASITE", "KAPASİTE")
+                sofor = _get(row_vals, "SÜRÜCÜ", "SURUCU", "ŞOFÖR", "SOFOR")
+
+                if not any([rota, giris, cikis, arac, kpst, sofor]):
+                    continue
+
+                route_id = None
+                try:
+                    if rid_txt and str(rid_txt).strip() != "":
+                        rid_i = int(float(str(rid_txt).strip().replace(",", ".")))
+                        if str(rid_i) in existing_route_ids:
+                            route_id = str(rid_i)
+                except Exception:
+                    route_id = None
+
+                if route_id is None:
+                    # Without explicit ID, import is ambiguous; keep row but it won't be saved.
+                    skipped += 1
+                    continue
+
+                time_block = (str(tb_txt or "").strip() or f"{str(giris or '').strip()}-{str(cikis or '').strip()}".strip("-"))
+                if not time_block:
+                    skipped += 1
+                    continue
+
+                vid = None
+                did = None
+                try:
+                    vid = plate_to_vid.get(str(arac or "").strip())
+                except Exception:
+                    vid = None
+                try:
+                    did = driver_to_did.get(str(sofor or "").strip().casefold())
+                except Exception:
+                    did = None
+
+                r = tbl.rowCount()
+                tbl.insertRow(r)
+                it_rota = QTableWidgetItem(str(rota or ""))
+                it_g = QTableWidgetItem(str(giris or ""))
+                it_c = QTableWidgetItem(str(cikis or ""))
+                it_p = QTableWidgetItem(str(arac or ""))
+                it_s = QTableWidgetItem(str(sofor or ""))
+                it_k = QTableWidgetItem(str(kpst or ""))
+                for it in (it_rota, it_g, it_c, it_p, it_s, it_k):
+                    it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
+
+                it_rota.setData(Qt.ItemDataRole.UserRole + 1, str(route_id))
+                it_rota.setData(Qt.ItemDataRole.UserRole + 2, str(time_block))
+                it_rota.setData(Qt.ItemDataRole.UserRole + 3, (None if vid in (None, "") else str(vid)))
+                it_rota.setData(Qt.ItemDataRole.UserRole + 4, (None if did in (None, "") else str(did)))
+
+                tbl.setItem(r, c_rota, it_rota)
+                tbl.setItem(r, c_g, it_g)
+                tbl.setItem(r, c_c, it_c)
+                tbl.setItem(r, c_p, it_p)
+                tbl.setItem(r, c_s, it_s)
+                if c_k is not None:
+                    try:
+                        it_k.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                        tbl.setItem(r, int(c_k), it_k)
+                    except Exception:
+                        pass
+                imported += 1
+        finally:
+            tbl.blockSignals(False)
+
+        if skipped:
+            QMessageBox.information(self, "Bilgi", f"Excel'den {imported} satır yüklendi. ({skipped} satır ID olmadığı/uyuşmadığı için atlandı)")
+        else:
+            QMessageBox.information(self, "Bilgi", f"Excel'den {imported} satır yüklendi.")
 
     def _is_admin(self) -> bool:
         try:
@@ -536,6 +877,11 @@ class TripsGridApp(QWidget):
             self.cmb_service_type.addItem("DİĞER", "DİĞER")
             self.cmb_service_type.blockSignals(False)
 
+        try:
+            self._load_customers()
+        except Exception:
+            pass
+
     def _ensure_route_params_table(self):
         conn = None
         try:
@@ -596,7 +942,12 @@ class TripsGridApp(QWidget):
             conn = self.db.connect()
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT id, COALESCE(title,'') FROM customers WHERE is_active = 1 ORDER BY title COLLATE TRNOCASE"
+                """
+                SELECT id, COALESCE(title,'')
+                FROM customers
+                WHERE COALESCE(is_active,1) = 1
+                ORDER BY title COLLATE TRNOCASE
+                """
             )
             rows = cursor.fetchall()
             conn.close()

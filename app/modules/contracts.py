@@ -2,11 +2,12 @@ from PyQt6 import uic
 from PyQt6.QtCore import QDate, Qt, QRegularExpression
 from PyQt6.QtGui import QIntValidator, QRegularExpressionValidator
 from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import QDialog, QWidget, QMessageBox, QTableWidgetItem, QHeaderView
+from PyQt6.QtWidgets import QDialog, QWidget, QMessageBox, QTableWidgetItem, QHeaderView, QFileDialog, QPushButton
 from app.core.db_manager import DatabaseManager
 from config import get_ui_path
 import os
 import json
+import re
 from datetime import datetime
 
 class ContractsApp(QWidget):
@@ -437,6 +438,29 @@ class ContractsApp(QWidget):
                 return "CIFT_SERVIS"
             return "TEK_SERVIS"
 
+        def _format_num_cell(v) -> str:
+            try:
+                if v is None:
+                    return ""
+                if isinstance(v, str):
+                    t = v.strip()
+                    if not t:
+                        return ""
+                    t2 = t.replace(" ", "")
+                    if t2.endswith(",0") or t2.endswith(".0"):
+                        t2 = t2[:-2]
+                    return t2
+                fv = float(v)
+                if abs(fv - int(fv)) < 1e-9:
+                    return str(int(fv))
+                s = f"{fv:.6f}".rstrip("0").rstrip(".")
+                return s
+            except Exception:
+                try:
+                    return str(v)
+                except Exception:
+                    return ""
+
         # Route list
         route_rows = []
         try:
@@ -525,7 +549,7 @@ class ContractsApp(QWidget):
             it1.setFlags(read_only_flags)
             tbl.setItem(r, 1, it1)
 
-            itkm = QTableWidgetItem("" if km is None else str(km))
+            itkm = QTableWidgetItem(_format_num_cell(km))
             itkm.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             itkm.setFlags(read_only_flags)
             tbl.setItem(r, 2, itkm)
@@ -1080,6 +1104,125 @@ class ContractsApp(QWidget):
         h.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
         h.setSectionResizeMode(6, QHeaderView.ResizeMode.Stretch)
 
+        def _norm_hdr(s: str) -> str:
+            try:
+                t = str(s or "").strip().casefold()
+                t = re.sub(r"\s+", " ", t)
+                t = (
+                    t.replace("ğ", "g")
+                    .replace("ü", "u")
+                    .replace("ş", "s")
+                    .replace("ı", "i")
+                    .replace("ö", "o")
+                    .replace("ç", "c")
+                )
+                return t
+            except Exception:
+                return ""
+
+        def _import_from_excel():
+            try:
+                import openpyxl
+            except Exception as e:
+                QMessageBox.critical(dlg, "Hata", f"openpyxl yüklenemedi:\n{str(e)}")
+                return
+
+            file_path, _ = QFileDialog.getOpenFileName(
+                dlg,
+                "Excel'den Yükle",
+                "",
+                "Excel Dosyası (*.xlsx)",
+            )
+            if not file_path:
+                return
+
+            msg = QMessageBox(dlg)
+            msg.setIcon(QMessageBox.Icon.Question)
+            msg.setWindowTitle("Excel'den Yükle")
+            msg.setText("Mevcut satırlar silinip Excel verisi mi yüklensin?")
+            msg.setInformativeText("\nEvet: Sil + Yükle\nHayır: Sona Ekle\nİptal: Vazgeç")
+            btn_yes = msg.addButton("Evet", QMessageBox.ButtonRole.YesRole)
+            btn_no = msg.addButton("Hayır", QMessageBox.ButtonRole.NoRole)
+            btn_cancel = msg.addButton("İptal", QMessageBox.ButtonRole.RejectRole)
+            msg.setDefaultButton(btn_yes)
+            msg.exec()
+            clicked = msg.clickedButton()
+            if clicked == btn_cancel:
+                return
+            mode_yes = clicked == btn_yes
+
+            try:
+                wb = openpyxl.load_workbook(file_path)
+                ws = wb.active
+            except Exception as e:
+                QMessageBox.critical(dlg, "Hata", f"Excel açılamadı:\n{str(e)}")
+                return
+
+            raw_headers = []
+            try:
+                for cell in ws[1]:
+                    raw_headers.append(str(cell.value).strip() if cell.value is not None else "")
+            except Exception:
+                raw_headers = []
+
+            if not raw_headers:
+                QMessageBox.warning(dlg, "Uyarı", "Excel dosyasında başlık satırı bulunamadı.")
+                return
+
+            header_idx = {_norm_hdr(h): i for i, h in enumerate(raw_headers)}
+
+            def _get(row_vals, *names, default=""):
+                for nm in names:
+                    i = header_idx.get(_norm_hdr(nm))
+                    if i is not None and i < len(row_vals):
+                        v = row_vals[i]
+                        return "" if v is None else str(v).strip()
+                return default
+
+            guz_count = 0
+            if mode_yes:
+                tbl.setRowCount(0)
+
+            tbl.blockSignals(True)
+            try:
+                for row in ws.iter_rows(min_row=2, values_only=True):
+                    row_vals = list(row)
+                    guz = _get(row_vals, "GÜZERGAH", "GUZERGAH", "İŞ KALEMİ", "IS KALEMI", "HAT")
+                    hareket = _get(row_vals, "HAREKET TÜRÜ", "HAREKET TURU")
+                    km = _get(row_vals, "MESAFE (KM)", "KM", "MESAFE")
+                    kpst = _get(row_vals, "ARAÇ KPST.", "ARAC KPST", "KPST", "KAPASITE")
+                    birim = _get(row_vals, "BİRİM FİYAT", "BIRIM FIYAT", "BIRIM")
+                    ay = _get(row_vals, "A.Y.FİYATI", "A.Y FIYATI", "AY FIYATI")
+                    note = _get(row_vals, "NOT", "AÇIKLAMA", "ACIKLAMA")
+
+                    if not any([guz, hareket, km, kpst, birim, ay, note]):
+                        continue
+
+                    r = tbl.rowCount()
+                    tbl.insertRow(r)
+                    vals = [guz, hareket, km, kpst, birim, ay, note]
+                    for c, v in enumerate(vals):
+                        it = QTableWidgetItem(str(v or ""))
+                        if c in (2, 3, 4, 5):
+                            it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                        tbl.setItem(r, c, it)
+                    guz_count += 1
+            finally:
+                tbl.blockSignals(False)
+
+            QMessageBox.information(dlg, "Bilgi", f"Excel'den {guz_count} satır yüklendi.")
+
+        try:
+            host_layout = getattr(dlg, "horizontalLayout_2", None)
+            if host_layout is not None:
+                btn_excel = QPushButton("EXCELDEN YÜKLE", dlg)
+                btn_excel.setMinimumSize(130, 40)
+                btn_excel.setMaximumSize(160, 40)
+                btn_excel.clicked.connect(_import_from_excel)
+                host_layout.insertWidget(2, btn_excel)
+        except Exception:
+            pass
+
         def _movement_to_category(mv: str) -> str:
             s = str(mv or "").strip()
             # Turkish-safe lowercase for correct detection of 'ÇİFT', 'GİRİŞ', etc.
@@ -1103,6 +1246,29 @@ class ContractsApp(QWidget):
             ):
                 return "CIFT_SERVIS"
             return "TEK_SERVIS"
+
+        def _format_num_cell(v) -> str:
+            try:
+                if v is None:
+                    return ""
+                if isinstance(v, str):
+                    t = v.strip()
+                    if not t:
+                        return ""
+                    t2 = t.replace(" ", "")
+                    if t2.endswith(",0") or t2.endswith(".0"):
+                        t2 = t2[:-2]
+                    return t2
+                fv = float(v)
+                if abs(fv - int(fv)) < 1e-9:
+                    return str(int(fv))
+                s2 = f"{fv:.6f}".rstrip("0").rstrip(".")
+                return s2
+            except Exception:
+                try:
+                    return str(v)
+                except Exception:
+                    return ""
 
         # Load existing tariff prices for this contract
         _price_map: dict[tuple[int, str], tuple[float, float]] = {}
@@ -1194,6 +1360,7 @@ class ContractsApp(QWidget):
                     km = rr[3] if len(rr) > 3 else 0
                     mv = rr[4] if len(rr) > 4 else ""
                     cap = rr[5] if len(rr) > 5 else 0
+                    note = rr[6] if len(rr) > 6 else ""
                     pm.append(
                         {
                             "id": rid,
@@ -1201,6 +1368,7 @@ class ContractsApp(QWidget):
                             "movement_type": str(mv or ""),
                             "distance_km": km,
                             "vehicle_capacity": cap,
+                            "note": str(note or ""),
                         }
                     )
         except Exception:
@@ -1219,11 +1387,11 @@ class ContractsApp(QWidget):
             vals = [
                 str((row or {}).get("route_name") or ""),
                 mv_val,
-                ("" if (row or {}).get("distance_km") is None else str((row or {}).get("distance_km"))),
-                ("" if (row or {}).get("vehicle_capacity") is None else str((row or {}).get("vehicle_capacity"))),
+                _format_num_cell((row or {}).get("distance_km")),
+                _format_num_cell((row or {}).get("vehicle_capacity")),
                 ("" if float(price_val or 0.0) <= 0 else self._format_money_tr(float(price_val))),
                 ("" if float(sub_price_val or 0.0) <= 0 else self._format_money_tr(float(sub_price_val))),
-                "",
+                str((row or {}).get("note") or ""),
             ]
             for c, v in enumerate(vals):
                 it = QTableWidgetItem(v)
@@ -1280,6 +1448,7 @@ class ContractsApp(QWidget):
                 kps_txt = (tbl.item(r, 3).text().strip() if tbl.item(r, 3) else "")
                 price_txt = (tbl.item(r, 4).text().strip() if tbl.item(r, 4) else "")
                 sub_price_txt = (tbl.item(r, 5).text().strip() if tbl.item(r, 5) else "")
+                note_txt = (tbl.item(r, 6).text().strip() if tbl.item(r, 6) else "")
                 if not any([hat, hareket, km_txt, kps_txt]):
                     continue
 
@@ -1296,6 +1465,7 @@ class ContractsApp(QWidget):
                         "movement_type": str(hareket or "").strip(),
                         "distance_km": self._parse_money(km_txt),
                         "vehicle_capacity": self._parse_money(kps_txt),
+                        "note": str(note_txt or "").strip(),
                         "sort_order": int(r),
                     }
                 )

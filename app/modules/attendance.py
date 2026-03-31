@@ -6,6 +6,7 @@ import json
 import re
 import unicodedata
 from datetime import datetime
+from time import sleep
 
 from PyQt6 import uic
 from PyQt6.QtCore import Qt, QDate, QTimer, QSignalBlocker, QEvent
@@ -2034,11 +2035,13 @@ class BulkAttendanceDialog(QDialog):
                 if lbl_u in ("TOPLAMLAR", "GENEL TOPLAM") and (str(qty_detail_text or "").strip() or lbl_u == "TOPLAMLAR"):
                     # Reset any previous/overlapping spans before applying the merge.
                     try:
-                        self.table.setSpan(int(insert_at), int(self._col_total_qty), 1, 1)
+                        if int(self.table.rowSpan(int(insert_at), int(self._col_total_qty)) or 1) > 1:
+                            self.table.setSpan(int(insert_at), int(self._col_total_qty), 1, 1)
                     except Exception:
                         pass
                     try:
-                        self.table.setSpan(int(insert_at), int(self._col_price), 1, 1)
+                        if int(self.table.rowSpan(int(insert_at), int(self._col_price)) or 1) > 1:
+                            self.table.setSpan(int(insert_at), int(self._col_price), 1, 1)
                     except Exception:
                         pass
                     try:
@@ -2166,11 +2169,6 @@ class BulkAttendanceDialog(QDialog):
                         # planned service (plan_time_block). Use plan_time_block to de-duplicate so
                         # day quantities are not double-counted in TOPLAMLAR.
                         kq_tb = str(ptb2 or tb2)
-                        try:
-                            if self._norm_tr_text(mv_key) == self._norm_tr_text("TEK") and (not self._is_planned_time_label(str(kq_tb))):
-                                kq_tb = ""
-                        except Exception:
-                            pass
                         kq = (int(rid2), str(kq_tb), str(trip_date))
                         if kq in seen_qty_keys:
                             continue
@@ -3037,11 +3035,13 @@ class BulkAttendanceDialog(QDialog):
                     try:
                         # Reset first to avoid overlap with any previous spans.
                         try:
-                            self.table.setSpan(int(sr), int(self._col_total_qty), 1, 1)
+                            if int(self.table.rowSpan(int(sr), int(self._col_total_qty)) or 1) > 1:
+                                self.table.setSpan(int(sr), int(self._col_total_qty), 1, 1)
                         except Exception:
                             pass
                         try:
-                            self.table.setSpan(int(sr), int(self._col_price), 1, 1)
+                            if int(self.table.rowSpan(int(sr), int(self._col_price)) or 1) > 1:
+                                self.table.setSpan(int(sr), int(self._col_price), 1, 1)
                         except Exception:
                             pass
                         self.table.setSpan(int(sr), int(self._col_total_qty), 1, 2)
@@ -6796,12 +6796,62 @@ class BulkAttendanceDialog(QDialog):
             except Exception:
                 pass
 
+        last_err = None
+        _wl = None
         try:
-            conn = self.db.connect()
-            cur = conn.cursor()
-            cur.execute("BEGIN")
+            _wl = getattr(self.db.__class__, "_write_lock", None)
+        except Exception:
+            _wl = None
+        try:
+            if _wl is not None:
+                try:
+                    _wl.acquire()
+                except Exception:
+                    _wl = None
 
-            try:
+            for attempt in range(10):
+                conn = None
+                try:
+                    self.db._ensure_bulk_puantaj_manual_rows_table()
+                except Exception:
+                    pass
+                conn = self.db.connect(timeout=0.4, busy_timeout_ms=400)
+                if not conn:
+                    raise RuntimeError("Veritabanı bağlantısı kurulamadı")
+                cur = conn.cursor()
+                try:
+                    cur.execute("BEGIN IMMEDIATE")
+                except Exception as e:
+                    last_err = e
+                    msg = ""
+                    try:
+                        msg = str(e or "")
+                    except Exception:
+                        msg = ""
+                    try:
+                        if conn is not None:
+                            try:
+                                conn.rollback()
+                            except Exception:
+                                pass
+                            try:
+                                conn.close()
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+                    if "locked" in msg.lower() and attempt < 9:
+                        try:
+                            QApplication.processEvents()
+                        except Exception:
+                            pass
+                        try:
+                            sleep(min(0.15, 0.02 * float(attempt + 1)))
+                        except Exception:
+                            pass
+                        continue
+                    break
+
                 def _parse_hhmm_to_minutes(s: str):
                     t = str(s or "").strip()
                     if not t:
@@ -6851,305 +6901,337 @@ class BulkAttendanceDialog(QDialog):
 
                 conflict_found = False
 
-                local_by_vehicle = {}
-                local_by_driver = {}
-                for row in alloc_rows or []:
-                    try:
-                        c_id, rid, tdate, st, tb, ln, did, vid, q, tt, nt, ca, ua = row
-                    except Exception:
-                        continue
-                    try:
-                        if float(q or 0) <= 0:
-                            continue
-                    except Exception:
-                        continue
-                    s_m, e_m = _parse_range_minutes(str(tb or ""), str(tt or ""))
-                    if s_m is None or e_m is None:
-                        continue
-
-                    key_date = str(tdate)
-                    if vid is not None and str(vid).strip():
-                        local_by_vehicle.setdefault((key_date, str(vid)), []).append((int(s_m), int(e_m), int(rid), str(tb or ""), int(ln or 0)))
-                    if did is not None and str(did).strip():
-                        local_by_driver.setdefault((key_date, str(did)), []).append((int(s_m), int(e_m), int(rid), str(tb or ""), int(ln or 0)))
-
-                for (dkey, vkey), rr in (local_by_vehicle or {}).items():
-                    rr2 = sorted(rr, key=lambda x: (x[0], x[1]))
-                    for i in range(len(rr2)):
-                        for j in range(i + 1, len(rr2)):
-                            if _overlap(rr2[i][0], rr2[i][1], rr2[j][0], rr2[j][1]):
-                                conflict_found = True
-                                break
-                            if rr2[j][0] > rr2[i][1] and rr2[i][0] < rr2[i][1]:
-                                break
-                        if conflict_found:
-                            break
-                    if conflict_found:
-                        break
-
-                for (dkey, drkey), rr in (local_by_driver or {}).items():
-                    rr2 = sorted(rr, key=lambda x: (x[0], x[1]))
-                    for i in range(len(rr2)):
-                        for j in range(i + 1, len(rr2)):
-                            if _overlap(rr2[i][0], rr2[i][1], rr2[j][0], rr2[j][1]):
-                                conflict_found = True
-                                break
-                            if rr2[j][0] > rr2[i][1] and rr2[i][0] < rr2[i][1]:
-                                break
-                        if conflict_found:
-                            break
-                    if conflict_found:
-                        break
-
-                for row in alloc_rows or []:
-                    try:
-                        c_id, rid, tdate, st, tb, ln, did, vid, q, tt, nt, ca, ua = row
-                    except Exception:
-                        continue
-                    try:
-                        if float(q or 0) <= 0:
-                            continue
-                    except Exception:
-                        continue
-                    if (vid is None or not str(vid).strip()) and (did is None or not str(did).strip()):
-                        continue
-                    conflict = self.db.find_allocation_conflict(
-                        contract_id=int(self.contract_id),
-                        trip_date=str(tdate),
-                        service_type=str(self.service_type),
-                        time_block=str(tb),
-                        time_text=str(tt or ""),
-                        vehicle_id=vid,
-                        driver_id=did,
-                        exclude_route_params_id=int(rid),
-                        exclude_time_block=str(tb),
-                        exclude_line_no=int(ln or 0),
-                    )
-                    if conflict:
-                        conflict_found = True
-                        break
-
-                if conflict_found:
-                    QMessageBox.warning(
-                        self,
-                        "Çakışma Uyarısı",
-                        "Aynı gün içinde araç/şoför saat çakışması tespit edildi. Uyarıya rağmen kayıt yapılacaktır.",
-                    )
-            except Exception:
-                pass
-
-            try:
-                for rid0, tb0, ln0 in (empty_hidden_groups or []):
-                    if int(ln0 or 0) != 0:
-                        continue
-                    cur.execute(
-                        """
-                        DELETE FROM trip_entries
-                        WHERE contract_id=? AND service_type=? AND time_block=? AND route_params_id=?
-                          AND line_no=? AND trip_date BETWEEN ? AND ?
-                        """,
-                        (
-                            int(self.contract_id),
-                            str(self.service_type),
-                            str(tb0),
-                            int(rid0),
-                            int(ln0),
-                            start_date,
-                            end_date,
-                        ),
-                    )
-                    cur.execute(
-                        """
-                        DELETE FROM trip_allocations
-                        WHERE contract_id=? AND service_type=? AND time_block=? AND route_params_id=?
-                          AND line_no=? AND trip_date BETWEEN ? AND ?
-                        """,
-                        (
-                            int(self.contract_id),
-                            str(self.service_type),
-                            str(tb0),
-                            int(rid0),
-                            int(ln0),
-                            start_date,
-                            end_date,
-                        ),
-                    )
-            except Exception:
-                pass
-
-            try:
-                if price_write_map:
-                    for (ridp, tbp), prp in (price_write_map or {}).items():
-                        price_rows.append(
-                            (
-                                int(self.contract_id),
-                                int(ridp),
-                                str(self.month_key),
-                                str(self.service_type),
-                                str(tbp),
-                                float(prp),
-                                now,
-                            )
-                        )
-            except Exception:
-                pass
-
-            if price_rows:
-                cur.executemany(
-                    """
-                    INSERT INTO trip_prices (
-                        contract_id, route_params_id, month, service_type, time_block, price, updated_at
-                    ) VALUES (?,?,?,?,?,?,?)
-                    ON CONFLICT(contract_id, route_params_id, month, service_type, time_block)
-                    DO UPDATE SET price=excluded.price, updated_at=excluded.updated_at
-                    """,
-                    price_rows,
-                )
-
-            if entry_rows:
-                cur.executemany(
-                    """
-                    INSERT INTO trip_entries (
-                        contract_id, route_params_id, trip_date, service_type, time_block, line_no,
-                        qty, time_text, created_at, updated_at
-                    ) VALUES (?,?,?,?,?,?,?,?,?,?)
-                    ON CONFLICT(contract_id, route_params_id, trip_date, service_type, time_block, line_no)
-                    DO UPDATE SET qty=excluded.qty, time_text=excluded.time_text, updated_at=excluded.updated_at
-                    """,
-                    entry_rows,
-                )
-
-            if alloc_rows:
-                cur.executemany(
-                    """
-                    INSERT INTO trip_allocations (
-                        contract_id, route_params_id, trip_date, service_type, time_block, line_no,
-                        driver_id, vehicle_id, qty, time_text, note, created_at, updated_at
-                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
-                    ON CONFLICT(contract_id, route_params_id, trip_date, service_type, time_block, line_no)
-                    DO UPDATE SET
-                        driver_id=excluded.driver_id,
-                        vehicle_id=excluded.vehicle_id,
-                        qty=excluded.qty,
-                        time_text=excluded.time_text,
-                        note=excluded.note,
-                        updated_at=excluded.updated_at
-                    """,
-                    alloc_rows,
-                )
-
-            # Cleanup empty split groups (line_no>0) to avoid extra/unused split rows coming back.
-            try:
-                for rid0, tb0, ln0 in (empty_split_groups or []):
-                    if int(ln0 or 0) <= 0:
-                        continue
-                    try:
-                        if (int(rid0), str(tb0)) in (split_keys or set()):
-                            continue
-                    except Exception:
-                        pass
-                    cur.execute(
-                        """
-                        DELETE FROM trip_entries
-                        WHERE contract_id=? AND service_type=? AND time_block=? AND route_params_id=?
-                          AND line_no=? AND trip_date BETWEEN ? AND ?
-                        """,
-                        (
-                            int(self.contract_id),
-                            str(self.service_type),
-                            str(tb0),
-                            int(rid0),
-                            int(ln0),
-                            start_date,
-                            end_date,
-                        ),
-                    )
-                    cur.execute(
-                        """
-                        DELETE FROM trip_allocations
-                        WHERE contract_id=? AND service_type=? AND time_block=? AND route_params_id=?
-                          AND line_no=? AND trip_date BETWEEN ? AND ?
-                        """,
-                        (
-                            int(self.contract_id),
-                            str(self.service_type),
-                            str(tb0),
-                            int(rid0),
-                            int(ln0),
-                            start_date,
-                            end_date,
-                        ),
-                    )
-            except Exception:
-                pass
-
-            try:
-                warned = set()
-                for row in alloc_rows or []:
-                    try:
-                        c_id, rid, tdate, st, tb, ln, did, vid, q, tt, nt, ca, ua = row
-                    except Exception:
-                        continue
-                    try:
-                        if float(q or 0) <= 0:
-                            continue
-                    except Exception:
-                        continue
-                    if vid is None or not str(vid).strip():
-                        continue
-                    k = (str(tdate), str(vid))
-                    if k in warned:
-                        continue
-                    warned.add(k)
-                    mv = int(self.db.get_vehicle_movements_for_day(int(self.contract_id), str(tdate), vid) or 0)
-                    if (not DISABLE_VEHICLE_MOVEMENT_LIMIT_WARNING) and mv > 8:
-                        QMessageBox.warning(self, "Uyarı", f"Bu araç için {tdate} tarihinde hareket sayısı {mv} oldu (limit: 8).")
-            except Exception:
-                pass
-
-            conn.commit()
-            conn.close()
-
-            try:
-                ok_manual = self.db.replace_bulk_puantaj_manual_rows(
-                    int(self.contract_id),
-                    str(self.month_key),
-                    str(self.service_type),
-                    list(manual_payload or []),
-                )
-                if not bool(ok_manual):
-                    QMessageBox.warning(self, "Uyarı", "Manuel satırlar kaydedilemedi.")
-            except Exception:
                 try:
-                    QMessageBox.warning(self, "Uyarı", "Manuel satırlar kaydedilemedi.")
+                    local_by_vehicle = {}
+                    local_by_driver = {}
+                    for row in alloc_rows or []:
+                        try:
+                            c_id, rid, tdate, st, tb, ln, did, vid, q, tt, nt, ca, ua = row
+                        except Exception:
+                            continue
+                        try:
+                            if float(q or 0) <= 0:
+                                continue
+                        except Exception:
+                            continue
+                        s_m, e_m = _parse_range_minutes(str(tb or ""), str(tt or ""))
+                        if s_m is None or e_m is None:
+                            continue
+
+                        key_date = str(tdate)
+                        if vid is not None and str(vid).strip():
+                            local_by_vehicle.setdefault((key_date, str(vid)), []).append((int(s_m), int(e_m), int(rid), str(tb or ""), int(ln or 0)))
+                        if did is not None and str(did).strip():
+                            local_by_driver.setdefault((key_date, str(did)), []).append((int(s_m), int(e_m), int(rid), str(tb or ""), int(ln or 0)))
+
+                    for (dkey, vkey), rr in (local_by_vehicle or {}).items():
+                        rr2 = sorted(rr, key=lambda x: (x[0], x[1]))
+                        for i in range(len(rr2)):
+                            for j in range(i + 1, len(rr2)):
+                                if _overlap(rr2[i][0], rr2[i][1], rr2[j][0], rr2[j][1]):
+                                    conflict_found = True
+                                    break
+                                if rr2[j][0] > rr2[i][1] and rr2[i][0] < rr2[i][1]:
+                                    break
+                            if conflict_found:
+                                break
+                        if conflict_found:
+                            break
+
+                    for (dkey, drkey), rr in (local_by_driver or {}).items():
+                        rr2 = sorted(rr, key=lambda x: (x[0], x[1]))
+                        for i in range(len(rr2)):
+                            for j in range(i + 1, len(rr2)):
+                                if _overlap(rr2[i][0], rr2[i][1], rr2[j][0], rr2[j][1]):
+                                    conflict_found = True
+                                    break
+                                if rr2[j][0] > rr2[i][1] and rr2[i][0] < rr2[i][1]:
+                                    break
+                            if conflict_found:
+                                break
+                        if conflict_found:
+                            break
+
+                    if conflict_found:
+                        QMessageBox.warning(
+                            self,
+                            "Çakışma Uyarısı",
+                            "Aynı gün içinde araç/şoför saat çakışması tespit edildi. Uyarıya rağmen kayıt yapılacaktır.",
+                        )
                 except Exception:
                     pass
-        except Exception:
-            try:
-                conn.rollback()
-            except Exception:
-                pass
-            try:
-                conn.close()
-            except Exception:
-                pass
-            QMessageBox.critical(self, "Hata", "Bazı kayıtlar yazılamadı.")
-            return
+
+                try:
+                    for rid0, tb0, ln0 in (empty_hidden_groups or []):
+                        if int(ln0 or 0) != 0:
+                            continue
+                        cur.execute(
+                            """
+                            DELETE FROM trip_entries
+                            WHERE contract_id=? AND service_type=? AND time_block=? AND route_params_id=?
+                              AND line_no=? AND trip_date BETWEEN ? AND ?
+                            """,
+                            (
+                                int(self.contract_id),
+                                str(self.service_type),
+                                str(tb0),
+                                int(rid0),
+                                int(ln0),
+                                start_date,
+                                end_date,
+                            ),
+                        )
+                        cur.execute(
+                            """
+                            DELETE FROM trip_allocations
+                            WHERE contract_id=? AND service_type=? AND time_block=? AND route_params_id=?
+                              AND line_no=? AND trip_date BETWEEN ? AND ?
+                            """,
+                            (
+                                int(self.contract_id),
+                                str(self.service_type),
+                                str(tb0),
+                                int(rid0),
+                                int(ln0),
+                                start_date,
+                                end_date,
+                            ),
+                        )
+                except Exception:
+                    pass
+
+                try:
+                    if price_write_map:
+                        for (ridp, tbp), prp in (price_write_map or {}).items():
+                            price_rows.append(
+                                (
+                                    int(self.contract_id),
+                                    int(ridp),
+                                    str(self.month_key),
+                                    str(self.service_type),
+                                    str(tbp),
+                                    float(prp),
+                                    now,
+                                )
+                            )
+                except Exception:
+                    pass
+
+                if price_rows:
+                    try:
+                        cur.executemany(
+                            """
+                            INSERT INTO trip_prices (
+                                contract_id, route_params_id, month, service_type, time_block, price, updated_at
+                            ) VALUES (?,?,?,?,?,?,?)
+                            ON CONFLICT(contract_id, route_params_id, month, service_type, time_block)
+                            DO UPDATE SET price=excluded.price, updated_at=excluded.updated_at
+                            """,
+                            price_rows,
+                        )
+                    except Exception as e:
+                        raise RuntimeError(f"trip_prices yazılamadı: {e}")
+
+                if entry_rows:
+                    try:
+                        cur.executemany(
+                            """
+                            INSERT INTO trip_entries (
+                                contract_id, route_params_id, trip_date, service_type, time_block, line_no,
+                                qty, time_text, created_at, updated_at
+                            ) VALUES (?,?,?,?,?,?,?,?,?,?)
+                            ON CONFLICT(contract_id, route_params_id, trip_date, service_type, time_block, line_no)
+                            DO UPDATE SET qty=excluded.qty, time_text=excluded.time_text, updated_at=excluded.updated_at
+                            """,
+                            entry_rows,
+                        )
+                    except Exception as e:
+                        raise RuntimeError(f"trip_entries yazılamadı: {e}")
+
+                if alloc_rows:
+                    try:
+                        cur.executemany(
+                            """
+                            INSERT INTO trip_allocations (
+                                contract_id, route_params_id, trip_date, service_type, time_block, line_no,
+                                driver_id, vehicle_id, qty, time_text, note, created_at, updated_at
+                            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                            ON CONFLICT(contract_id, route_params_id, trip_date, service_type, time_block, line_no)
+                            DO UPDATE SET
+                                driver_id=excluded.driver_id,
+                                vehicle_id=excluded.vehicle_id,
+                                qty=excluded.qty,
+                                time_text=excluded.time_text,
+                                note=excluded.note,
+                                updated_at=excluded.updated_at
+                            """,
+                            alloc_rows,
+                        )
+                    except Exception as e:
+                        raise RuntimeError(f"trip_allocations yazılamadı: {e}")
+
+                try:
+                    cur.execute(
+                        "DELETE FROM bulk_puantaj_manual_rows WHERE contract_id=? AND month=? AND service_type=?",
+                        (int(self.contract_id), str(self.month_key), str(self.service_type)),
+                    )
+                    now2 = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    for i, rec in enumerate(manual_payload or []):
+                        if not isinstance(rec, dict):
+                            continue
+                        cur.execute(
+                            """
+                            INSERT INTO bulk_puantaj_manual_rows (
+                                contract_id, month, service_type, sort_order,
+                                guzergah, vehicle_id, driver_id, movement_type, time_text,
+                                unit_price, day_qty_json, created_at, updated_at
+                            )
+                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                            """,
+                            (
+                                int(self.contract_id),
+                                str(self.month_key),
+                                str(self.service_type),
+                                int(rec.get("sort_order") if rec.get("sort_order") is not None else i),
+                                str(rec.get("guzergah") or ""),
+                                (None if rec.get("vehicle_id") is None else str(rec.get("vehicle_id"))),
+                                (None if rec.get("driver_id") is None else str(rec.get("driver_id"))),
+                                str(rec.get("movement_type") or ""),
+                                str(rec.get("time_text") or ""),
+                                float(rec.get("unit_price") or 0.0),
+                                str(rec.get("day_qty_json") or ""),
+                                now2,
+                                now2,
+                            ),
+                        )
+                except Exception as e:
+                    raise RuntimeError(f"manuel satırlar yazılamadı: {e}")
+
+                try:
+                    for rid0, tb0, ln0 in (empty_split_groups or []):
+                        if int(ln0 or 0) <= 0:
+                            continue
+                        try:
+                            if (int(rid0), str(tb0)) in (split_keys or set()):
+                                continue
+                        except Exception:
+                            pass
+                        cur.execute(
+                            """
+                            DELETE FROM trip_entries
+                            WHERE contract_id=? AND service_type=? AND time_block=? AND route_params_id=?
+                              AND line_no=? AND trip_date BETWEEN ? AND ?
+                            """,
+                            (
+                                int(self.contract_id),
+                                str(self.service_type),
+                                str(tb0),
+                                int(rid0),
+                                int(ln0),
+                                start_date,
+                                end_date,
+                            ),
+                        )
+                        cur.execute(
+                            """
+                            DELETE FROM trip_allocations
+                            WHERE contract_id=? AND service_type=? AND time_block=? AND route_params_id=?
+                              AND line_no=? AND trip_date BETWEEN ? AND ?
+                            """,
+                            (
+                                int(self.contract_id),
+                                str(self.service_type),
+                                str(tb0),
+                                int(rid0),
+                                int(ln0),
+                                start_date,
+                                end_date,
+                            ),
+                        )
+                except Exception:
+                    pass
+
+                try:
+                    warned = set()
+                    for row in alloc_rows or []:
+                        try:
+                            c_id, rid, tdate, st, tb, ln, did, vid, q, tt, nt, ca, ua = row
+                        except Exception:
+                            continue
+                        try:
+                            if float(q or 0) <= 0:
+                                continue
+                        except Exception:
+                            continue
+                        if vid is None or not str(vid).strip():
+                            continue
+                        k = (str(tdate), str(vid))
+                        if k in warned:
+                            continue
+                        warned.add(k)
+                        mv = int(self.db.get_vehicle_movements_for_day(int(self.contract_id), str(tdate), vid) or 0)
+                        if (not DISABLE_VEHICLE_MOVEMENT_LIMIT_WARNING) and mv > 8:
+                            QMessageBox.warning(self, "Uyarı", f"Bu araç için {tdate} tarihinde hareket sayısı {mv} oldu (limit: 8).")
+                except Exception:
+                    pass
+
+                except Exception as e:
+                    last_err = e
+                    msg = ""
+                    try:
+                        msg = str(e or "")
+                    except Exception:
+                        msg = ""
+                    try:
+                        if conn is not None:
+                            try:
+                                conn.rollback()
+                            except Exception:
+                                pass
+                            try:
+                                conn.close()
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+                    if "locked" in msg.lower() and attempt < 9:
+                        try:
+                            QApplication.processEvents()
+                        except Exception:
+                            pass
+                        try:
+                            sleep(min(0.15, 0.02 * float(attempt + 1)))
+                        except Exception:
+                            pass
+                        continue
+                    break
+
         finally:
-            self._saving = False
+            if _wl is not None:
+                try:
+                    _wl.release()
+                except Exception:
+                    pass
+        try:
+            self.btn_save.setEnabled(True)
+        except Exception:
+            pass
+        try:
+            self.table.setEnabled(True)
+        except Exception:
+            pass
+        try:
+            self.table.viewport().update()
+            self.table.update()
+        except Exception:
+            pass
+
+        if last_err is not None:
             try:
-                self.table.setEnabled(True)
+                QMessageBox.critical(self, "Hata", f"Bazı kayıtlar yazılamadı.\n\n{last_err}")
             except Exception:
-                pass
-            try:
-                self.btn_save.setEnabled(True)
-            except Exception:
-                pass
-            try:
-                self.table.viewport().update()
-                self.table.update()
-            except Exception:
-                pass
+                QMessageBox.critical(self, "Hata", "Bazı kayıtlar yazılamadı.")
+            return
 
         if bool(getattr(self, "_embedded", False)):
             try:
