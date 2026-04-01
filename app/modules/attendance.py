@@ -6,6 +6,7 @@ import json
 import re
 import unicodedata
 from datetime import datetime
+import time
 from time import sleep
 
 from PyQt6 import uic
@@ -1611,10 +1612,12 @@ class BulkAttendanceDialog(QDialog):
                 return 1
             rid_i = int((meta or {}).get("route_params_id") or 0)
             tb_s = str((meta or {}).get("time_block") or "").strip()
+            ptb_s = str((meta or {}).get("plan_time_block") or "").strip()
         except Exception:
             return 1
 
-        if rid_i <= 0 or (not tb_s):
+        tb_key = str(ptb_s or tb_s).strip()
+        if rid_i <= 0 or (not tb_key):
             return 1
 
         cnt = 0
@@ -1629,7 +1632,9 @@ class BulkAttendanceDialog(QDialog):
                         continue
                 except Exception:
                     continue
-                if str(m.get("time_block") or "").strip() != tb_s:
+                tb2 = str(m.get("time_block") or "").strip()
+                ptb2 = str(m.get("plan_time_block") or "").strip()
+                if str(ptb2 or tb2).strip() != tb_key:
                     continue
                 cnt += 1
         except Exception:
@@ -2106,6 +2111,12 @@ class BulkAttendanceDialog(QDialog):
                 m2 = self._row_meta[rr] if rr < len(self._row_meta) else None
                 if bool((m2 or {}).get("is_summary")):
                     break
+                try:
+                    if bool(self.table.isRowHidden(int(rr))):
+                        rr += 1
+                        continue
+                except Exception:
+                    pass
                 if int((m2 or {}).get("route_params_id") or 0) <= 0 and not bool((m2 or {}).get("is_manual")):
                     break
                 if _cell_txt(rr, int(self._col_vehicle)) != vehicle or _cell_txt(rr, int(self._col_driver)) != driver:
@@ -2155,6 +2166,10 @@ class BulkAttendanceDialog(QDialog):
                         gs2 = 1
                     if int(gs2 or 1) <= 0:
                         gs2 = 1
+                    try:
+                        ln2 = int((m2 or {}).get("line_no") or 0)
+                    except Exception:
+                        ln2 = 0
                     for day in range(1, int(self.days_in_month) + 1):
                         cc = int(self._day_start) + (int(day) - 1)
                         itx = self.table.item(int(rr), int(cc))
@@ -2168,8 +2183,9 @@ class BulkAttendanceDialog(QDialog):
                         # Split rows can have different time_block values while representing the same
                         # planned service (plan_time_block). Use plan_time_block to de-duplicate so
                         # day quantities are not double-counted in TOPLAMLAR.
-                        kq_tb = str(ptb2 or tb2)
-                        kq = (int(rid2), str(kq_tb), str(trip_date))
+                        is_split_group = int(gs2 or 1) > 1
+                        kq_tb = str((ptb2 or tb2) if bool(is_split_group) else tb2)
+                        kq = (int(rid2), str(kq_tb), str(trip_date), (int(ln2) if bool(is_split_group) else 0))
                         if kq in seen_qty_keys:
                             continue
                         seen_qty_keys.add(kq)
@@ -2204,6 +2220,10 @@ class BulkAttendanceDialog(QDialog):
                             if bool((mdbg or {}).get("is_summary")):
                                 continue
                             try:
+                                is_hidden = bool(self.table.isRowHidden(int(rrr)))
+                            except Exception:
+                                is_hidden = False
+                            try:
                                 rid_dbg = int((mdbg or {}).get("route_params_id") or 0)
                             except Exception:
                                 rid_dbg = 0
@@ -2217,10 +2237,19 @@ class BulkAttendanceDialog(QDialog):
                                 q_dbg = int(self._row_day_qty_sum(int(rrr)))
                             except Exception:
                                 q_dbg = 0
+                            try:
+                                p_it = self.table.item(int(rrr), int(self._col_price))
+                                p_dbg = float(self._parse_tr_float((p_it.text() if p_it is not None else "") or "0"))
+                            except Exception:
+                                p_dbg = 0.0
+                            try:
+                                row_price_dbg = float(self._row_total_price_value(int(rrr)) or 0.0)
+                            except Exception:
+                                row_price_dbg = 0.0
                             mv_dbg = _cell_txt(int(rrr), int(self._col_movement))
                             tt_dbg = _cell_txt(int(rrr), int(self._col_time_text))
                             lines.append(
-                                f"row={int(rrr)} rid={rid_dbg} tb='{tb_dbg}' plan_tb='{ptb_dbg}' ln={ln_dbg} day_sum={q_dbg} mv='{mv_dbg}' time_text='{tt_dbg}'"
+                                f"row={int(rrr)} hidden={is_hidden} rid={rid_dbg} tb='{tb_dbg}' plan_tb='{ptb_dbg}' ln={ln_dbg} day_sum={q_dbg} unit_price={p_dbg} row_price={row_price_dbg} mv='{mv_dbg}' time_text='{tt_dbg}'"
                             )
                         QMessageBox.information(
                             self,
@@ -6189,7 +6218,7 @@ class BulkAttendanceDialog(QDialog):
                     self._apply_day_cell_style(r, day_col)
 
             try:
-                split_keys = set()
+                split_counts: dict[tuple[int, str], int] = {}
                 for r0 in range(self.table.rowCount()):
                     mm = self._row_meta[int(r0)] if int(r0) < len(self._row_meta) else None
                     try:
@@ -6197,16 +6226,12 @@ class BulkAttendanceDialog(QDialog):
                     except Exception:
                         rid_i = 0
                     tb_s = str((mm or {}).get("time_block") or "").strip()
-                    try:
-                        ln_i = int((mm or {}).get("line_no") or 0)
-                    except Exception:
-                        ln_i = 0
-                    if rid_i <= 0 or not tb_s or ln_i <= 0:
+                    ptb_s = str((mm or {}).get("plan_time_block") or "").strip()
+                    tb_key = str(ptb_s or tb_s).strip()
+                    if rid_i <= 0 or not tb_key:
                         continue
-                    mt_item = self.table.item(int(r0), self._col_movement)
-                    mt_txt = self._norm_tr_text(mt_item.text() if mt_item is not None else "")
-                    if ("cift" in mt_txt) or ("paket" in mt_txt):
-                        split_keys.add((rid_i, tb_s))
+                    k = (int(rid_i), str(tb_key))
+                    split_counts[k] = int(split_counts.get(k, 0)) + 1
 
                 for r in range(self.table.rowCount()):
                     meta = self._row_meta[r] if r < len(self._row_meta) else None
@@ -6215,16 +6240,16 @@ class BulkAttendanceDialog(QDialog):
                     except Exception:
                         rid_i = 0
                     tb_s = str((meta or {}).get("time_block") or "").strip()
+                    ptb_s = str((meta or {}).get("plan_time_block") or "").strip()
+                    tb_key = str(ptb_s or tb_s).strip()
                     try:
                         ln_i = int((meta or {}).get("line_no") or 0)
                     except Exception:
                         ln_i = 0
 
-                    if rid_i <= 0 or not tb_s:
+                    if rid_i <= 0 or not tb_key:
                         continue
-                    if ln_i != 0:
-                        continue
-                    # TEK rows must never be treated as a base row of a split group.
+                    # TEK rows must never be treated as a split group.
                     try:
                         mt_item = self.table.item(int(r), self._col_movement)
                         mt_txt = self._norm_tr_text(mt_item.text() if mt_item is not None else "")
@@ -6233,8 +6258,19 @@ class BulkAttendanceDialog(QDialog):
                         is_split_mt = False
                     if not is_split_mt:
                         continue
-                    if (rid_i, tb_s) not in split_keys:
+                    try:
+                        gs = int(split_counts.get((int(rid_i), str(tb_key)), 0) or 0)
+                    except Exception:
+                        gs = 0
+                    if int(gs or 0) < 2:
                         continue
+
+                    # Mark split group size so totals stay correct even if empty partner row is removed.
+                    try:
+                        if isinstance(meta, dict):
+                            meta["split_group_size"] = int(gs)
+                    except Exception:
+                        pass
 
                     # empty-row visibility is now controlled via a user prompt after load
             except Exception:
@@ -6283,11 +6319,58 @@ class BulkAttendanceDialog(QDialog):
                     # still iterate them and Qt can produce paint artifacts (values that disappear
                     # on hover) when spans cross hidden rows. Remove rows physically instead.
                     try:
+                        split_counts: dict[tuple[int, str], int] = {}
+                        split_has_mt: set[tuple[int, str]] = set()
+                        try:
+                            for r0 in range(self.table.rowCount()):
+                                mm = self._row_meta[int(r0)] if int(r0) < len(self._row_meta) else None
+                                try:
+                                    rid_i = int((mm or {}).get("route_params_id") or 0)
+                                except Exception:
+                                    rid_i = 0
+                                tb_s = str((mm or {}).get("time_block") or "").strip()
+                                ptb_s = str((mm or {}).get("plan_time_block") or "").strip()
+                                tb_key = str(ptb_s or tb_s).strip()
+                                if rid_i <= 0 or not tb_key:
+                                    continue
+                                k = (int(rid_i), str(tb_key))
+                                split_counts[k] = int(split_counts.get(k, 0)) + 1
+                                try:
+                                    mt_item = self.table.item(int(r0), self._col_movement)
+                                    mt_txt = self._norm_tr_text(mt_item.text() if mt_item is not None else "")
+                                    if ("cift" in mt_txt) or ("paket" in mt_txt):
+                                        split_has_mt.add(k)
+                                except Exception:
+                                    pass
+                        except Exception:
+                            split_counts = {}
+                            split_has_mt = set()
+
                         try:
                             self.table.blockSignals(True)
                         except Exception:
                             pass
                         for rr in sorted([int(x) for x in (empty_rows or [])], reverse=True):
+                            keep_hidden = False
+                            try:
+                                mm = self._row_meta[int(rr)] if int(rr) < len(self._row_meta) else None
+                                rid_i = int((mm or {}).get("route_params_id") or 0)
+                                tb_s = str((mm or {}).get("time_block") or "").strip()
+                                ptb_s = str((mm or {}).get("plan_time_block") or "").strip()
+                                tb_key = str(ptb_s or tb_s).strip()
+                                k = (int(rid_i), str(tb_key))
+                                if int(split_counts.get(k, 0) or 0) >= 2 and k in split_has_mt:
+                                    keep_hidden = True
+                            except Exception:
+                                keep_hidden = False
+
+                            if keep_hidden:
+                                try:
+                                    self.table.setRowHidden(int(rr), True)
+                                except Exception:
+                                    pass
+                                continue
+
                             try:
                                 self.table.removeRow(int(rr))
                             except Exception:
@@ -6809,13 +6892,24 @@ class BulkAttendanceDialog(QDialog):
                 except Exception:
                     _wl = None
 
-            for attempt in range(10):
+            t0 = 0.0
+            try:
+                t0 = float(time.monotonic())
+            except Exception:
+                t0 = 0.0
+
+            for attempt in range(50):
+                try:
+                    if t0 and (float(time.monotonic()) - float(t0)) > 3.0:
+                        break
+                except Exception:
+                    pass
                 conn = None
                 try:
                     self.db._ensure_bulk_puantaj_manual_rows_table()
                 except Exception:
                     pass
-                conn = self.db.connect(timeout=0.4, busy_timeout_ms=400)
+                conn = self.db.connect(timeout=0.25, busy_timeout_ms=250)
                 if not conn:
                     raise RuntimeError("Veritabanı bağlantısı kurulamadı")
                 cur = conn.cursor()
@@ -6823,11 +6917,11 @@ class BulkAttendanceDialog(QDialog):
                     cur.execute("BEGIN IMMEDIATE")
                 except Exception as e:
                     last_err = e
-                    msg = ""
+                    msg0 = ""
                     try:
-                        msg = str(e or "")
+                        msg0 = str(e or "")
                     except Exception:
-                        msg = ""
+                        msg0 = ""
                     try:
                         if conn is not None:
                             try:
@@ -6840,13 +6934,13 @@ class BulkAttendanceDialog(QDialog):
                                 pass
                     except Exception:
                         pass
-                    if "locked" in msg.lower() and attempt < 9:
+                    if "locked" in (msg0 or "").lower():
                         try:
                             QApplication.processEvents()
                         except Exception:
                             pass
                         try:
-                            sleep(min(0.15, 0.02 * float(attempt + 1)))
+                            sleep(0.01)
                         except Exception:
                             pass
                         continue
@@ -7172,6 +7266,22 @@ class BulkAttendanceDialog(QDialog):
                         mv = int(self.db.get_vehicle_movements_for_day(int(self.contract_id), str(tdate), vid) or 0)
                         if (not DISABLE_VEHICLE_MOVEMENT_LIMIT_WARNING) and mv > 8:
                             QMessageBox.warning(self, "Uyarı", f"Bu araç için {tdate} tarihinde hareket sayısı {mv} oldu (limit: 8).")
+
+                    try:
+                        if conn is not None:
+                            try:
+                                conn.commit()
+                            except Exception:
+                                pass
+                            try:
+                                conn.close()
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+
+                    last_err = None
+                    break
                 except Exception:
                     pass
 
@@ -7194,13 +7304,13 @@ class BulkAttendanceDialog(QDialog):
                                 pass
                     except Exception:
                         pass
-                    if "locked" in msg.lower() and attempt < 9:
+                    if "locked" in msg.lower():
                         try:
                             QApplication.processEvents()
                         except Exception:
                             pass
                         try:
-                            sleep(min(0.15, 0.02 * float(attempt + 1)))
+                            sleep(0.01)
                         except Exception:
                             pass
                         continue
@@ -7227,6 +7337,40 @@ class BulkAttendanceDialog(QDialog):
             pass
 
         if last_err is not None:
+            msg0 = ""
+            try:
+                msg0 = str(last_err or "")
+            except Exception:
+                msg0 = ""
+            if "locked" in (msg0 or "").lower():
+                dbp = ""
+                try:
+                    dbp = str(getattr(self.db, "db_path", "") or "")
+                except Exception:
+                    dbp = ""
+                diag = ""
+                try:
+                    diag = str(self.db.debug_connection_snapshot() or "")
+                except Exception:
+                    diag = ""
+                try:
+                    QMessageBox.critical(
+                        self,
+                        "Hata",
+                        "Veritabanı dosyası kilitli (database is locked).\n\n"
+                        f"DB: {dbp}\n\n"
+                        "Net çözüm adımları:\n"
+                        "1) SATTUP'un 2. kez açık olmadığından emin olun (Task Manager'da ikinci python.exe kapatın).\n"
+                        "2) DB dosyası OneDrive/Dropbox gibi senkronize klasördeyse projeyi yerel bir klasöre taşıyın (örn. C:\\SATTUP).\n"
+                        "3) Antivirüs / yedekleme yazılımında DB dosyasını ve klasörünü hariç tutun.\n"
+                        "4) DB'yi Notepad/SQLite Browser gibi bir programla açık bırakmayın.\n\n"
+                        "Bu adımlar yapılmadan yazma kilidi yazılım tarafından kaldırılamaz."
+                        + ("\n\n--- TECH ---\n" + diag if (diag or "").strip() else ""),
+                    )
+                except Exception:
+                    QMessageBox.critical(self, "Hata", "Veritabanı dosyası kilitli (database is locked).")
+                return
+
             try:
                 QMessageBox.critical(self, "Hata", f"Bazı kayıtlar yazılamadı.\n\n{last_err}")
             except Exception:

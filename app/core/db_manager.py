@@ -2,6 +2,7 @@ import sqlite3
 import os
 import json
 import threading
+import traceback
 from datetime import datetime, timedelta
 from time import sleep
 from typing import Optional
@@ -33,9 +34,38 @@ def _tr_collate(a: str, b: str) -> int:
         return 1
     return 0
 
+
+class _TrackedConnection(sqlite3.Connection):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._sattup_conn_id = id(self)
+        try:
+            st = "".join(traceback.format_stack(limit=25))
+        except Exception:
+            st = ""
+        try:
+            with DatabaseManager._conn_registry_lock:
+                DatabaseManager._conn_registry[self._sattup_conn_id] = {
+                    "conn": self,
+                    "created_at": datetime.now().isoformat(timespec="seconds"),
+                    "stack": st,
+                }
+        except Exception:
+            pass
+
+    def close(self):
+        try:
+            with DatabaseManager._conn_registry_lock:
+                DatabaseManager._conn_registry.pop(getattr(self, "_sattup_conn_id", id(self)), None)
+        except Exception:
+            pass
+        return super().close()
+
 class DatabaseManager:
     _bootstrapped = False
     _write_lock = threading.RLock()
+    _conn_registry_lock = threading.RLock()
+    _conn_registry = {}
 
     def __init__(self):
         self.db_path = DB_PATH
@@ -63,13 +93,23 @@ class DatabaseManager:
     def connect(self, timeout: float = 5, busy_timeout_ms: int = 5000):
         try:
             # check_same_thread=False ekliyoruz ki farklı modüllerden erişirken sorun çıkmasın
-            conn = sqlite3.connect(self.db_path, check_same_thread=False, timeout=float(timeout or 0))
+            conn = sqlite3.connect(
+                self.db_path,
+                check_same_thread=False,
+                timeout=float(timeout or 0),
+                isolation_level=None,
+                factory=_TrackedConnection,
+            )
             try:
                 conn.execute(f"PRAGMA busy_timeout = {int(busy_timeout_ms or 0)}")
             except Exception:
                 pass
             try:
                 conn.execute("PRAGMA journal_mode=WAL")
+            except Exception:
+                pass
+            try:
+                conn.execute("PRAGMA wal_autocheckpoint = 10000")
             except Exception:
                 pass
             try:
@@ -84,6 +124,37 @@ class DatabaseManager:
         except Exception as e:
             print(f"Database connection error: {e}")
             return None
+
+    def debug_connection_snapshot(self, max_items: int = 8) -> str:
+        out = []
+        try:
+            items = []
+            with DatabaseManager._conn_registry_lock:
+                for cid, info in (DatabaseManager._conn_registry or {}).items():
+                    try:
+                        c = (info or {}).get("conn")
+                        if c is None:
+                            continue
+                        in_tx = False
+                        try:
+                            in_tx = bool(getattr(c, "in_transaction", False))
+                        except Exception:
+                            in_tx = False
+                        items.append((cid, info, in_tx))
+                    except Exception:
+                        continue
+
+            out.append(f"tracked_connections={len(items)}")
+            for cid, info, in_tx in (items or [])[: int(max_items or 0)]:
+                out.append(
+                    f"conn_id={cid} in_transaction={bool(in_tx)} created_at={(info or {}).get('created_at','')}"
+                )
+                st = (info or {}).get("stack") or ""
+                if st:
+                    out.append(st)
+            return "\n".join(out)
+        except Exception:
+            return ""
 
     def _ensure_bulk_puantaj_manual_rows_table(self):
         conn = self.connect()

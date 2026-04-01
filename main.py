@@ -3,6 +3,7 @@ import os
 import hashlib
 import subprocess
 import config
+import msvcrt
 
 # 1. Bytecode (.pycache) oluşumunu engelle
 sys.dont_write_bytecode = True
@@ -15,7 +16,7 @@ os.environ.setdefault(
 )
 
 from config import BASE_DIR
-from PyQt6.QtWidgets import QApplication, QDialog
+from PyQt6.QtWidgets import QApplication, QDialog, QMessageBox
 from PyQt6.QtCore import qInstallMessageHandler
 from app.core.db_manager import DatabaseManager
 from app.modules.main_menu import MainMenuApp
@@ -108,8 +109,27 @@ def is_licensed():
 # --- ANA PROGRAM ---
 
 def main():
-    db = DatabaseManager()
     app = QApplication(sys.argv)
+
+    # --- TEK INSTANCE (SQLite lock sorunlarının ana nedeni) ---
+    lock_fp = None
+    try:
+        lock_path = os.path.join(BASE_DIR, ".sattup.lock")
+        lock_fp = open(lock_path, "a+")
+        msvcrt.locking(lock_fp.fileno(), msvcrt.LK_NBLCK, 1)
+    except Exception:
+        try:
+            QMessageBox.critical(
+                None,
+                "Uyarı",
+                "SATTUP zaten açık görünüyor.\n\n"
+                "Lütfen diğer açık SATTUP penceresini kapatın (gerekirse Task Manager'dan ikinci python.exe'yi sonlandırın) ve tekrar deneyin.",
+            )
+        except Exception:
+            pass
+        return
+
+    db = DatabaseManager()
 
     # --- LİSANS BEKÇİSİ ---
     if not is_licensed():
